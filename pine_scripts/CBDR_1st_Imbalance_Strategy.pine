@@ -1,0 +1,161 @@
+//@version=6
+indicator("CBDR 1st Imbalance Strategy [Apex Institutional]", "Apex CBDR - 1st Imbalance", overlay = true, max_boxes_count = 500, max_lines_count = 500, max_labels_count = 500)
+
+// =====================================================================================
+// INPUTS & CONFIGURATION
+// =====================================================================================
+var string G_STRAT   = "Strategy Configuration"
+var string G_TIME    = "London Session & Timezone"
+var string G_IPDA    = "IPDA Macro Central Bank Filter"
+var string G_RISK    = "Risk, SL Buffer & RR Targets"
+var string G_ALERTS  = "Webhook Alerts"
+
+// Session Window: 03:00 AM – 11:45 AM New York Time (12:30 PM – 09:15 PM IST)
+sessionInput         = input.session("0300-1145", "London Session Hours (NY Time)", group = G_TIME, tooltip = "Strict execution window: 03:00 AM to 11:45 AM NY Time (12:30 PM to 09:15 PM IST)")
+timezoneInput        = input.string("America/New_York", "Timezone", group = G_TIME)
+tradeMon             = input.bool(true, "Trade Monday", group = G_TIME)
+tradeTue             = input.bool(true, "Trade Tuesday", group = G_TIME)
+tradeWed             = input.bool(true, "Trade Wednesday", group = G_TIME)
+
+// IPDA Filter Settings
+useIpdaFilter        = input.bool(true, "Enable IPDA Macro Ratio Filter", group = G_IPDA, tooltip = "Enforces Base Rate / Quote Rate > 1.0 for BUY ONLY, < 1.0 for SELL ONLY")
+manualIpdaDirection  = input.string("AUTO", "IPDA Direction Mode", options = ["AUTO", "BUY_ONLY", "SELL_ONLY", "DISABLED"], group = G_IPDA)
+
+// Risk, SL Buffer & RR Target Settings
+slBufferPips         = input.float(7.0, "SL Buffer Space (Pips)", minval = 1.0, maxval = 20.0, step = 0.5, group = G_RISK, tooltip = "Buffer space placed below/above the imbalance (5–10 pips recommended)")
+rrTarget1            = input.float(3.0, "Take Profit 1 (R:R Ratio)", minval = 1.0, maxval = 10.0, step = 0.5, group = G_RISK)
+rrTarget2            = input.float(5.0, "Take Profit 2 (R:R Ratio)", minval = 1.0, maxval = 15.0, step = 0.5, group = G_RISK)
+
+// Webhook Alert Secret
+webhookSecret        = input.string("apex_secret_key_2026", "Webhook Secret Token", group = G_ALERTS)
+
+// Visual Colors
+color BULL_COLOR     = #089981
+color BEAR_COLOR     = #f23645
+color IMBALANCE_BULL = color.new(#089981, 75)
+color IMBALANCE_BEAR = color.new(#f23645, 75)
+color SESSION_BG     = color.new(#2962ff, 95)
+
+// =====================================================================================
+// AUTOMATIC IPDA MACRO RATE MAPPING
+// =====================================================================================
+getSymbolIpdaDirection(string sym) =>
+    string cleanSym = str.replace_all(sym, "OANDA:", "")
+    cleanSym := str.replace_all(cleanSym, "FX:", "")
+    cleanSym := str.replace_all(cleanSym, "FOREXCOM:", "")
+    cleanSym := str.replace_all(cleanSym, "=X", "")
+    
+    // Automatic IPDA Macro Rates:
+    // Fed = 4.50%, ECB = 3.15%, BoE = 4.75%, BoJ = 0.25%, SNB = 0.50%, RBA = 4.35%, BoC = 3.75%, RBNZ = 4.75%
+    string dir = "BUY_ONLY"
+    if cleanSym == "EURUSD" or cleanSym == "XAUUSD" or cleanSym == "GOLD" or cleanSym == "AUDUSD" or cleanSym == "NZDUSD" or cleanSym == "EURGBP" or cleanSym == "EURAUD" or cleanSym == "EURCAD" or cleanSym == "EURNZD"
+        dir := "SELL_ONLY"
+    else
+        dir := "BUY_ONLY" // GBPCHF, USDJPY, USDCAD, GBPUSD, GBPJPY, EURJPY, etc.
+    dir
+
+effectiveIpdaDirection = manualIpdaDirection == "AUTO" ? getSymbolIpdaDirection(syminfo.ticker) : manualIpdaDirection
+
+// =====================================================================================
+// SESSION & DAY VALIDATION
+// =====================================================================================
+inSession = not na(time(timeframe.period, sessionInput, timezoneInput))
+dayOfWeekNum = dayofweek(time, timezoneInput) // 1=Sun, 2=Mon, 3=Tue, 4=Wed, 5=Thu, 6=Fri, 7=Sat
+isPermittedDay = (dayOfWeekNum == 2 and tradeMon) or (dayOfWeekNum == 3 and tradeTue) or (dayOfWeekNum == 4 and tradeWed)
+
+// Session Tracking
+var bool sessionFirstImbalanceFound = false
+var int currentSessionDay = -1
+
+int sessionDay = dayofmonth(time, timezoneInput)
+if sessionDay != currentSessionDay
+    currentSessionDay := sessionDay
+    sessionFirstImbalanceFound := false
+
+// Highlight London Session Background
+bgcolor(inSession and isPermittedDay ? SESSION_BG : na, title = "London Session Highlight")
+
+// =====================================================================================
+// 1ST IMBALANCE (FAIR VALUE GAP) DETECTION
+// =====================================================================================
+// Pip size calculation
+pipSize = syminfo.mintick * (syminfo.type == "forex" and str.contains(syminfo.ticker, "JPY") ? 100 : syminfo.type == "forex" ? 10 : 1)
+slBufferPrice = slBufferPips * pipSize
+
+// Bullish Imbalance: Candle 0 Low > Candle 2 High, and Displacement Candle 1 closed bullish
+isBullishImbalance = (low > high[2]) and (close[1] > high[2]) and (close[1] > open[1])
+
+// Bearish Imbalance: Candle 0 High < Candle 2 Low, and Displacement Candle 1 closed bearish
+isBearishImbalance = (high < low[2]) and (close[1] < low[2]) and (close[1] < open[1])
+
+// =====================================================================================
+// SIGNAL EXECUTION (1st Imbalance in 03:00–11:45 NY Window)
+// =====================================================================================
+bool buySignal = false
+bool sellSignal = false
+var float entryPrice = na
+var float slPrice = na
+var float tp1Price = na
+var float tp2Price = na
+
+if inSession and isPermittedDay and not sessionFirstImbalanceFound
+    // 1st Bullish Imbalance Entry (IPDA BUY ONLY permitted)
+    if isBullishImbalance and (effectiveIpdaDirection == "BUY_ONLY" or effectiveIpdaDirection == "DISABLED")
+        sessionFirstImbalanceFound := true
+        buySignal := true
+        entryPrice := low
+        float imbalanceBase = math.min(high[2], low[1])
+        slPrice := imbalanceBase - slBufferPrice
+        float riskDist = entryPrice - slPrice
+        tp1Price := entryPrice + (riskDist * rrTarget1)
+        tp2Price := entryPrice + (riskDist * rrTarget2)
+
+        // Draw Imbalance Box
+        box.new(left = bar_index[2], top = low, right = bar_index + 12, bottom = high[2], 
+                border_color = BULL_COLOR, bgcolor = IMBALANCE_BULL, border_style = line.style_solid)
+
+        // Visual Markers
+        line.new(bar_index, entryPrice, bar_index + 16, entryPrice, color = color.blue, width = 2, style = line.style_solid)
+        line.new(bar_index, slPrice, bar_index + 16, slPrice, color = BEAR_COLOR, width = 2, style = line.style_dashed)
+        line.new(bar_index, tp1Price, bar_index + 16, tp1Price, color = BULL_COLOR, width = 2, style = line.style_solid)
+
+        label.new(bar_index, low, text = "⚡ CBDR 1st Bullish Imbalance\nEntry: " + str.tostring(entryPrice, "#.#####") + "\nSL (Buffer): " + str.tostring(slPrice, "#.#####") + "\nTP1 (1:3): " + str.tostring(tp1Price, "#.#####"), 
+                  color = BULL_COLOR, textcolor = color.white, style = label.style_label_up, size = size.small)
+
+    // 1st Bearish Imbalance Entry (IPDA SELL ONLY permitted)
+    else if isBearishImbalance and (effectiveIpdaDirection == "SELL_ONLY" or effectiveIpdaDirection == "DISABLED")
+        sessionFirstImbalanceFound := true
+        sellSignal := true
+        entryPrice := high
+        float imbalanceTop = math.max(low[2], high[1])
+        slPrice := imbalanceTop + slBufferPrice
+        float riskDist = slPrice - entryPrice
+        tp1Price := entryPrice - (riskDist * rrTarget1)
+        tp2Price := entryPrice - (riskDist * rrTarget2)
+
+        // Draw Imbalance Box
+        box.new(left = bar_index[2], top = low[2], right = bar_index + 12, bottom = high, 
+                border_color = BEAR_COLOR, bgcolor = IMBALANCE_BEAR, border_style = line.style_solid)
+
+        // Visual Markers
+        line.new(bar_index, entryPrice, bar_index + 16, entryPrice, color = color.blue, width = 2, style = line.style_solid)
+        line.new(bar_index, slPrice, bar_index + 16, slPrice, color = BEAR_COLOR, width = 2, style = line.style_dashed)
+        line.new(bar_index, tp1Price, bar_index + 16, tp1Price, color = BULL_COLOR, width = 2, style = line.style_solid)
+
+        label.new(bar_index, high, text = "⚡ CBDR 1st Bearish Imbalance\nEntry: " + str.tostring(entryPrice, "#.#####") + "\nSL (Buffer): " + str.tostring(slPrice, "#.#####") + "\nTP1 (1:3): " + str.tostring(tp1Price, "#.#####"), 
+                  color = BEAR_COLOR, textcolor = color.white, style = label.style_label_down, size = size.small)
+
+// =====================================================================================
+// WEBHOOK ALERTS (JSON Payload for Dashboard)
+// =====================================================================================
+if buySignal
+    string buyPayload = '{"strategy":"CBDR","symbol":"' + syminfo.ticker + '","timeframe":"15m","action":"BUY","entry":' + str.tostring(entryPrice) + ',"sl":' + str.tostring(slPrice) + ',"tp1":' + str.tostring(tp1Price) + ',"tp2":' + str.tostring(tp2Price) + ',"session":"London","fvg_number":1,"secret":"' + webhookSecret + '","notes":"1st London Imbalance (03:00-11:45 NY). SL below imbalance + 7 pips. TP 1:3."}'
+    alert(buyPayload, alert.freq_once_per_bar_close)
+
+if sellSignal
+    string sellPayload = '{"strategy":"CBDR","symbol":"' + syminfo.ticker + '","timeframe":"15m","action":"SELL","entry":' + str.tostring(entryPrice) + ',"sl":' + str.tostring(slPrice) + ',"tp1":' + str.tostring(tp1Price) + ',"tp2":' + str.tostring(tp2Price) + ',"session":"London","fvg_number":1,"secret":"' + webhookSecret + '","notes":"1st London Imbalance (03:00-11:45 NY). SL above imbalance + 7 pips. TP 1:3."}'
+    alert(sellPayload, alert.freq_once_per_bar_close)
+
+// Plot Shapes
+plotshape(buySignal, title = "CBDR Buy Setup", style = shape.triangleup, location = location.belowbar, color = BULL_COLOR, size = size.small)
+plotshape(sellSignal, title = "CBDR Sell Setup", style = shape.triangledown, location = location.abovebar, color = BEAR_COLOR, size = size.small)

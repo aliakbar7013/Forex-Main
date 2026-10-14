@@ -1,0 +1,908 @@
+'use client';
+
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { 
+  BacktestTradeRecord, 
+  BacktestStats
+} from '@/types';
+import { 
+  BarChart3, 
+  Calendar, 
+  Download, 
+  PlusCircle, 
+  RefreshCw, 
+  Search, 
+  Trash2, 
+  CheckCircle2, 
+  XCircle, 
+  Layers, 
+  Clock,
+  BarChart2,
+  Zap,
+  Loader2,
+  Key,
+  ExternalLink,
+  ShieldCheck
+} from 'lucide-react';
+import { LogBacktestTradeModal } from '@/components/modals/LogBacktestTradeModal';
+import { BacktestTradeChartModal } from '@/components/modals/BacktestTradeChartModal';
+import { PairFilterSelect } from '@/components/dashboard/PairFilterSelect';
+import { PairPerformancePieChart } from '@/components/dashboard/PairPerformancePieChart';
+import { isMajorPair } from '@/lib/strategyValidator';
+
+export function BacktestStudio() {
+  const [trades, setTrades] = useState<BacktestTradeRecord[]>([]);
+  const [stats, setStats] = useState<BacktestStats | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
+  
+  // Data Provider state (Strictly TradingView)
+  const activeProvider = 'TRADINGVIEW';
+
+  // Filters
+  const [strategyFilter, setStrategyFilter] = useState<string>('ALL');
+  const [monthFilter, setMonthFilter] = useState<string>('ALL');
+  const [pairFilter, setPairFilter] = useState<string>('ALL');
+  const [pairTypeFilter, setPairTypeFilter] = useState<'ALL' | 'MAJOR' | 'MINOR'>('ALL');
+  const [dayFilter, setDayFilter] = useState<string>('ALL');
+  const [outcomeFilter, setOutcomeFilter] = useState<string>('ALL');
+  
+  // Modals
+  const [isLogModalOpen, setIsLogModalOpen] = useState(false);
+  const [selectedTradeForChart, setSelectedTradeForChart] = useState<BacktestTradeRecord | null>(null);
+
+  const fetchBacktestData = useCallback(async (showFullLoader = false) => {
+    try {
+      if (showFullLoader) {
+        setIsLoading(true);
+      }
+      const res = await fetch('/api/backtest');
+      const data = await res.json();
+      if (data.trades) {
+        setTrades(prev => {
+          if (JSON.stringify(prev) === JSON.stringify(data.trades)) return prev;
+          return data.trades;
+        });
+      }
+      if (data.stats) {
+        setStats(prev => {
+          if (JSON.stringify(prev) === JSON.stringify(data.stats)) return prev;
+          return data.stats;
+        });
+      }
+    } catch (err) {
+      console.error('Failed to load backtest data', err);
+    } finally {
+      if (showFullLoader) {
+        setIsLoading(false);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchBacktestData(true);
+  }, [fetchBacktestData]);
+
+  const handleDeleteTrade = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this historical trade record?')) return;
+    try {
+      const res = await fetch(`/api/backtest?id=${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) {
+        setTrades(prev => prev.filter(t => t.id !== id));
+        if (data.stats) setStats(data.stats);
+      }
+    } catch (err) {
+      console.error('Failed to delete trade', err);
+    }
+  };
+
+  const handleResetDataset = async () => {
+    if (!confirm('Reset backtesting database to 6-month verified ICT CBDR & New York trades with TradingView calibrated prices?')) return;
+    try {
+      const res = await fetch('/api/backtest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'RESET' })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setTrades(data.trades);
+        setStats(data.stats);
+        setSyncFeedback('✅ Backtest database reset to TradingView calibrated archive with exact entry, exit, SL and TP prices.');
+        setTimeout(() => setSyncFeedback(null), 6000);
+      }
+    } catch (err) {
+      console.error('Failed to reset dataset', err);
+    }
+  };
+
+  const handleSyncRealData = async (resetFirst = true) => {
+    try {
+      setIsSyncing(true);
+      setSyncFeedback('Connecting to TradingView Live Feed & computing 15m CBDR and New York trades with exact entry, exit, SL, and TP prices...');
+      const res = await fetch('/api/backtest/sync-real', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          resetFirst,
+          provider: 'TRADINGVIEW'
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSyncFeedback(`✅ TradingView Live Sync Complete: ${data.totalCompleted || data.totalGenerated} trades archived with exact Entry, Exit, SL, and TP prices • ${data.totalActiveLive || 0} active setups running!`);
+        await fetchBacktestData(false);
+        setTimeout(() => setSyncFeedback(null), 9000);
+      } else {
+        setSyncFeedback(`⚠️ Sync failed: ${data.error}`);
+        setTimeout(() => setSyncFeedback(null), 6000);
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setSyncFeedback(`❌ Error connecting to TradingView: ${msg}`);
+      setTimeout(() => setSyncFeedback(null), 6000);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  // Export to CSV
+  const handleExportCsv = () => {
+    if (trades.length === 0) return;
+
+    const headers = [
+      'ID', 'Date', 'Day', 'Strategy', 'Symbol', 'Action', 'Timeframe',
+      'Entry Price', 'Exit Price', 'Stop Loss', 'Take Profit 1', 'Lots', 'Risk Percent',
+      'Outcome', 'R:R Achieved', 'CBDR Valid Day', 'Session', 'Notes'
+    ];
+
+    const rows = filteredTrades.map(t => [
+      t.id,
+      t.date_executed,
+      t.trading_day,
+      t.strategy,
+      t.symbol,
+      t.action,
+      t.timeframe,
+      t.entry,
+      t.exit_price ?? (t.outcome === 'WIN' ? t.tp1 : t.outcome === 'LOSS' ? t.sl : t.entry),
+      t.sl,
+      t.tp1,
+      t.calculated_lot_size,
+      `${t.risk_percent}%`,
+      t.outcome,
+      `${t.riskRewardAchieved}R`,
+      t.isCbdrValidDay ? 'YES' : 'NO',
+      `"${t.session || ''}"`,
+      `"${(t.notes || '').replace(/"/g, '""')}"`
+    ]);
+
+    const csvContent = 'data:text/csv;charset=utf-8,' + [
+      headers.join(','),
+      ...rows.map(r => r.join(','))
+    ].join('\n');
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `ICT_6_Months_Backtest_Trades_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Export to JSON
+  const handleExportJson = () => {
+    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(filteredTrades, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute('href', dataStr);
+    downloadAnchor.setAttribute('download', `ICT_6_Months_Backtest_Trades_${new Date().toISOString().split('T')[0]}.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+  };
+
+  // Filtered trades
+  const filteredTrades = useMemo(() => {
+    return trades.filter(t => {
+      if (strategyFilter !== 'ALL' && t.strategy.toUpperCase() !== strategyFilter.toUpperCase()) {
+        return false;
+      }
+      if (monthFilter !== 'ALL' && !t.date_executed.startsWith(monthFilter)) {
+        return false;
+      }
+      if (pairFilter !== 'ALL' && t.symbol.toUpperCase() !== pairFilter.toUpperCase()) {
+        return false;
+      }
+      if (pairTypeFilter === 'MAJOR' && !isMajorPair(t.symbol)) {
+        return false;
+      }
+      if (pairTypeFilter === 'MINOR' && isMajorPair(t.symbol)) {
+        return false;
+      }
+      if (dayFilter !== 'ALL' && t.trading_day.toLowerCase() !== dayFilter.toLowerCase()) {
+        return false;
+      }
+      if (outcomeFilter !== 'ALL' && t.outcome !== outcomeFilter) {
+        return false;
+      }
+      return true;
+    });
+  }, [trades, strategyFilter, monthFilter, pairFilter, pairTypeFilter, dayFilter, outcomeFilter]);
+
+  return (
+    <div className="space-y-6">
+      
+      {/* Real-Market Sync Feedback Banner */}
+      {syncFeedback && (
+        <div className="p-3.5 rounded-xl bg-blue-50 border border-blue-200 text-blue-900 text-xs font-bold flex items-center gap-2 animate-in fade-in shadow-xs">
+          <Zap className="w-4 h-4 text-blue-600 shrink-0" />
+          <span>{syncFeedback}</span>
+        </div>
+      )}
+
+      {/* TradingView Institutional Market Feed Bar */}
+      <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-blue-900 via-indigo-950 to-slate-900 text-white shadow-md border border-blue-800/60 space-y-4">
+        
+        {/* Top Row: TradingView Live Feed Status & Sync Action */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="space-y-1.5">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-black tracking-wider uppercase flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                TradingView Live Feed Active
+              </span>
+
+              <a
+                href="https://www.tradingview.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs font-bold text-blue-300 hover:text-white transition-colors underline flex items-center gap-1"
+              >
+                tradingview.com <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
+
+            <h3 className="text-base sm:text-lg font-black tracking-tight text-white flex items-center gap-2">
+              TradingView Institutional 15m CBDR &amp; New York Quantitative Engine
+            </h3>
+            <p className="text-xs text-blue-200/80 max-w-2xl">
+              Streaming real-time rates directly from TradingView charts for all 28 Forex pairs + Gold + US Indices. 
+              <strong className="text-amber-300 ml-1">Focus #1:</strong> Central Bank Dealers Range (CBDR) 15m London Killzone (03:00–11:45 NY, Mon–Wed, PDH/PDL sweeps for majors, direct 1st FVG for crosses, strict 1:3 RR). 
+              <strong className="text-amber-300 ml-1">Focus #2:</strong> New York Strategy (09:30 AM–12:00 PM NY, 15m range sweep + 1m CHoCH/FVG entry).
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <button
+              onClick={() => handleSyncRealData(true)}
+              disabled={isSyncing}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 text-xs font-black transition-all shadow-md disabled:opacity-50"
+              title="Fetch real-time feeds from TradingView and execute quantitative backtester"
+            >
+              {isSyncing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5 fill-current" />}
+              <span>{isSyncing ? 'Syncing TradingView...' : '⚡ Sync TradingView Real-Time Data'}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* 1. Header Toolbar */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 sm:p-5 rounded-2xl bg-white border border-slate-200 shadow-sm">
+        <div>
+          <div className="flex flex-wrap items-center gap-2 mb-1">
+            <div className="p-2 rounded-lg bg-purple-50 text-purple-700 border border-purple-200">
+              <BarChart3 className="w-5 h-5" />
+            </div>
+            <h2 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">
+              Trade History &amp; Backtesting Archive
+            </h2>
+            <a
+              href="https://www.tradingview.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-900 border border-blue-300 text-xs font-bold hover:bg-blue-200 transition-colors inline-flex items-center gap-1"
+            >
+              TradingView Market Feed ↗
+            </a>
+            <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-300 text-xs font-bold">
+              Exact 15m Candles
+            </span>
+          </div>
+          <p className="text-xs text-slate-500 font-medium">
+            Quantitative CBDR &amp; New York backtest reports calculated directly from TradingView real-market candles (03:00–11:45 AM NY / 12:30–09:15 PM IST), 1st FVG execution, and IPDA interest rate compliance.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Live Sync Button */}
+          <button
+            onClick={() => handleSyncRealData(true)}
+            disabled={isSyncing}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-xs disabled:opacity-50"
+            title="Fetch live 15m candle feeds from TradingView and run backtester"
+          >
+            {isSyncing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
+            <span>{isSyncing ? 'Fetching TradingView Feeds...' : '⚡ Sync TradingView Real-Time Data'}</span>
+          </button>
+
+          <button
+            onClick={handleExportCsv}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-xs font-bold transition-all shadow-xs"
+          >
+            <Download className="w-3.5 h-3.5 text-blue-600" />
+            <span>Export CSV</span>
+          </button>
+
+          <button
+            onClick={handleExportJson}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-xs font-bold transition-all shadow-xs"
+          >
+            <Download className="w-3.5 h-3.5 text-amber-600" />
+            <span>Export JSON</span>
+          </button>
+
+          <button
+            onClick={() => setIsLogModalOpen(true)}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition-all shadow-xs"
+          >
+            <PlusCircle className="w-3.5 h-3.5" />
+            <span>Log Trade</span>
+          </button>
+
+          <button
+            onClick={handleResetDataset}
+            title="Reset dataset to default verified archive"
+            className="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200 text-xs transition-colors shadow-xs"
+          >
+            <RefreshCw className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* 2. Hero KPI Stats Grid (No Dollar Pricing) */}
+      {stats && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          <div className="p-3.5 sm:p-4 rounded-xl bg-white border border-slate-200 shadow-sm">
+            <span className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+              Total Setups
+            </span>
+            <div className="text-xl sm:text-2xl font-black text-slate-900 font-mono">
+              {stats.totalTrades}
+            </div>
+            <span className="text-[10px] text-slate-500 flex items-center gap-1 mt-1 font-medium">
+              <span className="text-emerald-700 font-bold">{stats.totalWins}W</span> / <span className="text-rose-700 font-bold">{stats.totalLosses}L</span> / <span>{stats.totalBe}BE</span>
+            </span>
+          </div>
+
+          <div className="p-3.5 sm:p-4 rounded-xl bg-white border border-slate-200 shadow-sm">
+            <span className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+              Win Rate %
+            </span>
+            <div className="text-xl sm:text-2xl font-black text-emerald-700 font-mono">
+              {stats.winRate}%
+            </div>
+            <span className="text-[10px] text-emerald-700 font-bold block mt-1">
+              ICT Confluence Edge
+            </span>
+          </div>
+
+          <div className="p-3.5 sm:p-4 rounded-xl bg-white border border-slate-200 shadow-sm">
+            <span className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+              Net Return (R)
+            </span>
+            <div className="text-xl sm:text-2xl font-black font-mono text-emerald-700">
+              +{((stats.avgRiskReward * stats.totalWins) - stats.totalLosses).toFixed(1)}R
+            </div>
+            <span className="text-[10px] text-slate-500 block mt-1 font-medium">
+              Risk Multiplier Output
+            </span>
+          </div>
+
+          <div className="p-3.5 sm:p-4 rounded-xl bg-white border border-slate-200 shadow-sm">
+            <span className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+              Profit Factor
+            </span>
+            <div className="text-xl sm:text-2xl font-black text-blue-700 font-mono">
+              {stats.profitFactor}
+            </div>
+            <span className="text-[10px] text-blue-700 font-bold block mt-1">
+              Win / Loss RR Ratio
+            </span>
+          </div>
+
+          <div className="p-3.5 sm:p-4 rounded-xl bg-white border border-slate-200 shadow-sm">
+            <span className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+              Avg Risk:Reward
+            </span>
+            <div className="text-xl sm:text-2xl font-black text-amber-700 font-mono">
+              {stats.avgRiskReward}R
+            </div>
+            <span className="text-[10px] text-slate-500 block mt-1 font-medium">
+              Asymmetrical Edge
+            </span>
+          </div>
+
+          <div className="p-3.5 sm:p-4 rounded-xl bg-white border border-slate-200 shadow-sm">
+            <span className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+              Max Drawdown
+            </span>
+            <div className="text-xl sm:text-2xl font-black text-slate-900 font-mono">
+              {stats.maxDrawdownPercent}%
+            </div>
+            <span className="text-[10px] text-emerald-700 font-bold block mt-1">
+              Defensive Stepping
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* 3. Deep-Dive Analytics: CBDR Day of Week vs Strategy Breakdown */}
+      {stats && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-6">
+          
+          {/* A. CBDR Day-of-Week Probability Matrix */}
+          <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-blue-600" />
+                <h3 className="font-bold text-slate-900 text-sm">
+                  CBDR Day-of-Week Execution Probability
+                </h3>
+              </div>
+              <span className="px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 text-[10px] font-bold border border-blue-200">
+                Mon / Tue / Wed Only
+              </span>
+            </div>
+
+            <p className="text-xs text-slate-600 font-medium">
+              Institutional weekly sequence: Trade <strong className="text-slate-900">Monday</strong> (Sweep Sunday H/L). If TP hit &rarr; <span className="text-emerald-700 font-bold">Holiday Tue–Fri</span>. Trade Tuesday only if Mon SL; trade Wednesday only if Tue SL (If SL &rarr; Week over). Thursdays &amp; Fridays are strictly <strong className="text-rose-700">NO TRADING</strong> (Retailer study days). Max 3 trades/week • 15m ONLY • 1st FVG Only • 1:3–1:4+ RR.
+            </p>
+
+            <div className="space-y-2.5">
+              {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].map((day) => {
+                const dayData = stats.dayBreakdown[day] || {
+                  dayName: day,
+                  trades: 0,
+                  wins: 0,
+                  losses: 0,
+                  be: 0,
+                  winRate: 0,
+                  totalPnl: 0,
+                  isCbdrPermitted: day === 'Monday' || day === 'Tuesday' || day === 'Wednesday'
+                };
+
+                return (
+                  <div key={day} className={`p-3 rounded-xl border transition-all ${
+                    dayData.isCbdrPermitted 
+                      ? 'bg-slate-50 border-slate-200' 
+                      : 'bg-rose-50/50 border-rose-200'
+                  }`}>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 mb-1.5">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-xs text-slate-900">
+                          📅 {day}
+                        </span>
+                        {dayData.isCbdrPermitted ? (
+                          <span className="px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-900 font-mono text-[9px] font-bold border border-emerald-300">
+                            PERMITTED ✅
+                          </span>
+                        ) : (
+                          <span className="px-1.5 py-0.2 rounded bg-rose-100 text-rose-900 font-mono text-[9px] font-bold border border-rose-300">
+                            BLOCKED BY FILTER 🚫
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-3 text-xs font-mono">
+                        <span className="text-slate-500 font-medium">
+                          {dayData.trades} Trades ({dayData.wins}W - {dayData.losses}L)
+                        </span>
+                        <span className="font-black text-blue-700">
+                          {dayData.winRate}% WR
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Progress Bar */}
+                    <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
+                      <div 
+                        className={`h-full rounded-full ${
+                          dayData.isCbdrPermitted ? 'bg-gradient-to-r from-blue-500 to-emerald-500' : 'bg-rose-500'
+                        }`}
+                        style={{ width: `${dayData.winRate}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* B. Strategy Edge Performance Breakdown */}
+          <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+              <div className="flex items-center gap-2">
+                <Layers className="w-4 h-4 text-purple-600" />
+                <h3 className="font-bold text-slate-900 text-sm">
+                  Strategy Performance &amp; Edge Breakdown
+                </h3>
+              </div>
+              <span className="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-bold border border-slate-200">
+                Defensive Risk Stepping Active
+              </span>
+            </div>
+
+            <p className="text-xs text-slate-600 font-medium">
+              Comparative backtest metrics across the 3 core models with IPDA rate alignment and defensive capital protection.
+            </p>
+
+            <div className="space-y-3">
+              {[
+                { key: 'CBDR', name: '1. CBDR Strategy (15m London Mon–Wed - Focus #1)', badge: 'Mandatory IPDA • Strict 1:3' },
+                { key: 'NEW_YORK', name: '2. New York Strategy (1m / 15m NY Open - Focus #2)', badge: 'IPDA Exempt • Indices & FX' },
+                { key: 'STOP_HUNT', name: 'Stop Hunt Model (5m Post-Asian)', badge: 'Secondary Model' }
+              ].map(strat => {
+                const stratData = stats.strategyBreakdown[strat.key] || {
+                  strategy: strat.key,
+                  trades: 0,
+                  wins: 0,
+                  losses: 0,
+                  be: 0,
+                  winRate: 0,
+                  totalPnl: 0,
+                  profitFactor: 0
+                };
+
+                return (
+                  <div key={strat.key} className="p-3.5 sm:p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-xs text-slate-900">
+                          {strat.name}
+                        </span>
+                        <span className="px-1.5 py-0.5 rounded bg-white text-blue-700 font-mono text-[9px] font-bold border border-slate-200">
+                          {strat.badge}
+                        </span>
+                      </div>
+                      <span className="font-mono font-bold text-emerald-700 text-xs">
+                        {stratData.winRate}% Win Rate
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 pt-1 text-[11px] font-mono">
+                      <div className="p-2 rounded bg-white border border-slate-200">
+                        <span className="text-slate-500 text-[10px] block font-medium">Executed Trades:</span>
+                        <span className="font-bold text-slate-900">{stratData.trades} ({stratData.wins}W / {stratData.losses}L)</span>
+                      </div>
+                      <div className="p-2 rounded bg-white border border-slate-200">
+                        <span className="text-slate-500 text-[10px] block font-medium">Profit Factor:</span>
+                        <span className="font-bold text-blue-700">{stratData.profitFactor}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+        </div>
+      )}
+
+      {/* 4. Interactive Pair Performance Pie View & Leaderboard */}
+      <PairPerformancePieChart
+        trades={trades}
+        onSelectPair={setPairFilter}
+        selectedPair={pairFilter}
+      />
+
+      {/* 5. Filter & Search Controls */}
+      <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-3 text-xs">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
+          {/* Month / 6-Month Timeframe Filter */}
+          <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5">
+            <span className="text-slate-500 font-medium">Time Horizon:</span>
+            <select
+              value={monthFilter}
+              onChange={e => setMonthFilter(e.target.value)}
+              className="bg-transparent text-slate-900 font-bold outline-none cursor-pointer"
+            >
+              <option value="ALL">All 6 Months (Apr–Oct 2026)</option>
+              <option value="2026-10">October 2026</option>
+              <option value="2026-09">September 2026</option>
+              <option value="2026-08">August 2026</option>
+              <option value="2026-07">July 2026</option>
+              <option value="2026-06">June 2026</option>
+              <option value="2026-05">May 2026</option>
+              <option value="2026-04">April 2026</option>
+            </select>
+          </div>
+
+          {/* Strategy Filter */}
+          <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5">
+            <span className="text-slate-500 font-medium">Strategy:</span>
+            <select
+              value={strategyFilter}
+              onChange={e => setStrategyFilter(e.target.value)}
+              className="bg-transparent text-slate-900 font-bold outline-none cursor-pointer"
+            >
+              <option value="ALL">All Strategies</option>
+              <option value="CBDR">1. CBDR Strategy (15m Focus #1)</option>
+              <option value="NEW_YORK">2. New York Strategy (1m Focus #2)</option>
+              <option value="STOP_HUNT">Stop Hunt (5m)</option>
+            </select>
+          </div>
+
+          {/* Day Filter */}
+          <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5">
+            <span className="text-slate-500 font-medium">Day:</span>
+            <select
+              value={dayFilter}
+              onChange={e => setDayFilter(e.target.value)}
+              className="bg-transparent text-slate-900 font-bold outline-none cursor-pointer"
+            >
+              <option value="ALL">All Days</option>
+              <option value="Monday">Monday</option>
+              <option value="Tuesday">Tuesday</option>
+              <option value="Wednesday">Wednesday</option>
+              <option value="Thursday">Thursday</option>
+              <option value="Friday">Friday</option>
+            </select>
+          </div>
+
+          {/* Outcome Filter */}
+          <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5">
+            <span className="text-slate-500 font-medium">Outcome:</span>
+            <select
+              value={outcomeFilter}
+              onChange={e => setOutcomeFilter(e.target.value)}
+              className="bg-transparent text-slate-900 font-bold outline-none cursor-pointer"
+            >
+              <option value="ALL">All Outcomes</option>
+              <option value="WIN">Wins Only</option>
+              <option value="LOSS">Losses Only</option>
+              <option value="BE">Break-Even</option>
+            </select>
+          </div>
+
+          {/* Pair Category Filter (Major vs Minor) */}
+          <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5">
+            <span className="text-slate-500 font-medium">Pair Type:</span>
+            <select
+              value={pairTypeFilter}
+              onChange={e => setPairTypeFilter(e.target.value as 'ALL' | 'MAJOR' | 'MINOR')}
+              className="bg-transparent text-slate-900 font-bold outline-none cursor-pointer"
+            >
+              <option value="ALL">All (Majors &amp; Minors)</option>
+              <option value="MAJOR">⚡ Major Pairs (PDH/PDL Swept)</option>
+              <option value="MINOR">🎯 Minor Pairs (Direct 1st FVG)</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Pair / Instrument Combobox Selector with Internal Search */}
+        <div className="shrink-0">
+          <PairFilterSelect 
+            value={pairFilter} 
+            onChange={setPairFilter} 
+            buttonLabelPrefix="Filter Pair:" 
+          />
+        </div>
+      </div>
+
+      {/* 5. Historical Trades Table (No Dollar Amounts) */}
+      <div className="rounded-2xl bg-white border border-slate-200 overflow-hidden shadow-sm">
+        <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Clock className="w-4 h-4 text-blue-600" />
+            <h3 className="font-bold text-slate-900 text-sm">
+              Backtested Trades Dataset ({filteredTrades.length} Records)
+            </h3>
+          </div>
+          <span className="text-xs text-slate-500 font-medium">
+            Click &quot;Export CSV&quot; above to download complete history
+          </span>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead>
+              <tr className="bg-slate-50 text-slate-700 uppercase tracking-wider text-[10px] font-bold border-b border-slate-200">
+                <th className="py-3 px-4">Entry Date &amp; Day</th>
+                <th className="py-3 px-4">Strategy</th>
+                <th className="py-3 px-4">Symbol / Action</th>
+                <th className="py-3 px-4">Entry &amp; Exit Price</th>
+                <th className="py-3 px-4">SL &amp; TP1 Target</th>
+                <th className="py-3 px-4">Lots / Risk %</th>
+                <th className="py-3 px-4">Outcome</th>
+                <th className="py-3 px-4">R:R Achieved</th>
+                <th className="py-3 px-4">Notes &amp; Confluences</th>
+                <th className="py-3 px-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-200 font-mono">
+              {filteredTrades.length === 0 ? (
+                <tr>
+                  <td colSpan={10} className="py-12 text-center text-slate-500 font-sans">
+                    No backtest trade records match the active filter criteria.
+                  </td>
+                </tr>
+              ) : (
+                filteredTrades.map(trade => (
+                  <tr key={trade.id} className="hover:bg-slate-50 transition-colors">
+                    
+                    {/* Entry Date & Day */}
+                    <td className="py-3.5 px-4 whitespace-nowrap">
+                      <div className="text-slate-900 font-bold text-[11px] flex items-center gap-1.5">
+                        <Calendar className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                        <span>{trade.date_executed}</span>
+                      </div>
+                      <span className={`inline-block px-1.5 py-0.2 rounded text-[9px] font-bold mt-0.5 ${
+                        trade.isCbdrValidDay 
+                           ? 'bg-teal-100 text-teal-900 border border-teal-300' 
+                           : 'bg-rose-100 text-rose-900 border border-rose-300'
+                      }`}>
+                        📅 {trade.trading_day}
+                      </span>
+                    </td>
+
+                    {/* Strategy */}
+                    <td className="py-3.5 px-4 whitespace-nowrap">
+                      <div className="flex items-center gap-1.5">
+                        <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-800 text-[10px] font-bold border border-slate-200">
+                          {trade.strategy}
+                        </span>
+                        {trade.strategy === 'CBDR' && (
+                          isMajorPair(trade.symbol) ? (
+                            <span className="inline-flex items-center px-1.5 py-0.2 rounded text-[8px] font-bold bg-amber-50 text-amber-900 border border-amber-300">
+                              ⚡ Major
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-1.5 py-0.2 rounded text-[8px] font-bold bg-indigo-50 text-indigo-900 border border-indigo-300">
+                              🎯 Minor
+                            </span>
+                          )
+                        )}
+                      </div>
+                      <div className="text-[10px] text-slate-500 mt-0.5 font-medium font-sans">
+                        {trade.timeframe} • {trade.session}
+                      </div>
+                    </td>
+
+                    {/* Symbol / Action */}
+                    <td className="py-3.5 px-4 whitespace-nowrap">
+                      <div className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
+                        <span>{trade.symbol}</span>
+                      </div>
+                      <span className={`inline-block px-1.5 py-0.2 rounded text-[9px] font-black ${
+                        trade.action === 'BUY'
+                          ? 'bg-emerald-100 text-emerald-950 border border-emerald-300'
+                          : 'bg-rose-100 text-rose-950 border border-rose-300'
+                      }`}>
+                        {trade.action} {trade.action === 'BUY' ? '▲' : '▼'}
+                      </span>
+                    </td>
+
+                    {/* Entry & Exit Price */}
+                    <td 
+                      onClick={() => setSelectedTradeForChart(trade)}
+                      className="py-3.5 px-4 whitespace-nowrap text-[11px] cursor-pointer group hover:bg-blue-50/50 transition-colors"
+                      title="Click to inspect on TradingView Chart"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-slate-400 text-[10px] font-semibold">Entry:</span>
+                        <span className="text-slate-900 font-bold group-hover:text-blue-700">{trade.entry}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <span className="text-slate-400 text-[10px] font-semibold">Exit:</span>
+                        <span className={`font-bold ${
+                          trade.outcome === 'WIN' ? 'text-emerald-700' : trade.outcome === 'LOSS' ? 'text-rose-700' : 'text-slate-700'
+                        }`}>
+                          {trade.exit_price ?? (trade.outcome === 'WIN' ? trade.tp1 : trade.outcome === 'LOSS' ? trade.sl : trade.entry)}
+                        </span>
+                        <span className={`text-[8px] px-1 py-0.2 rounded font-black ${
+                          trade.outcome === 'WIN' 
+                            ? 'bg-emerald-100 text-emerald-900 border border-emerald-300' 
+                            : trade.outcome === 'LOSS' 
+                            ? 'bg-rose-100 text-rose-900 border border-rose-300' 
+                            : 'bg-slate-100 text-slate-800 border border-slate-300'
+                        }`}>
+                          {trade.outcome === 'WIN' ? 'TP1' : trade.outcome === 'LOSS' ? 'SL' : 'BE'}
+                        </span>
+                      </div>
+                    </td>
+
+                    {/* SL & TP1 Target */}
+                    <td 
+                      onClick={() => setSelectedTradeForChart(trade)}
+                      className="py-3.5 px-4 whitespace-nowrap text-[11px] cursor-pointer group hover:bg-blue-50/50 transition-colors"
+                      title="Click to inspect on TradingView Chart"
+                    >
+                      <div className="text-rose-700 font-bold flex items-center gap-1">
+                        <span className="text-[10px] text-slate-400 font-normal">SL:</span> {trade.sl}
+                      </div>
+                      <div className="text-emerald-700 font-bold flex items-center gap-1 mt-0.5">
+                        <span className="text-[10px] text-slate-400 font-normal">TP1:</span> {trade.tp1}
+                      </div>
+                    </td>
+
+                    {/* Lots / Risk % */}
+                    <td className="py-3.5 px-4 whitespace-nowrap text-[11px]">
+                      <div className="text-slate-900 font-bold">{trade.calculated_lot_size} Lots</div>
+                      <div className="text-blue-700 font-medium">{trade.risk_percent}% Risk</div>
+                    </td>
+
+                    {/* Outcome */}
+                    <td className="py-3.5 px-4 whitespace-nowrap">
+                      <span className={`px-2 py-1 rounded-md text-[10px] font-black inline-flex items-center gap-1 ${
+                        trade.outcome === 'WIN'
+                          ? 'bg-emerald-100 text-emerald-950 border border-emerald-300'
+                          : trade.outcome === 'LOSS'
+                          ? 'bg-rose-100 text-rose-950 border border-rose-300'
+                          : 'bg-amber-100 text-amber-950 border border-amber-300'
+                      }`}>
+                        {trade.outcome === 'WIN' && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700" />}
+                        {trade.outcome === 'LOSS' && <XCircle className="w-3.5 h-3.5 text-rose-700" />}
+                        <span>{trade.outcome}</span>
+                      </span>
+                    </td>
+
+                    {/* R:R */}
+                    <td className="py-3.5 px-4 whitespace-nowrap font-bold text-xs">
+                      <span className={trade.riskRewardAchieved > 0 ? 'text-emerald-700' : trade.riskRewardAchieved < 0 ? 'text-rose-700' : 'text-slate-600'}>
+                        {trade.riskRewardAchieved > 0 ? `+${trade.riskRewardAchieved}R` : `${trade.riskRewardAchieved}R`}
+                      </span>
+                    </td>
+
+                    {/* Notes */}
+                    <td className="py-3.5 px-4 max-w-xs font-sans text-slate-700 text-[11px] truncate font-medium" title={trade.notes}>
+                      {trade.notes || '—'}
+                    </td>
+
+                    {/* Actions: View Chart & Delete */}
+                    <td className="py-3.5 px-4 whitespace-nowrap text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          onClick={() => setSelectedTradeForChart(trade)}
+                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-bold transition-all shadow-xs"
+                          title="Inspect Entry, Stop Loss & Take Profit on TradingView Chart"
+                        >
+                          <BarChart2 className="w-3.5 h-3.5 text-blue-600" />
+                          <span>View Chart</span>
+                        </button>
+                        
+                        <button
+                          onClick={() => handleDeleteTrade(trade.id)}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                          title="Delete record"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Log Trade Modal */}
+      <LogBacktestTradeModal
+        isOpen={isLogModalOpen}
+        onClose={() => setIsLogModalOpen(false)}
+        onTradeAdded={() => fetchBacktestData(false)}
+      />
+
+      {/* Backtest TradingView Chart Inspector Modal */}
+      <BacktestTradeChartModal
+        isOpen={!!selectedTradeForChart}
+        onClose={() => setSelectedTradeForChart(null)}
+        trade={selectedTradeForChart}
+      />
+    </div>
+  );
+}

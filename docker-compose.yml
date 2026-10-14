@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  forex-dashboard:
+    build: .
+    container_name: ict-forex-dashboard
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+    volumes:
+      # Persist SQLite database and logs permanently on host
+      - ./data:/app/data
