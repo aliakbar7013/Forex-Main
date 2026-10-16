@@ -286,7 +286,7 @@ for (const s of stopHuntLiveSignals) {
     checks: [
       { id: 'sh_killzone_obs', name: 'Asian Killzone (21:00 - 01:00 NY Time)', passed: true, message: 'Observation only. High/Low marked. No trading taken inside Asian Killzone.', severity: 'INFO' },
       { id: 'sh_sweep_rule', name: `Liquidity Sweep of Asian ${sweptLevel} Post-01:00 NY`, passed: true, message: `Asian Killzone ${sweptLevel} (${sweptPrice}) swept cleanly after 01:00 NY.`, severity: 'INFO' },
-      { id: 'sh_choch_fvg', name: `5m ${isBuy ? 'Bullish' : 'Bearish'} CHoCH + FVG Imbalance Entry`, passed: true, message: `5m timeframe confirmed. Limit entry placed at ${s.entry} on 5m FVG imbalance.`, severity: 'INFO' },
+      { id: 'sh_choch_fvg', name: `5m Origin FVG Imbalance (Formed Before CHoCH) + ${isBuy ? 'Bullish' : 'Bearish'} CHoCH`, passed: true, message: `5m timeframe confirmed. Limit entry placed strictly on the origin 5m FVG imbalance formed before CHoCH at ${s.entry}.`, severity: 'INFO' },
       { id: 'sh_sl_buffer', name: 'Stop Loss Placement (FVG + 2–4 Pips Buffer)', passed: true, message: `Stop Loss placed strictly at ${s.sl} (3.0 pips buffer beyond 5m FVG).`, severity: 'INFO' },
       { id: 'sh_tp_opposing', name: 'Take Profit: Opposing Asian Killzone Level', passed: true, message: `Target placed strictly at Opposing Asian ${opposingLevel} (${s.tp1}). Achieved 1:${s.primaryRR.toFixed(2)} RR.`, severity: 'INFO' },
       { id: 'sh_trading_days', name: 'Trading Days: Monday to Friday (All Week)', passed: true, message: 'Stop Hunt model is actively traded Monday through Friday.', severity: 'INFO' },

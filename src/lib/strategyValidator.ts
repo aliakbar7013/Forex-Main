@@ -403,7 +403,9 @@ export function validateStrategySignal(
     const chochConfirmed = payload.choch_confirmed !== false && payload.choch !== false;
     const fvgConfirmed = payload.fvg_confirmed !== false && payload.imbalance !== false;
     const triggerPassed = Boolean(chochConfirmed && fvgConfirmed);
-    const expectedTrigger = action === 'SELL' ? 'Red Bearish CHoCH + Bearish 5m FVG' : 'Green Bullish CHoCH + Bullish 5m FVG';
+    const expectedTrigger = action === 'SELL' 
+      ? 'Origin Bearish 5m FVG (Formed Before CHoCH) + Red CHoCH' 
+      : 'Origin Bullish 5m FVG (Formed Before CHoCH) + Green CHoCH';
     
     checks.push({
       id: 'stophunt_choch_fvg',
@@ -411,9 +413,9 @@ export function validateStrategySignal(
       passed: triggerPassed,
       severity: 'ERROR',
       expected: expectedTrigger,
-      received: `CHoCH: ${chochConfirmed ? 'Confirmed' : 'Pending'}, FVG: ${fvgConfirmed ? 'Confirmed' : 'Pending'}`,
+      received: `CHoCH: ${chochConfirmed ? 'Confirmed' : 'Pending'}, Origin FVG: ${fvgConfirmed ? 'Confirmed' : 'Pending'}`,
       message: triggerPassed
-        ? `Valid ${expectedTrigger} verified on 5-minute chart.`
+        ? `Valid ${expectedTrigger} verified on 5m chart. Entry placed on the origin imbalance that formed before CHoCH.`
         : `Awaiting 5m ${expectedTrigger} confirmation.`
     });
 
