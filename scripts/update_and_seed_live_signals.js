@@ -23,16 +23,16 @@ const stopHuntLiveSignals = [
     id: 'sig_live_sh_eurusd',
     symbol: 'EURUSD',
     action: 'SELL',
-    entry: 1.08720,
-    sl: 1.08960, // 3 pips buffer above 5m FVG top (1.08930)
-    tp1: 1.08280, // Opposing Asian Killzone Low (swept from High)
-    currentPrice: 1.08540,
-    asianHigh: 1.08920,
-    asianLow: 1.08280,
-    fvgZone: '1.08720 – 1.08930',
-    slDistancePips: 24.0,
-    tpDistancePips: 44.0,
-    primaryRR: 1.83,
+    entry: 1.12613, // User's precise Entry (1.8 pips space below FVG 1.12631)
+    sl: 1.12685, // 2-4 pips buffer above FVG top
+    tp1: 1.12100, // Asian Killzone Low (from chart)
+    currentPrice: 1.12278, // Current price on user's chart
+    asianHigh: 1.12410,
+    asianLow: 1.12100,
+    fvgZone: '1.12631 – 1.12650',
+    slDistancePips: 7.2,
+    tpDistancePips: 51.3,
+    primaryRR: 7.12,
     ratioDesc: 'ECB 3.15% / Fed 4.50% = 0.700 < 1.0',
     effectiveDirection: 'SELL_ONLY',
     lots: 2.08,
@@ -282,7 +282,7 @@ for (const s of stopHuntLiveSignals) {
   const validation = {
     isValid: true,
     overallStatus: 'PASSED',
-    summary: `[IPDA ${s.effectiveDirection} (${s.ratioDesc})] [Stop Hunt 5m] Asian Killzone (21:00–01:00 NY) ${sweptLevel} Swept (${sweptPrice}) post-01:00 NY. 5m ${isBuy ? 'Green' : 'Red'} CHoCH & FVG Retest @ ${s.entry}. SL: ${s.sl} (3 pips buffer). TP: Opposing Asian ${opposingLevel} @ ${s.tp1} (1:${s.primaryRR.toFixed(2)} RR). Traded all week Mon–Fri.`,
+    summary: `[IPDA ${s.effectiveDirection} (${s.ratioDesc})] [Stop Hunt 5m] Asian Killzone (21:00–01:00 NY) ${sweptLevel} Swept (${sweptPrice}) post-01:00 NY. Origin FVG formed first, confirmed by ${isBuy ? 'Green' : 'Red'} CHoCH. Entry with buffer space @ ${s.entry}. SL: ${s.sl}. TP: Opposing Asian ${opposingLevel} @ ${s.tp1} (1:${s.primaryRR.toFixed(2)} RR). Traded all week Mon–Fri.`,
     checks: [
       { id: 'sh_killzone_obs', name: 'Asian Killzone (21:00 - 01:00 NY Time)', passed: true, message: 'Observation only. High/Low marked. No trading taken inside Asian Killzone.', severity: 'INFO' },
       { id: 'sh_sweep_rule', name: `Liquidity Sweep of Asian ${sweptLevel} Post-01:00 NY`, passed: true, message: `Asian Killzone ${sweptLevel} (${sweptPrice}) swept cleanly after 01:00 NY.`, severity: 'INFO' },
