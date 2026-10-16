@@ -361,15 +361,21 @@ export async function syncLiveMarketSignals(): Promise<{
     }
   }
 
-  // 2. For any symbol that doesn't have an existing valid 1st imbalance signal, construct the single CBDR signal
-  for (const symbol of ACTIVE_SYMBOLS) {
-    try {
-      const isMajor = isMajorPair(symbol);
-      const ipdaBuyCheckPre = checkSignalIpdaPermitted(symbol, 'BUY', DEFAULT_CENTRAL_BANK_RATES);
-      const expectedAction: 'BUY' | 'SELL' = ipdaBuyCheckPre.permitted ? 'BUY' : 'SELL';
-      const expectedSlType = isMajor 
-        ? (expectedAction === 'BUY' ? 'London Session Low' : 'London Session High') 
-        : (expectedAction === 'BUY' ? 'Below Imbalance/FVG' : 'Above Imbalance/FVG');
+  // 2. CBDR Model: Strictly executes on Monday, Tuesday, Wednesday only!
+  // On Thursday, Friday, Saturday, and Sunday: STRICT NON-TRADING DAYS. NO CBDR ENTRIES TAKEN!
+  const now = new Date();
+  const nyContext = getMarketTimeContext(now);
+  const isTodayCbdrTradingDay = nyContext.dayOfWeek >= 1 && nyContext.dayOfWeek <= 3;
+
+  if (isTodayCbdrTradingDay) {
+    for (const symbol of ACTIVE_SYMBOLS) {
+      try {
+        const isMajor = isMajorPair(symbol);
+        const ipdaBuyCheckPre = checkSignalIpdaPermitted(symbol, 'BUY', DEFAULT_CENTRAL_BANK_RATES);
+        const expectedAction: 'BUY' | 'SELL' = ipdaBuyCheckPre.permitted ? 'BUY' : 'SELL';
+        const expectedSlType = isMajor 
+          ? (expectedAction === 'BUY' ? 'London Session Low' : 'London Session High') 
+          : (expectedAction === 'BUY' ? 'Below Imbalance/FVG' : 'Above Imbalance/FVG');
 
       if (cbdrSignalMap.has(symbol)) {
         const existing = cbdrSignalMap.get(symbol);
@@ -751,6 +757,11 @@ export async function syncLiveMarketSignals(): Promise<{
       console.error(`Error constructing live signal for ${symbol}`, err);
     }
   }
+} else {
+  // Non-trading day for CBDR (Thursday, Friday, Saturday, Sunday)
+  // Strictly do not show or keep any active CBDR signals in the live feed!
+  db.prepare("DELETE FROM signals WHERE strategy = 'CBDR'").run();
+}
 
   // 3. For key Stop Hunt pairs, construct or maintain authentic Stop Hunt 5m signals
   const STOP_HUNT_SPECS = [

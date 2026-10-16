@@ -36,7 +36,7 @@ import { BacktestStudio } from '@/components/dashboard/BacktestStudio';
 import { TradingViewRealtimeChart } from '@/components/dashboard/TradingViewRealtimeChart';
 import { StrategyStudio } from '@/components/dashboard/StrategyStudio';
 import { getSignalTradingDay } from '@/lib/strategyValidator';
-import { Sparkles, BarChart3, Zap, Scale, BarChart2, CheckCircle2, AlertTriangle, X, Radio, BookOpen } from 'lucide-react';
+import { Sparkles, BarChart3, Zap, Scale, BarChart2, CheckCircle2, AlertTriangle, X, Radio, BookOpen, Clock } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { 
   STATIC_INITIAL_SIGNALS, 
@@ -675,17 +675,22 @@ export default function TradingDashboard() {
   }, []);
 
   // 5. Filtered Signals Computation
-  // Ensure that live running trades (IN_TRADE) are always visible on the dashboard!
+  // Strictly enforce strategy categorization & trading day rules:
   const filteredSignals = useMemo(() => {
+    const todayNY = new Date().toLocaleDateString('en-US', { timeZone: 'America/New_York', weekday: 'long' });
+    const isCbdrTradingDay = todayNY === 'Monday' || todayNY === 'Tuesday' || todayNY === 'Wednesday';
+
     return signals.filter(s => {
-      // For CBDR: If pending entry on a non-trading day, do not display
-      if (s.strategy === 'CBDR' && s.status === 'PENDING') {
+      // 1. Mandatory CBDR Strategy Rule:
+      // Strictly Monday, Tuesday, Wednesday ONLY!
+      // On Thursday, Friday, Saturday, Sunday: NO CBDR TRADES/ENTRIES PERMITTED!
+      if (s.strategy === 'CBDR') {
+        if (!isCbdrTradingDay) return false;
         const { isCbdrValid } = getSignalTradingDay(s);
-        if (!isCbdrValid) {
-          return false;
-        }
+        if (!isCbdrValid) return false;
       }
 
+      // 2. Strict Strategy Categorization Filter:
       if (selectedStrategy !== 'ALL' && s.strategy.toUpperCase() !== selectedStrategy.toUpperCase()) {
         return false;
       }
@@ -713,11 +718,17 @@ export default function TradingDashboard() {
   }, []);
 
   const strategyCounts = useMemo(() => {
+    const todayNY = new Date().toLocaleDateString('en-US', { timeZone: 'America/New_York', weekday: 'long' });
+    const isCbdrTradingDay = todayNY === 'Monday' || todayNY === 'Tuesday' || todayNY === 'Wednesday';
+    const validCbdrSignals = isCbdrTradingDay ? signals.filter(s => s.strategy === 'CBDR' && getSignalTradingDay(s).isCbdrValid) : [];
+    const stopHuntSignals = signals.filter(s => s.strategy === 'STOP_HUNT');
+    const newYorkSignals = signals.filter(s => s.strategy === 'NEW_YORK');
+
     return {
-      all: signals.length,
-      cbdr: signals.filter(s => s.strategy === 'CBDR').length,
-      stopHunt: signals.filter(s => s.strategy === 'STOP_HUNT').length,
-      newYork: signals.filter(s => s.strategy === 'NEW_YORK').length
+      all: validCbdrSignals.length + stopHuntSignals.length + newYorkSignals.length,
+      cbdr: validCbdrSignals.length,
+      stopHunt: stopHuntSignals.length,
+      newYork: newYorkSignals.length
     };
   }, [signals]);
 
@@ -907,7 +918,7 @@ export default function TradingDashboard() {
           {(() => {
             const todayNYDay = new Date().toLocaleDateString('en-US', { timeZone: 'America/New_York', weekday: 'long' });
             const isThursdayOrFriday = todayNYDay === 'Thursday' || todayNYDay === 'Friday';
-            if (!isThursdayOrFriday || (selectedStrategy !== 'ALL' && selectedStrategy !== 'CBDR')) return null;
+            if (!isThursdayOrFriday || selectedStrategy === 'STOP_HUNT') return null;
 
             return (
               <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-50 via-orange-50/40 to-amber-50 border border-amber-300 text-amber-950 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
@@ -925,14 +936,18 @@ export default function TradingDashboard() {
                       </span>
                     </div>
                     <p className="text-xs text-slate-700 mt-1 leading-relaxed">
-                      Under ICT CBDR strategy rules, <strong>Thursday and Friday are strict Non-Trading Days</strong> (no new entries taken). Any active CBDR positions you are seeing below are <strong>running carry-over trades entered on previous valid trading sessions (Wednesday, Oct 7, 2026)</strong>.
+                      Under ICT CBDR institutional strategy rules, <strong>Thursday and Friday are strict Non-Trading Days (zero entries taken)</strong>. For active live trading setups today, select the <strong>Stop Hunt Model (5m)</strong> tab which trades all week (Monday through Friday).
                     </p>
                   </div>
                 </div>
                 <div className="text-right shrink-0">
-                  <span className="text-[11px] font-mono font-bold bg-white px-3 py-1.5 rounded-xl border border-amber-300 shadow-2xs block text-slate-800">
-                    📅 Entry Placed: Wednesday (Oct 7)
-                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedStrategy('STOP_HUNT')}
+                    className="px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-xs transition-colors flex items-center gap-1.5"
+                  >
+                    <span>Switch to Stop Hunt (5m)</span>
+                  </button>
                 </div>
               </div>
             );
@@ -1002,27 +1017,80 @@ export default function TradingDashboard() {
             </div>
           ) : filteredSignals.length === 0 ? (
             <div className="bg-white border border-slate-200 rounded-2xl p-12 text-center shadow-sm">
-              <Sparkles className="w-8 h-8 text-blue-600 mx-auto mb-3" />
-              <h3 className="text-base font-bold text-slate-900 mb-1">No active signals found</h3>
-              <p className="text-xs text-slate-600 max-w-md mx-auto mb-4 font-medium">
-                There are no signals matching your filter. Note that for CBDR, only Monday, Tuesday, and Wednesday trades are displayed. Check the Backtesting Archive for historical trades.
-              </p>
-              <div className="flex items-center justify-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => setIsSimulatorOpen(true)}
-                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs"
-                >
-                  Launch Webhook Simulator
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('backtest')}
-                  className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-xs"
-                >
-                  View Backtest Archive
-                </button>
-              </div>
+              {selectedStrategy === 'CBDR' ? (
+                <>
+                  <div className="w-12 h-12 rounded-2xl bg-amber-100 border border-amber-300 flex items-center justify-center text-amber-700 mx-auto mb-3">
+                    <AlertTriangle className="w-6 h-6" />
+                  </div>
+                  <h3 className="text-base font-bold text-slate-900 mb-1">
+                    No CBDR Entries Today ({new Date().toLocaleDateString('en-US', { timeZone: 'America/New_York', weekday: 'long' })})
+                  </h3>
+                  <p className="text-xs text-slate-600 max-w-md mx-auto mb-4 font-medium leading-relaxed">
+                    Under ICT CBDR institutional rules, trading is strictly <strong>Monday, Tuesday, and Wednesday</strong> (London Session 03:00 – 11:45 NY). <strong>Thursday and Friday are strict Non-Trading Days</strong> (zero entries taken).
+                  </p>
+                  <div className="flex items-center justify-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedStrategy('STOP_HUNT')}
+                      className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs shadow-xs"
+                    >
+                      View Live Stop Hunt Trades (Mon–Fri)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('backtest')}
+                      className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-xs"
+                    >
+                      View CBDR Backtest Archive
+                    </button>
+                  </div>
+                </>
+              ) : selectedStrategy === 'NEW_YORK' ? (
+                <>
+                  <div className="w-12 h-12 rounded-2xl bg-purple-100 border border-purple-300 flex items-center justify-center text-purple-700 mx-auto mb-3">
+                    <Clock className="w-6 h-6" />
+                  </div>
+                  <h3 className="text-base font-bold text-slate-900 mb-1">
+                    No Active New York Index Trades
+                  </h3>
+                  <p className="text-xs text-slate-600 max-w-md mx-auto mb-4 font-medium leading-relaxed">
+                    The New York Open Index model operates on NAS100, US30, and SPX500 during the 09:30 AM – 12:00 PM NY session.
+                  </p>
+                  <div className="flex items-center justify-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedStrategy('STOP_HUNT')}
+                      className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs shadow-xs"
+                    >
+                      View Live Stop Hunt Trades
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-8 h-8 text-blue-600 mx-auto mb-3" />
+                  <h3 className="text-base font-bold text-slate-900 mb-1">No active signals found</h3>
+                  <p className="text-xs text-slate-600 max-w-md mx-auto mb-4 font-medium">
+                    There are no signals matching your filter. Check the Backtesting Archive for historical trades.
+                  </p>
+                  <div className="flex items-center justify-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setIsSimulatorOpen(true)}
+                      className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs"
+                    >
+                      Launch Webhook Simulator
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('backtest')}
+                      className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-xs"
+                    >
+                      View Backtest Archive
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           ) : viewMode === 'cards' ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">

@@ -5,16 +5,12 @@ const dbPath = path.join(__dirname, '..', 'data', 'trading_dashboard.db');
 const db = new Database(dbPath);
 db.pragma('journal_mode = WAL');
 
-console.log('--- UPDATING AND SEEDING LIVE SIGNALS ---');
+console.log('--- SYNCHRONIZING LIVE SIGNALS DATABASE ---');
 
-// 1. Set all existing CBDR signals created_at to Wednesday (2026-10-14T09:05:00.000Z)
-const cbdrUpdate = db.prepare(`
-  UPDATE signals 
-  SET created_at = '2026-10-14T09:05:00.000Z', 
-      status = 'IN_TRADE' 
-  WHERE strategy = 'CBDR'
-`).run();
-console.log(`Updated ${cbdrUpdate.changes} CBDR live signals to Wednesday (2026-10-14) carry-over status.`);
+// 1. Friday Rule: Under ICT CBDR rules, Friday is a STRICT NON-TRADING DAY (no entries permitted).
+// Clear any active CBDR signals from the live feed on Thursday/Friday.
+const deletedCbdr = db.prepare("DELETE FROM signals WHERE strategy = 'CBDR'").run();
+console.log(`Friday Check: Cleared ${deletedCbdr.changes} CBDR signals from live feed (CBDR trades strictly Mon–Wed only).`);
 
 // 2. Define authentic Stop Hunt 5m live positions for Friday (2026-10-16)
 const stopHuntLiveSignals = [
@@ -285,7 +281,7 @@ for (const s of stopHuntLiveSignals) {
     updated_at: new Date().toISOString()
   });
 
-  console.log(`+ Inserted Live STOP_HUNT 5m: ${s.symbol} ${s.action} | Entry: ${s.entry} | SL: ${s.sl} | TP: ${s.tp1} (Opposing Asian ${opposingLevel}) | Floating: ${inProfit ? '+' : ''}${floatingPips} pips`);
+  console.log(`+ Active Live STOP_HUNT 5m: ${s.symbol} ${s.action} | Entry: ${s.entry} | SL: ${s.sl} | TP: ${s.tp1} (Opposing Asian ${opposingLevel}) | Floating: ${inProfit ? '+' : ''}${floatingPips} pips`);
 }
 
 console.log('\n--- VERIFYING SIGNALS SUMMARY ---');
