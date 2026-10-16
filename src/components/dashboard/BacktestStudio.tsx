@@ -266,12 +266,12 @@ export function BacktestStudio() {
             </div>
 
             <h3 className="text-base sm:text-lg font-black tracking-tight text-white flex items-center gap-2">
-              TradingView Institutional 15m CBDR &amp; New York Quantitative Engine
+              TradingView Institutional 15m CBDR &amp; 5m Stop Hunt Quantitative Engine
             </h3>
             <p className="text-xs text-blue-200/80 max-w-2xl">
-              Streaming real-time rates directly from TradingView charts for all 28 Forex pairs + Gold + US Indices. 
+              Streaming real-time rates directly from TradingView charts for all 28 Forex pairs + Gold. 
               <strong className="text-amber-300 ml-1">Focus #1:</strong> Central Bank Dealers Range (CBDR) 15m London Killzone (03:00–11:45 NY, Mon–Wed, PDH/PDL sweeps for majors, direct 1st FVG for crosses, strict 1:3 RR). 
-              <strong className="text-amber-300 ml-1">Focus #2:</strong> New York Strategy (09:30 AM–12:00 PM NY, 15m range sweep + 1m CHoCH/FVG entry).
+              <strong className="text-amber-300 ml-1">Focus #2:</strong> Stop Hunt Model 5m (Asian KZ 21:00–01:00 NY observation, post-01:00 NY sweep, 5m CHoCH + FVG, SL 2–4 pips, TP Opposing Asian Level, Mon–Fri).
             </p>
           </div>
 
@@ -536,14 +536,13 @@ export function BacktestStudio() {
             </div>
 
             <p className="text-xs text-slate-600 font-medium">
-              Comparative backtest metrics across the 3 core models with IPDA rate alignment and defensive capital protection.
+              Comparative backtest metrics across the 2 institutional models with IPDA rate alignment and defensive capital protection.
             </p>
 
             <div className="space-y-3">
               {[
-                { key: 'CBDR', name: '1. CBDR Strategy (15m London Mon–Wed)', badge: 'Mandatory IPDA • Strict 1:3' },
-                { key: 'STOP_HUNT', name: '2. Stop Hunt Model (5m Asian Sweep)', badge: 'Asian 21:00-01:00 KZ • Mon-Fri' },
-                { key: 'NEW_YORK', name: '3. New York Strategy (1m / 15m NY Open)', badge: 'IPDA Exempt • Indices & FX' }
+                { key: 'CBDR', name: '1. CBDR Strategy (15m London Mon–Wed)', badge: 'Mandatory IPDA • Strict 1:3 RR' },
+                { key: 'STOP_HUNT', name: '2. Stop Hunt Model (5m Post-Asian KZ)', badge: 'Asian 21:00-01:00 KZ • Mon-Fri • Opposing Asian TP' }
               ].map(strat => {
                 const stratData = stats.strategyBreakdown[strat.key] || {
                   strategy: strat.key,
@@ -628,10 +627,9 @@ export function BacktestStudio() {
               onChange={e => setStrategyFilter(e.target.value)}
               className="bg-transparent text-slate-900 font-bold outline-none cursor-pointer"
             >
-              <option value="ALL">All Strategies</option>
+              <option value="ALL">All Strategies (CBDR &amp; Stop Hunt)</option>
               <option value="CBDR">1. CBDR Strategy (15m Focus #1)</option>
-              <option value="NEW_YORK">2. New York Strategy (1m Focus #2)</option>
-              <option value="STOP_HUNT">Stop Hunt (5m)</option>
+              <option value="STOP_HUNT">2. Stop Hunt Model (5m Focus #2)</option>
             </select>
           </div>
 

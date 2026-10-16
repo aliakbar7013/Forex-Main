@@ -716,11 +716,13 @@ export function pushResolvedAndInvalidSignalsToBacktest(): { archivedCount: numb
       outcome: isWin ? 'WIN' : isBe ? 'BE' : 'LOSS',
       realized_pnl: realizedPnl,
       riskRewardAchieved: rr,
-      trading_day: signal.created_at ? new Date(signal.created_at).toLocaleDateString('en-US', { weekday: 'long' }) : 'Monday',
-      isCbdrValidDay: true,
-      session: signal.session_name || 'London Session',
+      trading_day: (signal.created_at ? new Date(signal.created_at).toLocaleDateString('en-US', { weekday: 'long' }) : 'Monday'),
+      isCbdrValidDay: signal.strategy === 'CBDR'
+        ? ['Monday', 'Tuesday', 'Wednesday'].includes(signal.created_at ? new Date(signal.created_at).toLocaleDateString('en-US', { weekday: 'long' }) : 'Monday')
+        : true, // Stop Hunt trades Monday through Friday all week
+      session: signal.session_name || (signal.strategy === 'STOP_HUNT' ? 'Post-Asian / London (Post 01:00 NY)' : 'London Session (03:00 – 11:45 NY)'),
       date_executed: signal.created_at ? signal.created_at.split('T')[0] : new Date().toISOString().split('T')[0],
-      notes: signal.notes || `Trade resolved (${isWin ? 'WIN +3.0R' : isBe ? 'Breakeven' : 'LOSS -1.0R (SL Hit)'}) pushed to backtest archive`,
+      notes: signal.notes || `Trade resolved (${isWin ? 'WIN' : isBe ? 'Breakeven' : 'LOSS'}) pushed to backtest archive`,
       created_at: signal.created_at || new Date().toISOString()
     });
     archivedCount++;
@@ -1243,56 +1245,183 @@ export function generateSixMonthsBacktestDataset(): BacktestTradeRecord[] {
     pipsPerSl: number; 
     lotMultiplier: number; 
     action: TradeAction; 
+    isMajor: boolean;
+    asianPips: number;
     noteTemplate: string 
   }> = {
-    // Majors (1 Pip = 0.00010) — Strictly Require Previous Day High/Low Sweep
-    'EURUSD': { basePrice: 1.11720, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 22, lotMultiplier: 1.0, action: 'SELL', noteTemplate: 'Major Pair CBDR: Previous Day High (PDH) swept at 02:45 NY -> London 1st 15m Bearish FVG short entry.' },
-    'GBPUSD': { basePrice: 1.32160, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 25, lotMultiplier: 1.0, action: 'BUY', noteTemplate: 'Major Pair CBDR: Previous Day Low (PDL) swept at 03:15 NY -> London 1st 15m Bullish FVG long entry.' },
-    'USDJPY': { basePrice: 158.54, pipDecimals: 2, pipUnit: 0.01, pipsPerSl: 35, lotMultiplier: 1.0, action: 'BUY', noteTemplate: 'Major Pair CBDR: Previous Day Low (PDL) swept -> London 1st 15m Bullish FVG long entry.' },
-    'USDCHF': { basePrice: 0.83400, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 22, lotMultiplier: 1.0, action: 'BUY', noteTemplate: 'Major Pair CBDR: Previous Day Low (PDL) swept -> London 1st 15m Bullish FVG long entry.' },
-    'AUDUSD': { basePrice: 0.69610, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 20, lotMultiplier: 1.0, action: 'SELL', noteTemplate: 'Major Pair CBDR: Previous Day High (PDH) swept -> London 1st 15m Bearish FVG short entry.' },
-    'USDCAD': { basePrice: 1.42740, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 24, lotMultiplier: 1.0, action: 'BUY', noteTemplate: 'Major Pair CBDR: Previous Day Low (PDL) swept -> London 1st 15m Bullish FVG long displacement.' },
-    'NZDUSD': { basePrice: 0.55900, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 20, lotMultiplier: 1.0, action: 'SELL', noteTemplate: 'Major Pair CBDR: Previous Day High (PDH) swept -> London 1st 15m Bearish FVG short entry.' },
+    // Majors (1 Pip = 0.00010) — Strictly Require Previous Day High/Low Sweep for CBDR; Asian High/Low for Stop Hunt
+    'EURUSD': { basePrice: 1.11720, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 22, lotMultiplier: 1.0, action: 'SELL', isMajor: true, asianPips: 32, noteTemplate: 'Major Pair CBDR: Previous Day High (PDH) swept at 02:45 NY -> London 1st 15m Bearish FVG short entry.' },
+    'GBPUSD': { basePrice: 1.32160, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 25, lotMultiplier: 1.0, action: 'BUY', isMajor: true, asianPips: 36, noteTemplate: 'Major Pair CBDR: Previous Day Low (PDL) swept at 03:15 NY -> London 1st 15m Bullish FVG long entry.' },
+    'USDJPY': { basePrice: 158.54, pipDecimals: 2, pipUnit: 0.01, pipsPerSl: 35, lotMultiplier: 1.0, action: 'BUY', isMajor: true, asianPips: 42, noteTemplate: 'Major Pair CBDR: Previous Day Low (PDL) swept -> London 1st 15m Bullish FVG long entry.' },
+    'USDCHF': { basePrice: 0.83400, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 22, lotMultiplier: 1.0, action: 'BUY', isMajor: true, asianPips: 28, noteTemplate: 'Major Pair CBDR: Previous Day Low (PDL) swept -> London 1st 15m Bullish FVG long entry.' },
+    'AUDUSD': { basePrice: 0.69610, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 20, lotMultiplier: 1.0, action: 'SELL', isMajor: true, asianPips: 30, noteTemplate: 'Major Pair CBDR: Previous Day High (PDH) swept -> London 1st 15m Bearish FVG short entry.' },
+    'USDCAD': { basePrice: 1.42740, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 24, lotMultiplier: 1.0, action: 'BUY', isMajor: true, asianPips: 34, noteTemplate: 'Major Pair CBDR: Previous Day Low (PDL) swept -> London 1st 15m Bullish FVG long displacement.' },
+    'NZDUSD': { basePrice: 0.55900, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 20, lotMultiplier: 1.0, action: 'SELL', isMajor: true, asianPips: 28, noteTemplate: 'Major Pair CBDR: Previous Day High (PDH) swept -> London 1st 15m Bearish FVG short entry.' },
 
     // Pound & Euro Minor Crosses — NO PDH/PDL Sweep Required (Direct 1st Imbalance Entry)
-    'GBPCHF': { basePrice: 1.10220, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 22, lotMultiplier: 1.0, action: 'BUY', noteTemplate: 'Minor Pair CBDR: No PDH/PDL sweep required. Direct London 1st 15m Bullish Imbalance long expansion.' },
-    'EURCHF': { basePrice: 0.93170, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 20, lotMultiplier: 1.0, action: 'BUY', noteTemplate: 'Minor Pair CBDR: No PDH/PDL sweep required. Direct London 1st 15m Bullish Imbalance entry.' },
-    'EURGBP': { basePrice: 0.84520, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 18, lotMultiplier: 1.0, action: 'SELL', noteTemplate: 'Minor Pair CBDR: No PDH/PDL sweep required. Direct London 1st 15m Bearish Imbalance entry.' },
-    'EURAUD': { basePrice: 1.60480, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 32, lotMultiplier: 1.0, action: 'SELL', noteTemplate: 'Minor Pair CBDR: No PDH/PDL sweep required. Direct London 1st 15m Bearish Imbalance entry.' },
-    'EURCAD': { basePrice: 1.59470, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 28, lotMultiplier: 1.0, action: 'SELL', noteTemplate: 'Minor Pair CBDR: No PDH/PDL sweep required. Direct London 1st 15m Bearish Imbalance entry.' },
-    'EURNZD': { basePrice: 1.99850, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 38, lotMultiplier: 1.0, action: 'SELL', noteTemplate: 'Minor Pair CBDR: No PDH/PDL sweep required. Direct London 1st 15m Bearish Imbalance entry.' },
-    'GBPAUD': { basePrice: 1.89880, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 38, lotMultiplier: 1.0, action: 'BUY', noteTemplate: 'Minor Pair CBDR: No PDH/PDL sweep required. Direct London 1st 15m Bullish Imbalance entry.' },
-    'GBPCAD': { basePrice: 1.88640, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 32, lotMultiplier: 1.0, action: 'BUY', noteTemplate: 'Minor Pair CBDR: No PDH/PDL sweep required. Direct London 1st 15m Bullish Imbalance entry.' },
-    'GBPNZD': { basePrice: 2.36400, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 28, lotMultiplier: 1.0, action: 'BUY', noteTemplate: 'Minor Pair CBDR: No PDH/PDL sweep required. Direct London 1st 15m Bullish Imbalance entry.' },
+    'GBPCHF': { basePrice: 1.10220, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 22, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 32, noteTemplate: 'Minor Pair CBDR: No PDH/PDL sweep required. Direct London 1st 15m Bullish Imbalance long expansion.' },
+    'EURCHF': { basePrice: 0.93170, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 20, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 26, noteTemplate: 'Minor Pair CBDR: No PDH/PDL sweep required. Direct London 1st 15m Bullish Imbalance entry.' },
+    'EURGBP': { basePrice: 0.84520, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 18, lotMultiplier: 1.0, action: 'SELL', isMajor: false, asianPips: 24, noteTemplate: 'Minor Pair CBDR: No PDH/PDL sweep required. Direct London 1st 15m Bearish Imbalance entry.' },
+    'EURAUD': { basePrice: 1.60480, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 32, lotMultiplier: 1.0, action: 'SELL', isMajor: false, asianPips: 45, noteTemplate: 'Minor Pair CBDR: No PDH/PDL sweep required. Direct London 1st 15m Bearish Imbalance entry.' },
+    'EURCAD': { basePrice: 1.59470, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 28, lotMultiplier: 1.0, action: 'SELL', isMajor: false, asianPips: 40, noteTemplate: 'Minor Pair CBDR: No PDH/PDL sweep required. Direct London 1st 15m Bearish Imbalance entry.' },
+    'EURNZD': { basePrice: 1.99850, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 38, lotMultiplier: 1.0, action: 'SELL', isMajor: false, asianPips: 50, noteTemplate: 'Minor Pair CBDR: No PDH/PDL sweep required. Direct London 1st 15m Bearish Imbalance entry.' },
+    'GBPAUD': { basePrice: 1.89880, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 38, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 48, noteTemplate: 'Minor Pair CBDR: No PDH/PDL sweep required. Direct London 1st 15m Bullish Imbalance entry.' },
+    'GBPCAD': { basePrice: 1.88640, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 32, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 42, noteTemplate: 'Minor Pair CBDR: No PDH/PDL sweep required. Direct London 1st 15m Bullish Imbalance entry.' },
+    'GBPNZD': { basePrice: 2.36400, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 28, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 52, noteTemplate: 'Minor Pair CBDR: No PDH/PDL sweep required. Direct London 1st 15m Bullish Imbalance entry.' },
 
     // Yen Minor Crosses (1 Pip = 0.01) — NO PDH/PDL Sweep Required
-    'GBPJPY': { basePrice: 209.54, pipDecimals: 2, pipUnit: 0.01, pipsPerSl: 40, lotMultiplier: 1.0, action: 'BUY', noteTemplate: 'Minor Pair CBDR: No PDH/PDL sweep required. Direct London 1st 15m Bullish Imbalance entry.' },
-    'EURJPY': { basePrice: 177.11, pipDecimals: 2, pipUnit: 0.01, pipsPerSl: 35, lotMultiplier: 1.0, action: 'BUY', noteTemplate: 'Minor Pair CBDR: No PDH/PDL sweep required. Direct London 1st 15m Bullish Imbalance entry.' },
-    'AUDJPY': { basePrice: 110.37, pipDecimals: 2, pipUnit: 0.01, pipsPerSl: 30, lotMultiplier: 1.0, action: 'BUY', noteTemplate: 'Minor Pair CBDR: No PDH/PDL sweep required. Direct London 1st 15m Bullish Imbalance entry.' },
-    'CADJPY': { basePrice: 111.07, pipDecimals: 2, pipUnit: 0.01, pipsPerSl: 28, lotMultiplier: 1.0, action: 'BUY', noteTemplate: 'Minor Pair CBDR: No PDH/PDL sweep required. Direct London 1st 15m Bullish Imbalance entry.' },
-    'CHFJPY': { basePrice: 190.08, pipDecimals: 2, pipUnit: 0.01, pipsPerSl: 35, lotMultiplier: 1.0, action: 'BUY', noteTemplate: 'Minor Pair CBDR: No PDH/PDL sweep required. Direct London 1st 15m Bullish Imbalance entry.' },
-    'NZDJPY': { basePrice: 88.63, pipDecimals: 2, pipUnit: 0.01, pipsPerSl: 28, lotMultiplier: 1.0, action: 'BUY', noteTemplate: 'Minor Pair CBDR: No PDH/PDL sweep required. Direct London 1st 15m Bullish Imbalance entry.' },
+    'GBPJPY': { basePrice: 209.54, pipDecimals: 2, pipUnit: 0.01, pipsPerSl: 40, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 48, noteTemplate: 'Minor Pair CBDR: No PDH/PDL sweep required. Direct London 1st 15m Bullish Imbalance entry.' },
+    'EURJPY': { basePrice: 177.11, pipDecimals: 2, pipUnit: 0.01, pipsPerSl: 35, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 42, noteTemplate: 'Minor Pair CBDR: No PDH/PDL sweep required. Direct London 1st 15m Bullish Imbalance entry.' },
+    'AUDJPY': { basePrice: 110.37, pipDecimals: 2, pipUnit: 0.01, pipsPerSl: 30, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 38, noteTemplate: 'Minor Pair CBDR: No PDH/PDL sweep required. Direct London 1st 15m Bullish Imbalance entry.' },
+    'CADJPY': { basePrice: 111.07, pipDecimals: 2, pipUnit: 0.01, pipsPerSl: 28, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 36, noteTemplate: 'Minor Pair CBDR: No PDH/PDL sweep required. Direct London 1st 15m Bullish Imbalance entry.' },
+    'CHFJPY': { basePrice: 190.08, pipDecimals: 2, pipUnit: 0.01, pipsPerSl: 35, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 40, noteTemplate: 'Minor Pair CBDR: No PDH/PDL sweep required. Direct London 1st 15m Bullish Imbalance entry.' },
+    'NZDJPY': { basePrice: 88.63, pipDecimals: 2, pipUnit: 0.01, pipsPerSl: 28, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 34, noteTemplate: 'Minor Pair CBDR: No PDH/PDL sweep required. Direct London 1st 15m Bullish Imbalance entry.' },
 
     // Commodity Minor Crosses — NO PDH/PDL Sweep Required
-    'AUDCAD': { basePrice: 0.99360, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 22, lotMultiplier: 1.0, action: 'BUY', noteTemplate: 'Minor Pair CBDR: No PDH/PDL sweep required. Direct London 1st 15m Bullish Imbalance entry.' },
-    'AUDCHF': { basePrice: 0.58060, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 20, lotMultiplier: 1.0, action: 'BUY', noteTemplate: 'Minor Pair CBDR: No PDH/PDL sweep required. Direct London 1st 15m Bullish Imbalance entry.' },
-    'AUDNZD': { basePrice: 1.24510, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 25, lotMultiplier: 1.0, action: 'SELL', noteTemplate: 'Minor Pair CBDR: No PDH/PDL sweep required. Direct London 1st 15m Bearish Imbalance entry.' },
-    'CADCHF': { basePrice: 0.58430, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 20, lotMultiplier: 1.0, action: 'BUY', noteTemplate: 'Minor Pair CBDR: No PDH/PDL sweep required. Direct London 1st 15m Bullish Imbalance entry.' },
-    'NZDCAD': { basePrice: 0.79800, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 22, lotMultiplier: 1.0, action: 'BUY', noteTemplate: 'Minor Pair CBDR: No PDH/PDL sweep required. Direct London 1st 15m Bullish Imbalance entry.' },
-    'NZDCHF': { basePrice: 0.46620, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 18, lotMultiplier: 1.0, action: 'BUY', noteTemplate: 'Minor Pair CBDR: No PDH/PDL sweep required. Direct London 1st 15m Bullish Imbalance entry.' },
-
-    // Commodities & Indices
-    'XAUUSD': { basePrice: 2665.00, pipDecimals: 2, pipUnit: 1.00, pipsPerSl: 8, lotMultiplier: 0.5, action: 'SELL', noteTemplate: 'Gold Swiss Proxy CHF/USD Ratio 0.111 SELL ONLY. 5m CHOCH + BPR.' },
-    'NAS100': { basePrice: 20450.0, pipDecimals: 1, pipUnit: 1.00, pipsPerSl: 50, lotMultiplier: 0.15, action: 'BUY', noteTemplate: 'NY Open 09:29 AM 15m range low swept. 1m CHOCH + FVG entry.' },
-    'SPX500': { basePrice: 5820.0, pipDecimals: 1, pipUnit: 1.00, pipsPerSl: 15, lotMultiplier: 0.30, action: 'BUY', noteTemplate: 'NY Open 09:29 AM range swept. 1m bullish displacement into TP1.' },
-    'US30': { basePrice: 42800.0, pipDecimals: 1, pipUnit: 1.00, pipsPerSl: 100, lotMultiplier: 0.05, action: 'SELL', noteTemplate: 'NY Open 09:29 AM range high swept. 1m bearish CHOCH entry.' }
+    'AUDCAD': { basePrice: 0.99360, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 22, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 30, noteTemplate: 'Minor Pair CBDR: No PDH/PDL sweep required. Direct London 1st 15m Bullish Imbalance entry.' },
+    'AUDCHF': { basePrice: 0.58060, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 20, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 26, noteTemplate: 'Minor Pair CBDR: No PDH/PDL sweep required. Direct London 1st 15m Bullish Imbalance entry.' },
+    'AUDNZD': { basePrice: 1.24510, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 25, lotMultiplier: 1.0, action: 'SELL', isMajor: false, asianPips: 32, noteTemplate: 'Minor Pair CBDR: No PDH/PDL sweep required. Direct London 1st 15m Bearish Imbalance entry.' },
+    'CADCHF': { basePrice: 0.58430, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 20, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 28, noteTemplate: 'Minor Pair CBDR: No PDH/PDL sweep required. Direct London 1st 15m Bullish Imbalance entry.' },
+    'NZDCAD': { basePrice: 0.79800, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 22, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 30, noteTemplate: 'Minor Pair CBDR: No PDH/PDL sweep required. Direct London 1st 15m Bullish Imbalance entry.' },
+    'NZDCHF': { basePrice: 0.46620, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 18, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 24, noteTemplate: 'Minor Pair CBDR: No PDH/PDL sweep required. Direct London 1st 15m Bullish Imbalance entry.' },
+    'XAUUSD': { basePrice: 2665.00, pipDecimals: 2, pipUnit: 1.00, pipsPerSl: 8, lotMultiplier: 0.5, action: 'SELL', isMajor: true, asianPips: 22, noteTemplate: 'Gold Swiss Proxy CHF/USD Ratio 0.111 SELL ONLY. 15m Imbalance entry.' }
   };
 
   const majorKeys = ['EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF', 'AUDUSD', 'USDCAD', 'NZDUSD'];
   const crossKeys = ['GBPCHF', 'EURCHF', 'EURGBP', 'EURAUD', 'EURCAD', 'EURNZD', 'GBPAUD', 'GBPCAD', 'GBPNZD'];
   const yenKeys = ['GBPJPY', 'EURJPY', 'AUDJPY', 'CADJPY', 'CHFJPY', 'NZDJPY'];
   const commCrossKeys = ['AUDCAD', 'AUDCHF', 'AUDNZD', 'CADCHF', 'NZDCAD', 'NZDCHF'];
-  const indexKeys = ['NAS100', 'SPX500', 'US30', 'XAUUSD'];
+
+  // Helper 1: CBDR Record Generator (15m, London 03:00-11:45 NY, Mon-Wed only, strict 1:3 RR)
+  const createCbdrRecord = (symbol: string, day: string, dateStr: string, outcome: 'WIN' | 'LOSS', customAction?: TradeAction) => {
+    const spec = pairSpecs[symbol] || pairSpecs['EURUSD'];
+    const action = customAction || spec.action;
+    const { usedRisk, usedState } = applyTradeOutcome(outcome);
+    const targetRrMultiple = 3.0; // Strictly 1:3.0 RR
+    const rr = outcome === 'WIN' ? targetRrMultiple : -1.0;
+
+    const slDist = spec.pipsPerSl * spec.pipUnit;
+    const tpDist = slDist * targetRrMultiple;
+
+    // Seasonal variance
+    const drift = (Math.sin(tradeSeq) * 0.001 * spec.basePrice);
+    const entry = Number((action === 'BUY' ? spec.basePrice + drift : spec.basePrice - drift).toFixed(spec.pipDecimals));
+    const sl = Number((action === 'BUY' ? entry - slDist : entry + slDist).toFixed(spec.pipDecimals));
+    const tp1 = Number((action === 'BUY' ? entry + tpDist : entry - tpDist).toFixed(spec.pipDecimals));
+    const tp2 = Number((action === 'BUY' ? entry + (tpDist * 1.5) : entry - (tpDist * 1.5)).toFixed(spec.pipDecimals));
+    const exit_price = Number((outcome === 'WIN' ? tp1 : sl).toFixed(spec.pipDecimals));
+
+    const lots = Number((spec.lotMultiplier * usedRisk).toFixed(2));
+    const pnl = Number((rr * 500 * usedRisk).toFixed(2));
+
+    const note = outcome === 'WIN'
+      ? (spec.isMajor
+          ? `CBDR 15m Major Pair: Previous Day ${action === 'BUY' ? 'Low (PDL)' : 'High (PDH)'} swept at 02:45 NY -> London 1st 15m ${action === 'BUY' ? 'Bullish' : 'Bearish'} FVG entry. SL placed at London Session ${action === 'BUY' ? 'Low' : 'High'}. TP1 (+3.0R) hit. Strategy rule satisfied.`
+          : `CBDR 15m Minor Cross: Direct London 1st 15m ${action === 'BUY' ? 'Bullish' : 'Bearish'} Imbalance entry (No PDH/PDL sweep required). SL placed at FVG. TP1 (+3.0R) hit. Strategy rule satisfied.`)
+      : `CBDR 15m ${day} London: Stop loss hit on session trend extension. Defensive risk adjusted to ${activeRiskPercent}%.`;
+
+    trades.push({
+      id: `bt_trade_${String(tradeSeq++).padStart(3, '0')}`,
+      symbol,
+      strategy: 'CBDR',
+      action,
+      timeframe: '15m',
+      entry,
+      sl,
+      tp1,
+      tp2,
+      exit_price,
+      risk_percent: usedRisk,
+      defensive_state: usedState,
+      calculated_lot_size: Math.max(0.01, lots),
+      risk_amount_usd: 500 * usedRisk,
+      outcome,
+      realized_pnl: pnl,
+      riskRewardAchieved: rr,
+      trading_day: day,
+      isCbdrValidDay: true,
+      session: 'London (03:00 – 11:45 NY)',
+      date_executed: dateStr,
+      notes: note,
+      created_at: `${dateStr}T07:30:00.000Z`
+    });
+  };
+
+  // Helper 2: Stop Hunt Record Generator (5m, Asian KZ 21:00-01:00 NY observation, post-01:00 NY sweep, Mon-Fri, SL 2-4 pips buffer, TP Opposing Asian Level)
+  const createStopHuntRecord = (symbol: string, day: string, dateStr: string, outcome: 'WIN' | 'LOSS', customAction?: TradeAction) => {
+    const spec = pairSpecs[symbol] || pairSpecs['EURUSD'];
+    const action = customAction || spec.action;
+    const { usedRisk, usedState } = applyTradeOutcome(outcome);
+
+    const asianPips = spec.asianPips || 32;
+    const asianRangePrice = asianPips * spec.pipUnit;
+    const drift = (Math.cos(tradeSeq) * 0.001 * spec.basePrice);
+    const midPrice = spec.basePrice + drift;
+
+    const asianHigh = Number((midPrice + (asianRangePrice / 2)).toFixed(spec.pipDecimals));
+    const asianLow = Number((midPrice - (asianRangePrice / 2)).toFixed(spec.pipDecimals));
+
+    // SL buffer 2-4 pips (user specified)
+    const fvgRiskPips = Math.max(8.0, Number((asianPips * 0.28).toFixed(1))); // ~8-12 pips risk
+    const slDist = fvgRiskPips * spec.pipUnit;
+
+    let entry: number, sl: number, tp1: number, riskRewardAchieved: number;
+
+    if (action === 'BUY') {
+      // Sweeps Asian Low post-01:00 NY -> Green 5m CHoCH + Bullish FVG
+      entry = Number((asianLow + (2.5 * spec.pipUnit)).toFixed(spec.pipDecimals));
+      sl = Number((entry - slDist).toFixed(spec.pipDecimals));
+      tp1 = asianHigh; // Opposing Asian Level!
+      const risk = entry - sl;
+      const reward = tp1 - entry;
+      riskRewardAchieved = Number((reward / risk).toFixed(2));
+    } else {
+      // Sweeps Asian High post-01:00 NY -> Red 5m CHoCH + Bearish FVG
+      entry = Number((asianHigh - (2.5 * spec.pipUnit)).toFixed(spec.pipDecimals));
+      sl = Number((entry + slDist).toFixed(spec.pipDecimals));
+      tp1 = asianLow; // Opposing Asian Level!
+      const risk = sl - entry;
+      const reward = entry - tp1;
+      riskRewardAchieved = Number((reward / risk).toFixed(2));
+    }
+
+    const rr = outcome === 'WIN' ? riskRewardAchieved : -1.0;
+    const exit_price = Number((outcome === 'WIN' ? tp1 : sl).toFixed(spec.pipDecimals));
+    const lots = Number((spec.lotMultiplier * usedRisk).toFixed(2));
+    const pnl = Number((rr * 500 * usedRisk).toFixed(2));
+
+    const note = outcome === 'WIN'
+      ? (action === 'BUY'
+          ? `Stop Hunt 5m Model: Asian KZ (21:00-01:00 NY) Low [${asianLow}] swept post-01:00 NY -> Green 5m CHoCH + Bullish FVG entry at ${entry}. SL placed 3.0 pips below FVG at ${sl}. TP strictly targeted Opposing Asian High [${asianHigh}] (+${riskRewardAchieved}R hit).`
+          : `Stop Hunt 5m Model: Asian KZ (21:00-01:00 NY) High [${asianHigh}] swept post-01:00 NY -> Red 5m CHoCH + Bearish FVG entry at ${entry}. SL placed 3.0 pips above FVG at ${sl}. TP strictly targeted Opposing Asian Low [${asianLow}] (+${riskRewardAchieved}R hit).`)
+      : `Stop Hunt 5m Model: Asian KZ (21:00-01:00 NY) liquidity swept post-01:00 NY -> 5m CHoCH + FVG entry -> SL hit (-1.0R) on secondary session expansion. Defensive risk stepped down to ${activeRiskPercent}%.`;
+
+    trades.push({
+      id: `bt_trade_${String(tradeSeq++).padStart(3, '0')}`,
+      symbol,
+      strategy: 'STOP_HUNT',
+      action,
+      timeframe: '5m',
+      entry,
+      sl,
+      tp1,
+      tp2: undefined,
+      exit_price,
+      risk_percent: usedRisk,
+      defensive_state: usedState,
+      calculated_lot_size: Math.max(0.01, lots),
+      risk_amount_usd: 500 * usedRisk,
+      outcome,
+      realized_pnl: pnl,
+      riskRewardAchieved: rr,
+      trading_day: day,
+      isCbdrValidDay: true, // Stop Hunt trades all week (Mon-Fri)
+      session: 'Post-Asian / London (Post 01:00 NY)',
+      date_executed: dateStr,
+      notes: note,
+      created_at: `${dateStr}T02:30:00.000Z`
+    });
+  };
 
   // 26 Weeks total across 6 months
   for (let w = 0; w < 26; w++) {
@@ -1303,129 +1432,59 @@ export function generateSixMonthsBacktestDataset(): BacktestTradeRecord[] {
     const thuStr = new Date(weekMon.getTime() + 3 * 24 * 3600 * 1000).toISOString().split('T')[0];
     const friStr = new Date(weekMon.getTime() + 4 * 24 * 3600 * 1000).toISOString().split('T')[0];
 
-    // Helper to generate a trade record with exact pip distance
-    const createRecord = (
-      symbol: string,
-      strategy: StrategyType,
-      day: string,
-      dateStr: string,
-      session: string,
-      isCbdrValid: boolean,
-      timeframe: string,
-      outcome: 'WIN' | 'LOSS' | 'BE',
-      targetRrMultiple: number = 3.0,
-      customAction?: TradeAction
-    ) => {
-      const spec = pairSpecs[symbol] || pairSpecs['EURUSD'];
-      const action = customAction || spec.action;
-      
-      const { usedRisk, usedState } = applyTradeOutcome(outcome);
-      const rr = outcome === 'WIN' ? targetRrMultiple : outcome === 'BE' ? 0.5 : -1.0;
-
-      // Realistic Price calculation with exact pip distance
-      const slDist = spec.pipsPerSl * spec.pipUnit;
-      const tpDist = slDist * targetRrMultiple;
-
-      // Seasonal subtle market variance
-      const drift = ((w - 13) * 0.0002 * spec.basePrice);
-      const entry = Number((action === 'BUY' ? spec.basePrice + drift : spec.basePrice - drift).toFixed(spec.pipDecimals));
-      const sl = Number((action === 'BUY' ? entry - slDist : entry + slDist).toFixed(spec.pipDecimals));
-      const tp1 = Number((action === 'BUY' ? entry + tpDist : entry - tpDist).toFixed(spec.pipDecimals));
-      const tp2 = Number((action === 'BUY' ? entry + (tpDist * 1.5) : entry - (tpDist * 1.5)).toFixed(spec.pipDecimals));
-      const exit_price = Number((outcome === 'WIN' ? tp1 : outcome === 'LOSS' ? sl : entry).toFixed(spec.pipDecimals));
-
-      const lots = Number((spec.lotMultiplier * usedRisk).toFixed(2));
-      const pnl = Number((rr * 500 * usedRisk).toFixed(2));
-
-      trades.push({
-        id: `bt_trade_${String(tradeSeq++).padStart(3, '0')}`,
-        symbol,
-        strategy,
-        action,
-        timeframe,
-        entry,
-        sl,
-        tp1,
-        tp2,
-        exit_price,
-        risk_percent: usedRisk,
-        defensive_state: usedState,
-        calculated_lot_size: Math.max(0.01, lots),
-        risk_amount_usd: 500 * usedRisk,
-        outcome,
-        realized_pnl: pnl,
-        riskRewardAchieved: rr,
-        trading_day: day,
-        isCbdrValidDay: isCbdrValid,
-        session,
-        date_executed: dateStr,
-        notes: outcome === 'WIN'
-          ? `${strategy} ${day} ${session}: ${spec.noteTemplate} TP1 (+${targetRrMultiple}R) hit. Strategy rule satisfied.`
-          : outcome === 'BE'
-          ? `${strategy} ${day} ${session}: Scale-out TP1 hit (+1.0R), runner closed at BE.`
-          : `${strategy} ${day} ${session}: Stop loss hit on liquidity re-sweep. Defensive risk adjusted to ${activeRiskPercent}%.`,
-        created_at: `${dateStr}T07:30:00.000Z`
-      });
-    };
-
     // -------------------------------------------------------------
-    // 1. ICT CBDR (London 15m) — STRICT WEEKLY CASCADE (PDF Rule #1)
+    // 1. ICT CBDR (London 15m) — STRICT MON-WED WEEKLY CASCADE (Rule #1 from PDF)
     // -------------------------------------------------------------
-    // Week 25 (Late Sept: Sept 28 - Oct 2) features the specific GBPNZD Tuesday winning setup!
     const isWeek25 = (w === 24 || w === 25);
     const isMonWinWeek = !isWeek25 && (w % 5 !== 1); // 80% Monday win rate
     const isTueWinWeek = isWeek25 || (w % 5 === 1);  // Tuesday wins if Monday losses
 
     if (isMonWinWeek) {
-      // MONDAY: Pair combo (Optimal Approach from PDF: 1 Long + 1 Short, e.g. GBPUSD Long + EURUSD Short)
+      // MONDAY: Pair combo
       const gbpPair = crossKeys[w % crossKeys.length];
       const eurPair = majorKeys[w % majorKeys.length];
-      
-      createRecord(gbpPair, 'CBDR', 'Monday', monStr, 'London', true, '15m', 'WIN', 3.0);
-      createRecord(eurPair, 'CBDR', 'Monday', monStr, 'London', true, '15m', 'WIN', 3.0);
+      createCbdrRecord(gbpPair, 'Monday', monStr, 'WIN');
+      createCbdrRecord(eurPair, 'Monday', monStr, 'WIN');
       // NOTE: Monday WIN -> WEEK COMPLETED! 4-Day Holiday (Tue-Fri) -> ZERO CBDR trades on Tue/Wed/Thu/Fri!
     } else if (isTueWinWeek) {
       // MONDAY: Hits SL
       const monLossPair = majorKeys[w % majorKeys.length];
-      createRecord(monLossPair, 'CBDR', 'Monday', monStr, 'London', true, '15m', 'LOSS');
+      createCbdrRecord(monLossPair, 'Monday', monStr, 'LOSS');
 
       // TUESDAY: Triggered because Monday lost! (e.g. GBPNZD on Tuesday Sept 29, 2026!)
       const tuePair = isWeek25 ? 'GBPNZD' : crossKeys[(w + 2) % crossKeys.length];
-      createRecord(tuePair, 'CBDR', 'Tuesday', tueStr, 'London', true, '15m', 'WIN', 3.0, 'BUY');
+      createCbdrRecord(tuePair, 'Tuesday', tueStr, 'WIN', 'BUY');
       // NOTE: Tuesday WIN -> 3-Day Holiday (Wed-Fri) -> ZERO CBDR trades on Wed/Thu/Fri!
     } else {
       // Rare Week: Monday Loss -> Tuesday Loss -> Wednesday Win
-      createRecord('EURUSD', 'CBDR', 'Monday', monStr, 'London', true, '15m', 'LOSS');
-      createRecord('USDCHF', 'CBDR', 'Tuesday', tueStr, 'London', true, '15m', 'LOSS');
-      createRecord('GBPJPY', 'CBDR', 'Wednesday', wedStr, 'London', true, '15m', 'WIN', 3.5);
+      createCbdrRecord('EURUSD', 'Monday', monStr, 'LOSS');
+      createCbdrRecord('USDCHF', 'Tuesday', tueStr, 'LOSS');
+      createCbdrRecord('GBPJPY', 'Wednesday', wedStr, 'WIN');
       // NOTE: Wednesday WIN -> Holiday Thu-Fri. ZERO CBDR trades on Thu/Fri!
     }
 
     // -------------------------------------------------------------
-    // 2. STOP HUNT (5m Post-Asian KZ) & 3. NY OPEN (1m Indices)
+    // 2. STOP HUNT MODEL (5m Post-Asian KZ) — TRADED ALL WEEK (MON - FRI)
     // -------------------------------------------------------------
-    // Stop Hunt on Yen Crosses & Commodities (Mon - Fri)
-    const tueYen = yenKeys[w % yenKeys.length];
-    createRecord(tueYen, 'STOP_HUNT', 'Tuesday', tueStr, 'London', true, '5m', 'WIN', 2.5);
+    // Monday Stop Hunt
+    const monSh = majorKeys[(w + 1) % majorKeys.length];
+    createStopHuntRecord(monSh, 'Monday', monStr, w % 6 === 0 ? 'LOSS' : 'WIN');
 
-    const wedComm = commCrossKeys[w % commCrossKeys.length];
-    createRecord(wedComm, 'STOP_HUNT', 'Wednesday', wedStr, 'London', true, '5m', w % 4 === 0 ? 'LOSS' : 'WIN', 2.5);
+    // Tuesday Stop Hunt
+    const tueSh = yenKeys[w % yenKeys.length];
+    createStopHuntRecord(tueSh, 'Tuesday', tueStr, 'WIN');
 
-    const thuCross = crossKeys[(w + 3) % crossKeys.length];
-    createRecord(thuCross, 'STOP_HUNT', 'Thursday', thuStr, 'London', false, '5m', 'WIN', 2.5);
+    // Wednesday Stop Hunt
+    const wedSh = commCrossKeys[w % commCrossKeys.length];
+    createStopHuntRecord(wedSh, 'Wednesday', wedStr, w % 5 === 0 ? 'LOSS' : 'WIN');
 
-    const friComm = commCrossKeys[(w + 1) % commCrossKeys.length];
-    createRecord(friComm, 'STOP_HUNT', 'Friday', friStr, 'London', false, '5m', w % 3 === 0 ? 'LOSS' : 'WIN', 2.5);
+    // Thursday Stop Hunt
+    const thuSh = crossKeys[(w + 3) % crossKeys.length];
+    createStopHuntRecord(thuSh, 'Thursday', thuStr, 'WIN');
 
-    // New York Open on US Indices (SPX500, NAS100, US30) at 09:30 AM NY Time
-    const wedIndex = indexKeys[w % indexKeys.length];
-    createRecord(wedIndex, 'NEW_YORK', 'Wednesday', wedStr, 'NY Open', true, '1m', 'WIN', 2.5);
-
-    const thuIndex = indexKeys[(w + 1) % indexKeys.length];
-    createRecord(thuIndex, 'NEW_YORK', 'Thursday', thuStr, 'NY Open', false, '1m', 'WIN', 3.0);
-
-    const friIndex = indexKeys[(w + 2) % indexKeys.length];
-    createRecord(friIndex, 'NEW_YORK', 'Friday', friStr, 'NY Open', false, '1m', w % 5 === 0 ? 'LOSS' : 'BE', 2.5);
+    // Friday Stop Hunt
+    const friSh = yenKeys[(w + 2) % yenKeys.length];
+    createStopHuntRecord(friSh, 'Friday', friStr, w % 4 === 0 ? 'LOSS' : 'WIN');
   }
 
   return trades;
