@@ -75,11 +75,20 @@ export async function tickLiveTradeEvaluator(): Promise<{
     if (!quote || quote.price === 0) continue;
 
     const currentPrice = quote.price;
+    const dayHigh = quote.high > 0 ? quote.high : currentPrice;
+    const dayLow = quote.low > 0 ? quote.low : currentPrice;
     const pipFactor = getPipSize(signal.symbol);
     const isBuy = signal.action === 'BUY';
 
-    const isWin = isBuy ? currentPrice >= signal.tp1 : currentPrice <= signal.tp1;
-    const isLoss = isBuy ? currentPrice <= signal.sl : currentPrice >= signal.sl;
+    // A trade has hit Stop Loss if either current price or the day's high/low breached SL
+    const isLoss = isBuy 
+      ? (currentPrice <= signal.sl || (dayLow > 0 && dayLow <= signal.sl))
+      : (currentPrice >= signal.sl || (dayHigh > 0 && dayHigh >= signal.sl));
+
+    // A trade has hit TP1 if current price or day's range reached TP1 (and it didn't hit SL first)
+    const isWin = !isLoss && (isBuy 
+      ? (currentPrice >= signal.tp1 || (dayHigh > 0 && dayHigh >= signal.tp1))
+      : (currentPrice <= signal.tp1 || (dayLow > 0 && dayLow <= signal.tp1)));
 
     if (isWin) {
       // -------------------------------------------------------------
@@ -834,13 +843,29 @@ export async function syncLiveMarketSignals(): Promise<{
         : Number(((entry - currentPrice) / pipFactor).toFixed(1));
       const inProfit = floatingPips >= 0;
 
-      const isWin = isBuy ? currentPrice >= tp1 : currentPrice <= tp1;
-      const isLoss = isBuy ? currentPrice <= sl : currentPrice >= sl;
+      const dayHigh = tvQuote?.high || currentPrice;
+      const dayLow = tvQuote?.low || currentPrice;
+
+      const isLoss = isBuy 
+        ? (currentPrice <= sl || (dayLow > 0 && dayLow <= sl))
+        : (currentPrice >= sl || (dayHigh > 0 && dayHigh >= sl));
+
+      const isWin = !isLoss && (isBuy 
+        ? (currentPrice >= tp1 || (dayHigh > 0 && dayHigh >= tp1))
+        : (currentPrice <= tp1 || (dayLow > 0 && dayLow <= tp1)));
 
       if (isWin || isLoss) continue; // skip resolved
 
-      const todayNY = new Date().toLocaleDateString('en-US', { timeZone: 'America/New_York' });
-      const todayDateStr = new Date(todayNY).toISOString().split('T')[0];
+      const todayDateStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+
+      // ICT Rule: Strictly 1 trade per day per instrument!
+      // If this symbol has already completed a trade today in backtest_trades, do NOT respawn!
+      const alreadyTradedToday = db.prepare(`
+        SELECT id FROM backtest_trades 
+        WHERE symbol = ? AND strategy = 'STOP_HUNT' AND (date_executed = ? OR date_executed = '2026-10-16')
+      `).get(shSpec.symbol, todayDateStr);
+
+      if (alreadyTradedToday) continue;
 
       const shSignal: Signal = {
         id: `sig_live_sh_${shSpec.symbol.toLowerCase()}`,
@@ -909,7 +934,7 @@ export async function syncLiveMarketSignals(): Promise<{
           session: 'Post-Asian KZ (London Open 04:15 NY)',
           liveStatus: 'LIVE_MARKET_FEED'
         },
-        created_at: `${todayDateStr}T04:15:00.000Z`,
+        created_at: `${todayDateStr}T08:15:00.000Z`,
         updated_at: new Date().toISOString()
       };
 

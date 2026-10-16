@@ -252,7 +252,7 @@ const insertSignalStmt = db.prepare(`
   )
 `);
 
-const fridayTimestamp = '2026-10-16T04:15:00.000Z'; // Today Friday Post-Asian KZ London Open
+const fridayTimestamp = '2026-10-16T08:15:00.000Z'; // Today Friday Post-Asian KZ London Open (04:15 AM EDT)
 
 // Insert Stop Hunt 5m signals
 for (const s of stopHuntLiveSignals) {

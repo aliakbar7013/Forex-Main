@@ -84,11 +84,10 @@ export function getSignalTradingDay(signal: { created_at?: string; notes?: strin
 } {
   const explicitDay = signal.raw_payload?.day || signal.raw_payload?.trading_day;
   const dateObj = signal.created_at ? new Date(signal.created_at) : new Date();
-  const nyDateStr = dateObj.toLocaleString('en-US', { timeZone: 'America/New_York' });
-  const nyDate = new Date(nyDateStr);
-  const dayIndex = isNaN(nyDate.getDay()) ? 1 : nyDate.getDay();
+  const dayNameNY = dateObj.toLocaleDateString('en-US', { timeZone: 'America/New_York', weekday: 'long' });
+  let dayName = dayNameNY;
   const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  let dayName = dayNames[dayIndex];
+  const dayIndex = dayNames.indexOf(dayNameNY) >= 0 ? dayNames.indexOf(dayNameNY) : 1;
 
   if (typeof explicitDay === 'string') {
     const dLower = explicitDay.toLowerCase().trim();
