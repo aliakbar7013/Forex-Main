@@ -665,15 +665,15 @@ export function getAllSignals(limit: number = 100): Signal[] {
   // Automatically archive any resolved or invalid trades to backtest
   pushResolvedAndInvalidSignalsToBacktest();
 
-  // Strictly return active valid signals (1 per instrument) in Live Signals feed
+  // Strictly return active valid signals (1 per instrument per strategy) in Live Signals feed
   const rows = db.prepare(`
     SELECT s.* FROM signals s
     INNER JOIN (
-      SELECT symbol, MAX(created_at) as max_created
+      SELECT symbol, strategy, MAX(created_at) as max_created
       FROM signals
       WHERE status IN ('IN_TRADE', 'PENDING')
-      GROUP BY symbol
-    ) latest ON s.symbol = latest.symbol AND s.created_at = latest.max_created
+      GROUP BY symbol, strategy
+    ) latest ON s.symbol = latest.symbol AND s.strategy = latest.strategy AND s.created_at = latest.max_created
     WHERE s.status IN ('IN_TRADE', 'PENDING')
     ORDER BY s.created_at DESC
     LIMIT ?
@@ -734,6 +734,16 @@ export function pushResolvedAndInvalidSignalsToBacktest(): { archivedCount: numb
 
 export function findExistingSignalForEntry(symbol: string, strategy?: string): Signal | null {
   const db = getDb();
+  if (strategy) {
+    const row = db.prepare(`
+      SELECT * FROM signals 
+      WHERE symbol = ? AND strategy = ?
+      ORDER BY created_at DESC 
+      LIMIT 1
+    `).get(symbol.toUpperCase(), strategy) as any;
+    if (!row) return null;
+    return rowToSignal(row);
+  }
   const row = db.prepare(`
     SELECT * FROM signals 
     WHERE symbol = ?
@@ -750,7 +760,7 @@ export function pruneDuplicateSignals(): number {
     DELETE FROM signals 
     WHERE id NOT IN (
       SELECT id FROM (
-        SELECT id, ROW_NUMBER() OVER (PARTITION BY symbol ORDER BY created_at DESC) as rn
+        SELECT id, ROW_NUMBER() OVER (PARTITION BY symbol, strategy ORDER BY created_at DESC) as rn
         FROM signals
       ) WHERE rn = 1
     )
@@ -769,8 +779,8 @@ export function insertSignal(signal: Signal): Signal {
   const db = getDb();
   const sym = signal.symbol.toUpperCase();
 
-  // Deduplication: remove any older duplicate signal for this symbol
-  db.prepare('DELETE FROM signals WHERE symbol = ? AND id != ?').run(sym, signal.id);
+  // Deduplication: remove any older duplicate signal for this symbol AND strategy
+  db.prepare('DELETE FROM signals WHERE symbol = ? AND strategy = ? AND id != ?').run(sym, signal.strategy, signal.id);
 
   db.prepare(`
     INSERT OR REPLACE INTO signals (

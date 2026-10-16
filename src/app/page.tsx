@@ -675,11 +675,11 @@ export default function TradingDashboard() {
   }, []);
 
   // 5. Filtered Signals Computation
-  // Strictly enforce: For CBDR, ONLY show trades that are on Monday, Tuesday, Wednesday!
+  // Ensure that live running trades (IN_TRADE) are always visible on the dashboard!
   const filteredSignals = useMemo(() => {
     return signals.filter(s => {
-      // 1. Mandatory Day Filter for CBDR: ONLY Show Monday, Tuesday, Wednesday trades!
-      if (s.strategy === 'CBDR') {
+      // For CBDR: If pending entry on a non-trading day, do not display
+      if (s.strategy === 'CBDR' && s.status === 'PENDING') {
         const { isCbdrValid } = getSignalTradingDay(s);
         if (!isCbdrValid) {
           return false;
