@@ -15,7 +15,7 @@ import {
   Activity,
   ArrowRight
 } from 'lucide-react';
-import { generateCbdrTradingViewPineScript } from '@/lib/pineScriptGenerator';
+import { generateCbdrTradingViewPineScript, generateStopHuntTradingViewPineScript } from '@/lib/pineScriptGenerator';
 
 interface TradingViewSyncModalProps {
   isOpen: boolean;
@@ -26,13 +26,16 @@ interface TradingViewSyncModalProps {
 export function TradingViewSyncModal({
   isOpen,
   onClose,
-  webhookUrl = 'https://cells-anna-none-trails.trycloudflare.com/api/signals/webhook'
+  webhookUrl = 'https://perth-subscriptions-namespace-ambassador.trycloudflare.com/api/signals/webhook'
 }: TradingViewSyncModalProps) {
+  const [selectedModel, setSelectedModel] = useState<'CBDR' | 'STOP_HUNT'>('STOP_HUNT');
   const [copiedScript, setCopiedScript] = useState(false);
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [copiedPayload, setCopiedPayload] = useState(false);
 
-  const pineScriptCode = generateCbdrTradingViewPineScript(webhookUrl);
+  const pineScriptCode = selectedModel === 'STOP_HUNT' 
+    ? generateStopHuntTradingViewPineScript(webhookUrl)
+    : generateCbdrTradingViewPineScript(webhookUrl);
 
   const handleCopyScript = () => {
     navigator.clipboard.writeText(pineScriptCode);
@@ -46,7 +49,9 @@ export function TradingViewSyncModal({
     setTimeout(() => setCopiedUrl(false), 2000);
   };
 
-  const sampleJsonAlert = `{"strategy":"CBDR","symbol":"{{ticker}}","timeframe":"{{interval}}","action":"BUY","entry":{{close}},"sl":{{plot_0}},"tp1":{{plot_1}},"secret":"YOUR_WEBHOOK_SECRET"}`;
+  const sampleJsonAlert = selectedModel === 'STOP_HUNT'
+    ? `{"strategy":"STOP_HUNT","symbol":"{{ticker}}","timeframe":"5m","action":"SELL","entry":{{close}},"sl":1.08500,"tp1":1.07800,"asian_high_swept":true,"choch_confirmed":true,"fvg_confirmed":true,"secret":"YOUR_WEBHOOK_SECRET"}`
+    : `{"strategy":"CBDR","symbol":"{{ticker}}","timeframe":"15m","action":"BUY","entry":{{close}},"sl":{{plot_0}},"tp1":{{plot_1}},"secret":"YOUR_WEBHOOK_SECRET"}`;
 
   const handleCopyPayload = () => {
     navigator.clipboard.writeText(sampleJsonAlert);
@@ -59,11 +64,36 @@ export function TradingViewSyncModal({
       isOpen={isOpen}
       onClose={onClose}
       title="TradingView Real-Time Sync & Pine Script Engine"
-      subtitle="Connect live TradingView data to your dashboard and plot real-time CBDR trades directly on TradingView charts"
+      subtitle="Connect live TradingView indicators to your dashboard with automated Webhook triggers"
       maxWidth="3xl"
       icon={<BarChart2 className="w-5 h-5 text-blue-600" />}
     >
       <div className="space-y-6 text-xs text-slate-800">
+
+        {/* Model Switcher Tabs */}
+        <div className="flex items-center gap-2 p-1.5 bg-slate-100 rounded-xl border border-slate-200">
+          <button
+            onClick={() => setSelectedModel('STOP_HUNT')}
+            className={`flex-1 py-2 px-3 rounded-lg font-bold transition-all text-center flex items-center justify-center gap-2 ${
+              selectedModel === 'STOP_HUNT'
+                ? 'bg-amber-500 text-white shadow-md'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+            }`}
+          >
+            <span>🎯 Stop Hunt Model (5m Asian Sweep)</span>
+            <span className="text-[10px] bg-amber-600/50 px-1.5 py-0.5 rounded text-white font-mono">NEW</span>
+          </button>
+          <button
+            onClick={() => setSelectedModel('CBDR')}
+            className={`flex-1 py-2 px-3 rounded-lg font-bold transition-all text-center flex items-center justify-center gap-2 ${
+              selectedModel === 'CBDR'
+                ? 'bg-blue-600 text-white shadow-md'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+            }`}
+          >
+            <span>🏛️ CBDR London Model (15m 1st FVG)</span>
+          </button>
+        </div>
 
         {/* 1. Integration Flow Overview Card */}
         <div className="p-4 rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200">

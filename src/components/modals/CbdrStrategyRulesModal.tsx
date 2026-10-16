@@ -24,7 +24,7 @@ interface CbdrStrategyRulesModalProps {
 }
 
 export function CbdrStrategyRulesModal({ isOpen, onClose }: CbdrStrategyRulesModalProps) {
-  const [activeTab, setActiveTab] = useState<'overview' | 'entry' | 'pairs_risk' | 'mistakes'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'entry' | 'pairs_risk' | 'mistakes' | 'stop_hunt'>('overview');
 
   return (
     <Modal
@@ -89,6 +89,19 @@ export function CbdrStrategyRulesModal({ isOpen, onClose }: CbdrStrategyRulesMod
           >
             <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
             <span>4. Mistakes &amp; Live Examples</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('stop_hunt')}
+            className={`px-3 py-1.5 rounded-lg font-bold transition-all text-xs whitespace-nowrap flex items-center gap-1.5 ${
+              activeTab === 'stop_hunt'
+                ? 'bg-amber-500 text-white shadow-xs font-black'
+                : 'text-amber-800 hover:text-amber-950 hover:bg-amber-100/60'
+            }`}
+          >
+            <Zap className="w-3.5 h-3.5 text-amber-500" />
+            <span>5. Stop Hunt Model (5m Asian Sweep)</span>
           </button>
         </div>
 
@@ -464,6 +477,138 @@ export function CbdrStrategyRulesModal({ isOpen, onClose }: CbdrStrategyRulesMod
                   <div>• 1st bearish FVG in London</div>
                   <div>• Confluence with IPDA interest rate bias</div>
                   <div>• <strong>Result:</strong> 4% gain &rarr; <strong>8% total portfolio gain in 1 day!</strong></div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        )}
+
+        {/* TAB 5: Stop Hunt Model (5m Asian Sweep) */}
+        {activeTab === 'stop_hunt' && (
+          <div className="space-y-4">
+            
+            {/* Model Architecture Header Banner */}
+            <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200">
+              <div className="flex items-center gap-2 mb-1.5">
+                <span className="px-2 py-0.5 rounded bg-amber-500 text-white font-mono text-[10px] font-bold">
+                  MODEL #2
+                </span>
+                <span className="font-black text-slate-900 text-sm">
+                  ICT Stop Hunt 5m Model (Asian Range Liquidity Sweep)
+                </span>
+              </div>
+              <p className="text-slate-700 leading-relaxed text-[11px]">
+                Built on smart money engineering liquidity around the <strong>Asian Killzone (21:00 – 01:00 NY)</strong>.
+                Price sweeps the Asian range extreme, shifts market structure (CHoCH) on the 5-minute timeframe,
+                prints a Fair Value Gap (FVG), and distributes into the <strong>Opposing Asian extreme level</strong>.
+              </p>
+            </div>
+
+            {/* Core Strategy Parameters Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                <div className="font-bold text-slate-900 flex items-center gap-1.5">
+                  <Clock className="w-4 h-4 text-blue-600" />
+                  <span>1. Observation vs. Trading Timings</span>
+                </div>
+                <div className="space-y-1.5 text-[11px] text-slate-700">
+                  <div className="p-2 rounded-lg bg-pink-50 border border-pink-200 text-pink-950 font-medium">
+                    <strong>Asian Killzone (21:00 – 01:00 NY):</strong> Observation ONLY (No Trading). Mark the highest high and lowest low of this session.
+                  </div>
+                  <div className="p-2 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-950 font-medium">
+                    <strong>Trading Execution (After 01:00 NY):</strong> Price must sweep the Asian level after the killzone ends. If no sweep today, wait for tomorrow!
+                  </div>
+                  <div className="p-2 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-950 font-medium">
+                    <strong>Trading Days:</strong> Active all week from <strong>Monday to Friday</strong>.
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                <div className="font-bold text-slate-900 flex items-center gap-1.5">
+                  <Target className="w-4 h-4 text-emerald-600" />
+                  <span>2. Stop Loss &amp; Take Profit Rules</span>
+                </div>
+                <div className="space-y-1.5 text-[11px] text-slate-700">
+                  <div className="p-2 rounded-lg bg-rose-50 border border-rose-200 text-rose-950 font-medium">
+                    <strong>Stop Loss Placement:</strong> Placed strictly <strong>2 to 4 pips</strong> above/below the 5-minute Fair Value Gap (FVG / Imbalance).
+                  </div>
+                  <div className="p-2 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-950 font-medium">
+                    <strong>Take Profit Target:</strong> Targets the <strong>Opposing Asian Killzone Level</strong>! (Sell targets Asian Low, Buy targets Asian High).
+                  </div>
+                  <div className="p-2 rounded-lg bg-purple-50 border border-purple-200 text-purple-950 font-medium">
+                    <strong>Macro IPDA Alignment:</strong> Must align with Central Bank interest rate bias (e.g., EURUSD = Sell Only, USDJPY = Buy Only).
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Step-by-Step Execution Cards (SELL vs BUY) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              
+              {/* SELL SETUP */}
+              <div className="p-4 rounded-xl bg-rose-50/70 border border-rose-200 space-y-2">
+                <div className="flex items-center gap-1.5 text-rose-900 font-bold">
+                  <span className="w-2.5 h-2.5 rounded-full bg-rose-600"></span>
+                  <span>Bearish Setup (SELL) — e.g. EURUSD</span>
+                </div>
+                <div className="space-y-1.5 text-[11px] text-rose-950">
+                  <div>1. <strong>IPDA Bias:</strong> Must be SELL ONLY (Rate Ratio &lt; 1.0).</div>
+                  <div>2. <strong>Level Marked:</strong> High of Asian Killzone (21:00 – 01:00 NY).</div>
+                  <div>3. <strong>Sweep:</strong> Price sweeps above Asian High after 01:00 NY.</div>
+                  <div>4. <strong>Shift:</strong> Red Bearish CHoCH appears on 5-minute chart.</div>
+                  <div>5. <strong>Imbalance:</strong> Bearish 5m Fair Value Gap (FVG) forms.</div>
+                  <div>6. <strong>Entry:</strong> Limit or market order on the 5m FVG.</div>
+                  <div>7. <strong>Stop Loss:</strong> 2–4 pips above the Bearish FVG.</div>
+                  <div>8. <strong>Take Profit:</strong> Directly at the <strong>Asian Killzone LOW</strong>!</div>
+                </div>
+              </div>
+
+              {/* BUY SETUP */}
+              <div className="p-4 rounded-xl bg-emerald-50/70 border border-emerald-200 space-y-2">
+                <div className="flex items-center gap-1.5 text-emerald-900 font-bold">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-600"></span>
+                  <span>Bullish Setup (BUY) — e.g. USDJPY</span>
+                </div>
+                <div className="space-y-1.5 text-[11px] text-emerald-950">
+                  <div>1. <strong>IPDA Bias:</strong> Must be BUY ONLY (Rate Ratio &gt; 1.0).</div>
+                  <div>2. <strong>Level Marked:</strong> Low of Asian Killzone (21:00 – 01:00 NY).</div>
+                  <div>3. <strong>Sweep:</strong> Price sweeps below Asian Low after 01:00 NY.</div>
+                  <div>4. <strong>Shift:</strong> Green Bullish CHoCH appears on 5-minute chart.</div>
+                  <div>5. <strong>Imbalance:</strong> Bullish 5m Fair Value Gap (FVG) forms.</div>
+                  <div>6. <strong>Entry:</strong> Limit or market order on the 5m FVG.</div>
+                  <div>7. <strong>Stop Loss:</strong> 2–4 pips below the Bullish FVG.</div>
+                  <div>8. <strong>Take Profit:</strong> Directly at the <strong>Asian Killzone HIGH</strong>!</div>
+                </div>
+              </div>
+
+            </div>
+
+            {/* Indicators Setup Card */}
+            <div className="p-3.5 rounded-xl bg-slate-900 text-slate-100 space-y-2 font-mono text-[11px]">
+              <div className="text-amber-400 font-bold flex items-center gap-2">
+                <Layers className="w-4 h-4 text-amber-400" />
+                <span>TradingView LuxAlgo Indicator Settings for Stop Hunt Model:</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-slate-300">
+                <div className="space-y-1 bg-slate-800/80 p-2.5 rounded-lg border border-slate-700">
+                  <div className="text-white font-bold">ICT Killzones [LuxAlgo]:</div>
+                  <div>• Asian Session: Checked (2100-0100 NY)</div>
+                  <div>• Show Retracements: Enabled</div>
+                  <div>• Extend: Enabled</div>
+                  <div>• Fib 0 (Low): Enabled (Black)</div>
+                  <div>• Fib 1 (High): Enabled (Black)</div>
+                  <div>• All other Fibs: Unchecked</div>
+                </div>
+                <div className="space-y-1 bg-slate-800/80 p-2.5 rounded-lg border border-slate-700">
+                  <div className="text-white font-bold">Smart Money Concepts [LuxAlgo]:</div>
+                  <div>• Timeframe: 5-minute (5m)</div>
+                  <div>• Internal Structure: CHoCH only</div>
+                  <div>• Bullish CHoCH: #089981 (Green)</div>
+                  <div>• Bearish CHoCH: #F23645 (Red)</div>
+                  <div>• Fair Value Gaps (FVG): Enabled (Extend: 1)</div>
+                  <div>• Confluence Filter: Unchecked</div>
                 </div>
               </div>
             </div>

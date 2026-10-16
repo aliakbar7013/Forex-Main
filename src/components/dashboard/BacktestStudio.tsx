@@ -541,9 +541,9 @@ export function BacktestStudio() {
 
             <div className="space-y-3">
               {[
-                { key: 'CBDR', name: '1. CBDR Strategy (15m London Mon–Wed - Focus #1)', badge: 'Mandatory IPDA • Strict 1:3' },
-                { key: 'NEW_YORK', name: '2. New York Strategy (1m / 15m NY Open - Focus #2)', badge: 'IPDA Exempt • Indices & FX' },
-                { key: 'STOP_HUNT', name: 'Stop Hunt Model (5m Post-Asian)', badge: 'Secondary Model' }
+                { key: 'CBDR', name: '1. CBDR Strategy (15m London Mon–Wed)', badge: 'Mandatory IPDA • Strict 1:3' },
+                { key: 'STOP_HUNT', name: '2. Stop Hunt Model (5m Asian Sweep)', badge: 'Asian 21:00-01:00 KZ • Mon-Fri' },
+                { key: 'NEW_YORK', name: '3. New York Strategy (1m / 15m NY Open)', badge: 'IPDA Exempt • Indices & FX' }
               ].map(strat => {
                 const stratData = stats.strategyBreakdown[strat.key] || {
                   strategy: strat.key,

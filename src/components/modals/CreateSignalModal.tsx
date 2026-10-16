@@ -111,9 +111,9 @@ export function CreateSignalModal({
               }}
               className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 font-bold focus:outline-none focus:border-blue-500 focus:bg-white"
             >
-              <option value="CBDR">1. CBDR Strategy (15m Focus #1)</option>
-              <option value="NEW_YORK">2. New York Strategy (1m/15m Focus #2)</option>
-              <option value="STOP_HUNT">Stop Hunt Model (5m)</option>
+              <option value="CBDR">1. CBDR Strategy (15m London 1st FVG)</option>
+              <option value="STOP_HUNT">2. Stop Hunt Model (5m Asian Sweep)</option>
+              <option value="NEW_YORK">3. New York Strategy (1m/15m Indices)</option>
               <option value="CUSTOM">Custom Strategy</option>
             </select>
           </div>
@@ -185,6 +185,21 @@ export function CreateSignalModal({
             </div>
           </div>
         </div>
+
+        {/* Stop Hunt Helper Banner */}
+        {strategy === 'STOP_HUNT' && (
+          <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex flex-col gap-1">
+            <div className="font-bold flex items-center gap-1.5 text-amber-900">
+              <span>🎯 Stop Hunt Model Rules (5-Minute Asian Sweep)</span>
+            </div>
+            <div className="text-[11px] text-amber-800 space-y-0.5">
+              <p>• <strong>Observation</strong>: Asian Killzone (21:00 – 01:00 NY) strictly marks Asian High & Low.</p>
+              <p>• <strong>Sweep</strong>: Post-01:00 NY sweep of Asian {action === 'SELL' ? 'HIGH' : 'LOW'} + {action === 'SELL' ? 'Red Bearish' : 'Green Bullish'} CHoCH + FVG.</p>
+              <p>• <strong>Stop Loss</strong>: 2–4 pips {action === 'SELL' ? 'above' : 'below'} the 5m FVG imbalance.</p>
+              <p>• <strong>Take Profit</strong>: Directly targets opposing Asian {action === 'SELL' ? 'LOW' : 'HIGH'}.</p>
+            </div>
+          </div>
+        )}
 
         {/* Entry & Stop Loss */}
         <div className="grid grid-cols-2 gap-3">

@@ -58,9 +58,9 @@ export function FilterAndControlsBarComponent({
 }: FilterAndControlsBarProps) {
   const strategies = [
     { key: 'ALL', label: 'All Trades', count: counts.all },
-    { key: 'CBDR', label: '⚡ CBDR 15m (Focus #1)', count: counts.cbdr },
-    { key: 'NEW_YORK', label: '🗽 New York (Focus #2)', count: counts.newYork },
-    { key: 'STOP_HUNT', label: 'Stop Hunt (5m)', count: counts.stopHunt }
+    { key: 'CBDR', label: '⚡ CBDR 15m (London)', count: counts.cbdr },
+    { key: 'STOP_HUNT', label: '🎯 Stop Hunt 5m (Asian Sweep)', count: counts.stopHunt },
+    { key: 'NEW_YORK', label: '🗽 New York (Indices)', count: counts.newYork }
   ];
 
   const statuses = [

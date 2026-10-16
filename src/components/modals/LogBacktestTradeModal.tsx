@@ -93,14 +93,14 @@ export function LogBacktestTradeModal({ isOpen, onClose, onTradeAdded }: LogBack
                 const s = e.target.value as StrategyType;
                 setStrategy(s);
                 if (s === 'CBDR') { setTimeframe('15m'); setSession('London'); }
-                else if (s === 'STOP_HUNT') { setTimeframe('5m'); setSession('London'); }
+                else if (s === 'STOP_HUNT') { setTimeframe('5m'); setSession('Post-Asian'); }
                 else if (s === 'NEW_YORK') { setTimeframe('1m'); setSession('NY Open'); setSymbol('NAS100'); }
               }}
               className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-bold focus:outline-none focus:border-blue-500 focus:bg-white"
             >
-              <option value="CBDR">1. CBDR Strategy (15m Focus #1)</option>
-              <option value="NEW_YORK">2. New York Strategy (1m Focus #2)</option>
-              <option value="STOP_HUNT">Stop Hunt (5m)</option>
+              <option value="CBDR">1. CBDR Strategy (15m London Mon–Wed)</option>
+              <option value="STOP_HUNT">2. Stop Hunt Model (5m Asian Sweep)</option>
+              <option value="NEW_YORK">3. New York Strategy (1m Indices)</option>
               <option value="CUSTOM">Custom Strategy</option>
             </select>
           </div>

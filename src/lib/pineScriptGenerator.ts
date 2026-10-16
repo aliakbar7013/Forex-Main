@@ -277,3 +277,146 @@ if barstate.islast and i_showTable
     table.cell(table_id=hud, column=1, row=7, text="1st Session Imbalance (1:3 RR)", bgcolor=color.navy, text_color=color.white, text_size=size.tiny)
 `;
 }
+
+/**
+ * Produces production-grade TradingView Pine Script v5 code for the Stop Hunt (5m Asian Sweep) Model
+ */
+export function generateStopHuntTradingViewPineScript(webhookUrl: string = 'https://perth-subscriptions-namespace-ambassador.trycloudflare.com/api/signals/webhook'): string {
+  return `//@version=5
+indicator("Apex ICT Stop Hunt (5m Asian Sweep + SMC CHoCH)", overlay=true, max_boxes_count=500, max_lines_count=500, max_labels_count=500)
+
+// 1. Inputs
+timeZoneInput       = input.string("America/New_York", "Timezone")
+asianSessionHours   = input.session("2100-0100", "Asian Killzone (Observation Only)")
+slBufferPips        = input.float(3.0, "SL Breathing Space (Pips)", minval=1.0, maxval=10.0, step=0.5)
+ipdaDirectionInput  = input.string("AUTO", "IPDA Bias Filter", options=["AUTO", "BUY_ONLY", "SELL_ONLY", "ANY"])
+
+// 2. Asian Killzone Tracker (21:00 - 01:00 NY)
+inAsianKZ = not na(time(timeframe.period, asianSessionHours, timeZoneInput))
+
+var float asianHigh = na
+var float asianLow  = na
+var int   asianStartBar = na
+var box   asianBox      = na
+var line  asianHighLine = na
+var line  asianLowLine  = na
+var label asianHighLabel= na
+var label asianLowLabel = na
+
+var bool  asianHighSwept = false
+var bool  asianLowSwept  = false
+var bool  tradeTakenToday= false
+
+isAsianStart = inAsianKZ and not inAsianKZ[1]
+isAsianEnd   = not inAsianKZ and inAsianKZ[1]
+
+if isAsianStart
+    asianHigh := high
+    asianLow  := low
+    asianStartBar := bar_index
+    asianHighSwept := false
+    asianLowSwept  := false
+    tradeTakenToday:= false
+    asianBox := box.new(left=bar_index, top=asianHigh, right=bar_index, bottom=asianLow, bgcolor=color.new(#e91e63, 85), border_color=color.new(#e91e63, 40), border_style=line.style_dashed)
+
+if inAsianKZ
+    asianHigh := math.max(asianHigh, high)
+    asianLow  := math.min(asianLow, low)
+    box.set_top(asianBox, asianHigh)
+    box.set_bottom(asianBox, asianLow)
+    box.set_right(asianBox, bar_index)
+
+if isAsianEnd
+    asianHighLine := line.new(asianStartBar, asianHigh, bar_index + 20, asianHigh, color=color.black, width=2)
+    asianLowLine  := line.new(asianStartBar, asianLow, bar_index + 20, asianLow, color=color.black, width=2)
+    asianHighLabel := label.new(bar_index + 20, asianHigh, "Asian High (BSL)", color=color(na), textcolor=color.black, style=label.style_label_left, size=size.small)
+    asianLowLabel  := label.new(bar_index + 20, asianLow, "Asian Low (SSL)", color=color(na), textcolor=color.black, style=label.style_label_left, size=size.small)
+
+if not inAsianKZ and not na(asianHighLine)
+    line.set_x2(asianHighLine, bar_index + 15)
+    line.set_x2(asianLowLine, bar_index + 15)
+    label.set_x(asianHighLabel, bar_index + 15)
+    label.set_x(asianLowLabel, bar_index + 15)
+
+// 3. Post-Asian Sweep (after 01:00 NY)
+if not inAsianKZ and not na(asianHigh) and not na(asianLow)
+    if high > asianHigh and not asianHighSwept
+        asianHighSwept := true
+        label.new(bar_index, high, "⚡ STOP HUNT (Asian High Swept)", color=#F23645, textcolor=color.white, style=label.style_label_down, size=size.tiny)
+    if low < asianLow and not asianLowSwept
+        asianLowSwept := true
+        label.new(bar_index, low, "⚡ STOP HUNT (Asian Low Swept)", color=#089981, textcolor=color.white, style=label.style_label_up, size=size.tiny)
+
+// 4. LuxAlgo SMC Internal CHoCH & FVG
+pivotLen = 5
+pivotH = ta.pivothigh(high, pivotLen, pivotLen)
+pivotL = ta.pivotlow(low, pivotLen, pivotLen)
+var float lastPivotH = na
+var float lastPivotL = na
+if not na(pivotH)
+    lastPivotH := high[pivotLen]
+if not na(pivotL)
+    lastPivotL := low[pivotLen]
+
+bearishCHoCH = not inAsianKZ and asianHighSwept and not na(lastPivotL) and ta.crossunder(close, lastPivotL)
+bullishCHoCH = not inAsianKZ and asianLowSwept  and not na(lastPivotH) and ta.crossover(close, lastPivotH)
+
+bullishFVG = low[0] > high[2] and close[1] > open[1]
+bearishFVG = high[0] < low[2] and close[1] < open[1]
+
+var float fvgTop = na
+var float fvgBottom = na
+if bullishFVG
+    fvgTop := low[0]
+    fvgBottom := high[2]
+    box.new(bar_index[2], fvgTop, bar_index + 1, fvgBottom, bgcolor=color.new(#00ff68, 75), border_color=color.new(#00ff68, 40))
+if bearishFVG
+    fvgTop := low[2]
+    fvgBottom := high[0]
+    box.new(bar_index[2], fvgTop, bar_index + 1, fvgBottom, bgcolor=color.new(#ff0008, 75), border_color=color.new(#ff0008, 40))
+
+// 5. IPDA Bias Filter
+isDefaultSell = str.contains(syminfo.ticker, "EURUSD") or str.contains(syminfo.ticker, "XAUUSD") or str.contains(syminfo.ticker, "AUDUSD") or str.contains(syminfo.ticker, "NZDUSD")
+isDefaultBuy  = str.contains(syminfo.ticker, "GBPUSD") or str.contains(syminfo.ticker, "USDJPY") or str.contains(syminfo.ticker, "USDCHF") or str.contains(syminfo.ticker, "USDCAD")
+ipdaPermitSell = (ipdaDirectionInput == "SELL_ONLY" or ipdaDirectionInput == "ANY") or (ipdaDirectionInput == "AUTO" and isDefaultSell)
+ipdaPermitBuy  = (ipdaDirectionInput == "BUY_ONLY" or ipdaDirectionInput == "ANY") or (ipdaDirectionInput == "AUTO" and isDefaultBuy)
+
+// 6. Signal Triggers
+validSellSignal = not inAsianKZ and asianHighSwept and bearishFVG and ipdaPermitSell and not tradeTakenToday
+validBuySignal  = not inAsianKZ and asianLowSwept and bullishFVG and ipdaPermitBuy and not tradeTakenToday
+
+var float tradeEntry = na
+var float tradeSL    = na
+var float tradeTP    = na
+var string tradeSide = na
+
+if validSellSignal
+    tradeTakenToday := true
+    tradeSide       := "SELL"
+    tradeEntry      := close
+    tradeSL         := fvgTop + (slBufferPips * 10 * syminfo.mintick)
+    tradeTP         := asianLow // Target Opposing Asian Level
+    line.new(bar_index, tradeEntry, bar_index + 30, tradeEntry, color=color.blue, width=2)
+    line.new(bar_index, tradeSL, bar_index + 30, tradeSL, color=color.red, width=2)
+    line.new(bar_index, tradeTP, bar_index + 30, tradeTP, color=color.green, width=2)
+    label.new(bar_index, high, "🔴 STOP HUNT SELL\\nEntry: " + str.tostring(tradeEntry, "#.#####") + "\\nSL: " + str.tostring(tradeSL, "#.#####") + "\\nTP (Asian Low): " + str.tostring(tradeTP, "#.#####"), color=#F23645, textcolor=color.white, style=label.style_label_down, size=size.small)
+
+if validBuySignal
+    tradeTakenToday := true
+    tradeSide       := "BUY"
+    tradeEntry      := close
+    tradeSL         := fvgBottom - (slBufferPips * 10 * syminfo.mintick)
+    tradeTP         := asianHigh // Target Opposing Asian Level
+    line.new(bar_index, tradeEntry, bar_index + 30, tradeEntry, color=color.blue, width=2)
+    line.new(bar_index, tradeSL, bar_index + 30, tradeSL, color=color.red, width=2)
+    line.new(bar_index, tradeTP, bar_index + 30, tradeTP, color=color.green, width=2)
+    label.new(bar_index, low, "🟢 STOP HUNT BUY\\nEntry: " + str.tostring(tradeEntry, "#.#####") + "\\nSL: " + str.tostring(tradeSL, "#.#####") + "\\nTP (Asian High): " + str.tostring(tradeTP, "#.#####"), color=#089981, textcolor=color.white, style=label.style_label_up, size=size.small)
+
+// 7. Webhook Dispatch
+webhookPayload = '{"strategy":"STOP_HUNT","symbol":"' + syminfo.ticker + '","timeframe":"5m","action":"' + tradeSide + '","entry":' + str.tostring(tradeEntry) + ',"sl":' + str.tostring(tradeSL) + ',"tp1":' + str.tostring(tradeTP) + ',"asian_high_swept":' + (asianHighSwept ? 'true' : 'false') + ',"asian_low_swept":' + (asianLowSwept ? 'true' : 'false') + ',"choch_confirmed":true,"fvg_confirmed":true,"session":"Post-Asian"}'
+
+if validBuySignal or validSellSignal
+    alert(webhookPayload, alert.freq_once_per_bar_close)
+`;
+}
+

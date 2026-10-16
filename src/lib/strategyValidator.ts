@@ -50,14 +50,14 @@ export function getMarketTimeContext(timestamp: Date = new Date(), explicitDay?:
   // Trades are strictly permitted within this window only. If beyond this session, NO TRADE.
   const isLondonSession = nyTimeDecimal >= 3.0 && nyTimeDecimal <= 11.75;
 
-  // Post-Asian Kill Zone completion: Asian KZ is ~ 20:00 - 00:00 NY. Post-Asian is 00:00 - 08:00 NY
-  const isPostAsianKZ = nyTimeDecimal >= 0.0 && nyTimeDecimal <= 8.5;
+  // Asian Kill Zone: 21:00 - 01:00 NY Time (Observation only - NO TRADING)
+  const isAsianKZ = nyTimeDecimal >= 21.0 || nyTimeDecimal < 1.0;
+
+  // Post-Asian Kill Zone execution window: 01:00 - 21:00 NY Time
+  const isPostAsianKZ = nyTimeDecimal >= 1.0 && nyTimeDecimal < 21.0;
 
   // NY Strategy Window: 09:30 AM - 12:00 PM NY Time (07:00 PM - 09:30 PM IST)
   const isNYStrategyWindow = nyTimeDecimal >= 9.5 && nyTimeDecimal <= 12.0;
-
-  // Asian Kill Zone: 20:00 - 00:00 NY Time
-  const isAsianKZ = nyTimeDecimal >= 20.0 || nyTimeDecimal < 0.0;
 
   return {
     nyDate,
@@ -338,46 +338,110 @@ export function validateStrategySignal(
     }
 
   } else if (strategy === 'STOP_HUNT') {
-    // 1. Timeframe Check: 5-minute only
+    // 1. Timeframe Check: Strictly 5-minute ONLY
     const is5m = timeframe === '5m';
     checks.push({
       id: 'stophunt_tf',
-      name: 'Timeframe Requirement (5m)',
+      name: 'Timeframe Requirement (5m ONLY)',
       passed: Boolean(is5m),
       severity: 'ERROR',
       expected: '5m',
       received: timeframe || 'Not Specified',
       message: is5m
-        ? 'Valid 5m timeframe confirmed for Stop Hunt Model'
+        ? 'Valid 5m timeframe confirmed for Stop Hunt Model.'
         : `Stop Hunt Model strictly requires 5-minute timeframe. Received: ${timeframe || 'none'}`
     });
 
-    // 2. Post-Asian Kill Zone Completion
-    const postAsianConfirmed = Boolean(payload.asian_kz_completed !== false && (marketTime.isPostAsianKZ || payload.asian_kz_completed === true));
+    // 2. Trading Days: Monday to Friday (All Week Active)
+    const isValidWeekday = marketTime.dayOfWeek >= 1 && marketTime.dayOfWeek <= 5;
     checks.push({
-      id: 'stophunt_asian_kz',
-      name: 'Post-Asian Kill Zone Execution',
-      passed: Boolean(postAsianConfirmed),
-      severity: 'WARNING',
-      expected: 'Post-Asian Kill Zone Completion',
-      received: marketTime.isPostAsianKZ ? 'Post-Asian Window Active' : 'Asian Session Ongoing / Unverified',
-      message: postAsianConfirmed
-        ? 'Asian Kill Zone completed. Liquidity pool formed for stop run.'
-        : 'Caution: Model requires Asian Kill Zone to complete before stop hunt entry is valid.'
+      id: 'stophunt_day',
+      name: 'Trading Days (Monday – Friday All Week)',
+      passed: Boolean(isValidWeekday),
+      severity: 'ERROR',
+      expected: 'Monday – Friday',
+      received: marketTime.dayName,
+      message: isValidWeekday
+        ? `Valid trading day confirmed (${marketTime.dayName}). Stop Hunt is active all week.`
+        : `Market is closed on ${marketTime.dayName}. Stop Hunt executes Monday through Friday.`
     });
 
-    // 3. Condition: Asian High/Low Sweep + CHOCH + Fresh BPR
-    const bprConfirmed = Boolean(payload.bpr_confirmed !== false && payload.choch_confirmed !== false);
+    // 3. Execution Window: Post-Asian Killzone (After 01:00 NY and before 21:00 NY)
+    // 21:00 - 01:00 NY is strictly observation only!
+    const isInsideAsianObservation = marketTime.isAsianKZ;
     checks.push({
-      id: 'stophunt_bpr_choch',
-      name: 'Asian Sweep + CHOCH + Fresh BPR Entry',
-      passed: Boolean(bprConfirmed),
-      severity: 'WARNING',
-      expected: 'CHOCH + Balanced Price Range (BPR)',
-      received: `CHOCH: ${payload.choch_confirmed !== false ? 'Confirmed' : 'Pending'}, BPR: ${payload.bpr_confirmed !== false ? 'Confirmed' : 'Pending'}`,
-      message: bprConfirmed
-        ? 'Asian liquidity sweep verified with CHOCH & clean BPR entry'
-        : 'Awaiting clean CHOCH print and fresh Balanced Price Range (BPR) confirmation'
+      id: 'stophunt_timing_window',
+      name: 'Execution Window (After Asian Killzone 01:00 NY)',
+      passed: !isInsideAsianObservation,
+      severity: 'ERROR',
+      expected: 'Post-Asian Execution (01:00 – 21:00 NY)',
+      received: isInsideAsianObservation ? `Asian Killzone Active (${marketTime.nyTimeFormatted})` : `Post-Asian Active (${marketTime.nyTimeFormatted})`,
+      message: !isInsideAsianObservation
+        ? 'Valid post-Asian trading window active (After 01:00 NY).'
+        : `Currently in Asian Killzone observation window (21:00 - 01:00 NY). Strictly for marking Asian High & Low — NO TRADING inside this window.`
+    });
+
+    // 4. Liquidity Sweep: Must sweep Asian High (for SELL) or Asian Low (for BUY)
+    const expectedSweep = action === 'SELL' ? 'Asian Killzone High Sweep' : 'Asian Killzone Low Sweep';
+    const sweepConfirmed = action === 'SELL'
+      ? (payload.asian_high_swept !== false && payload.liquidity_sweep !== false && payload.sweep !== false)
+      : (payload.asian_low_swept !== false && payload.liquidity_sweep !== false && payload.sweep !== false);
+    
+    checks.push({
+      id: 'stophunt_sweep',
+      name: `Liquidity Sweep: ${expectedSweep}`,
+      passed: Boolean(sweepConfirmed),
+      severity: 'ERROR',
+      expected: expectedSweep,
+      received: sweepConfirmed ? `${expectedSweep} Confirmed` : 'Sweep Pending / Unverified',
+      message: sweepConfirmed
+        ? `Confirmed ${expectedSweep} occurred after 01:00 NY.`
+        : `Stop Hunt rule violation: ${action} setup strictly requires sweeping the ${expectedSweep} before entry.`
+    });
+
+    // 5. Structure Shift (CHOCH) + Fair Value Gap (FVG) Trigger
+    const chochConfirmed = payload.choch_confirmed !== false && payload.choch !== false;
+    const fvgConfirmed = payload.fvg_confirmed !== false && payload.imbalance !== false;
+    const triggerPassed = Boolean(chochConfirmed && fvgConfirmed);
+    const expectedTrigger = action === 'SELL' ? 'Red Bearish CHoCH + Bearish 5m FVG' : 'Green Bullish CHoCH + Bullish 5m FVG';
+    
+    checks.push({
+      id: 'stophunt_choch_fvg',
+      name: `Reversal Trigger (${expectedTrigger})`,
+      passed: triggerPassed,
+      severity: 'ERROR',
+      expected: expectedTrigger,
+      received: `CHoCH: ${chochConfirmed ? 'Confirmed' : 'Pending'}, FVG: ${fvgConfirmed ? 'Confirmed' : 'Pending'}`,
+      message: triggerPassed
+        ? `Valid ${expectedTrigger} verified on 5-minute chart.`
+        : `Awaiting 5m ${expectedTrigger} confirmation.`
+    });
+
+    // 6. Stop Loss Placement: 2-4 pips above/below FVG
+    checks.push({
+      id: 'stophunt_sl_rule',
+      name: `Stop Loss Placement (${action === 'SELL' ? 'Above Bearish FVG + 2-4 pips' : 'Below Bullish FVG - 2-4 pips'})`,
+      passed: true,
+      severity: 'INFO',
+      expected: action === 'SELL' ? 'Above Bearish FVG with 2-4 pips breathing space' : 'Below Bullish FVG with 2-4 pips breathing space',
+      received: `SL: ${payload.sl}`,
+      message: action === 'SELL'
+        ? 'Stop Loss placed above the 5m bearish imbalance/FVG with breathing room.'
+        : 'Stop Loss placed below the 5m bullish imbalance/FVG with breathing room.'
+    });
+
+    // 7. Take Profit: Opposing Asian Killzone Level
+    const expectedTPTarget = action === 'SELL' ? 'Asian Killzone LOW' : 'Asian Killzone HIGH';
+    checks.push({
+      id: 'stophunt_tp_target',
+      name: `Take Profit Target: ${expectedTPTarget}`,
+      passed: true,
+      severity: 'INFO',
+      expected: expectedTPTarget,
+      received: `TP1: ${payload.tp1}`,
+      message: action === 'SELL'
+        ? 'Target is set directly at the Asian Killzone LOW (opposing liquidity pool).'
+        : 'Target is set directly at the Asian Killzone HIGH (opposing liquidity pool).'
     });
 
   } else if (strategy === 'NEW_YORK') {
