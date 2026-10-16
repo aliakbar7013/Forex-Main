@@ -39,47 +39,71 @@ export async function POST() {
     const ipdaBiases = getAllIpdaBiases();
     const now = new Date();
 
-    const sampleSignalsData: IncomingWebhookPayload[] = [
+    const sampleSignalsData: (IncomingWebhookPayload & { createdAt?: string })[] = [
       {
-        strategy: 'CBDR',
+        strategy: 'Stop Hunt',
         symbol: 'EURUSD',
-        timeframe: '15m',
+        timeframe: '5m',
         action: 'SELL',
-        entry: 1.08450,
-        sl: 1.08700,
-        tp1: 1.07700,
-        tp2: 1.07200,
-        tp3: 1.06500,
-        session: 'London',
-        liquidity_sweep: true,
-        pdh_pdl_sweep: true,
-        fvg_number: 1,
-        notes: 'Major Pair CBDR: Previous Day High (PDH) swept at 02:45 NY -> London 1st 15m Bearish Imbalance entry. 1:3 RR target.'
+        entry: 1.08720,
+        sl: 1.08960,
+        tp1: 1.08280,
+        session: 'Post-Asian',
+        asian_kz_completed: true,
+        choch_confirmed: true,
+        bpr_confirmed: true,
+        notes: '[Stop Hunt 5m] Swept Asian High (21:00-01:00 NY) -> 5m Red CHoCH & FVG Retest @ 1.08720. TP: Opposing Asian Low @ 1.08280.'
+      },
+      {
+        strategy: 'Stop Hunt',
+        symbol: 'USDJPY',
+        timeframe: '5m',
+        action: 'BUY',
+        entry: 154.550,
+        sl: 154.180,
+        tp1: 155.650,
+        session: 'Post-Asian',
+        asian_kz_completed: true,
+        choch_confirmed: true,
+        bpr_confirmed: true,
+        notes: '[Stop Hunt 5m] Swept Asian Low (21:00-01:00 NY) -> 5m Green CHoCH & FVG Retest @ 154.550. TP: Opposing Asian High @ 155.650.'
       },
       {
         strategy: 'CBDR',
-        symbol: 'GBPNZD',
+        symbol: 'EURCHF',
         timeframe: '15m',
         action: 'BUY',
-        entry: 2.34200,
-        sl: 2.33950,
-        tp1: 2.34950,
-        tp2: 2.35500,
-        tp3: 2.36200,
+        entry: 0.92420,
+        sl: 0.92120,
+        tp1: 0.93320,
+        tp2: 0.93920,
         session: 'London',
         fvg_number: 1,
-        notes: 'Minor Pair CBDR: No PDH/PDL sweep required. Direct London 1st 15m Bullish Imbalance entry. 1:3 RR target.'
+        createdAt: '2026-10-14T09:05:00.000Z',
+        notes: 'Minor Pair CBDR: Direct London 1st 15m Bullish Imbalance entry on Wednesday session. 1:3 RR target running actively.'
+      },
+      {
+        strategy: 'CBDR',
+        symbol: 'CADJPY',
+        timeframe: '15m',
+        action: 'BUY',
+        entry: 111.350,
+        sl: 110.950,
+        tp1: 112.550,
+        tp2: 113.350,
+        session: 'London',
+        fvg_number: 1,
+        createdAt: '2026-10-14T09:15:00.000Z',
+        notes: 'Minor Pair CBDR: Direct London 1st 15m Bullish Imbalance entry on Wednesday session. 1:3 RR target running actively.'
       },
       {
         strategy: 'Stop Hunt',
         symbol: 'GBPUSD',
         timeframe: '5m',
         action: 'BUY',
-        entry: 1.29400,
-        sl: 1.29150,
-        tp1: 1.29900,
-        tp2: 1.30400,
-        tp3: 1.31000,
+        entry: 1.30150,
+        sl: 1.29820,
+        tp1: 1.30920,
         session: 'Post-Asian',
         asian_kz_completed: true,
         choch_confirmed: true,
@@ -105,17 +129,15 @@ export async function POST() {
         strategy: 'Stop Hunt',
         symbol: 'XAUUSD',
         timeframe: '5m',
-        action: 'BUY',
-        entry: 2655.20,
-        sl: 2647.20,
-        tp1: 2671.20,
-        tp2: 2685.00,
-        tp3: 2700.00,
+        action: 'SELL',
+        entry: 2668.50,
+        sl: 2678.00,
+        tp1: 2642.00,
         session: 'London',
         asian_kz_completed: true,
         choch_confirmed: true,
         bpr_confirmed: true,
-        notes: 'Gold Asian liquidity pool sweep with Bullish IPDA monthly alignment.'
+        notes: 'Gold Asian High swept -> 5m Red CHoCH + FVG entry -> TP Opposing Asian Low @ 2642.00.'
       }
     ];
 
@@ -142,7 +164,7 @@ export async function POST() {
         action
       }, riskSettings);
 
-      const signalTime = new Date(now.getTime() - (index * 14 * 60 * 1000)).toISOString();
+      const signalTime = item.createdAt || new Date(now.getTime() - (index * 14 * 60 * 1000)).toISOString();
       
       let status: any = 'IN_TRADE';
       let outcome: any = undefined;

@@ -682,12 +682,14 @@ export default function TradingDashboard() {
 
     return signals.filter(s => {
       // 1. Mandatory CBDR Strategy Rule:
-      // Strictly Monday, Tuesday, Wednesday ONLY!
-      // On Thursday, Friday, Saturday, Sunday: NO CBDR TRADES/ENTRIES PERMITTED!
-      if (s.strategy === 'CBDR') {
-        if (!isCbdrTradingDay) return false;
-        const { isCbdrValid } = getSignalTradingDay(s);
-        if (!isCbdrValid) return false;
+      // If s.strategy === 'CBDR':
+      // - If pending entry on non-trading day (Thu/Fri/weekend), do not show
+      if (s.strategy === 'CBDR' && s.status === 'PENDING' && !isCbdrTradingDay) {
+        return false;
+      }
+      // - If trade has hit TP or SL, do not show in live running feed
+      if (s.status === 'TP1_HIT' || s.status === 'TP2_HIT' || s.status === 'CLOSED_PROFIT' || s.status === 'SL_HIT' || s.status === 'CANCELLED') {
+        return false;
       }
 
       // 2. Strict Strategy Categorization Filter:
@@ -711,6 +713,23 @@ export default function TradingDashboard() {
     });
   }, [signals, selectedStrategy, selectedStatus, selectedDirection, searchQuery]);
 
+  // Deduplicate by symbol on ALL view so no instrument appears twice ("as i dont need everying double double")
+  const displayedSignals = useMemo(() => {
+    if (selectedStrategy !== 'ALL') {
+      return filteredSignals;
+    }
+    const seen = new Set<string>();
+    const res: Signal[] = [];
+    for (const s of filteredSignals) {
+      const sym = s.symbol.toUpperCase();
+      if (!seen.has(sym)) {
+        seen.add(sym);
+        res.push(s);
+      }
+    }
+    return res;
+  }, [filteredSignals, selectedStrategy]);
+
   const handleOpenChart = useCallback((symbol: string, signal?: Signal) => {
     setSelectedChartSymbol(symbol);
     if (signal) setSelectedChartSignal(signal);
@@ -720,13 +739,21 @@ export default function TradingDashboard() {
   const strategyCounts = useMemo(() => {
     const todayNY = new Date().toLocaleDateString('en-US', { timeZone: 'America/New_York', weekday: 'long' });
     const isCbdrTradingDay = todayNY === 'Monday' || todayNY === 'Tuesday' || todayNY === 'Wednesday';
-    const validCbdrSignals = isCbdrTradingDay ? signals.filter(s => s.strategy === 'CBDR' && getSignalTradingDay(s).isCbdrValid) : [];
-    const stopHuntSignals = signals.filter(s => s.strategy === 'STOP_HUNT');
-    const newYorkSignals = signals.filter(s => s.strategy === 'NEW_YORK');
+
+    // Running CBDR trades (IN_TRADE) or valid new entries on Mon-Wed
+    const cbdrSignals = signals.filter(s => s.strategy === 'CBDR' && (s.status === 'IN_TRADE' || (s.status === 'PENDING' && isCbdrTradingDay)));
+    const stopHuntSignals = signals.filter(s => s.strategy === 'STOP_HUNT' && (s.status === 'IN_TRADE' || s.status === 'PENDING'));
+    const newYorkSignals = signals.filter(s => s.strategy === 'NEW_YORK' && (s.status === 'IN_TRADE' || s.status === 'PENDING'));
+
+    // Unique symbols on ALL view to match deduplicated cards
+    const uniqueSymbols = new Set<string>();
+    for (const s of [...stopHuntSignals, ...cbdrSignals, ...newYorkSignals]) {
+      uniqueSymbols.add(s.symbol.toUpperCase());
+    }
 
     return {
-      all: validCbdrSignals.length + stopHuntSignals.length + newYorkSignals.length,
-      cbdr: validCbdrSignals.length,
+      all: uniqueSymbols.size,
+      cbdr: cbdrSignals.length,
       stopHunt: stopHuntSignals.length,
       newYork: newYorkSignals.length
     };
@@ -914,11 +941,11 @@ export default function TradingDashboard() {
             countdown={countdown}
           />
 
-          {/* CBDR Non-Trading Day Banner for Thursday / Friday */}
+          {/* CBDR Non-Trading Day Banner for Thursday / Friday (Shown when viewing CBDR) */}
           {(() => {
             const todayNYDay = new Date().toLocaleDateString('en-US', { timeZone: 'America/New_York', weekday: 'long' });
             const isThursdayOrFriday = todayNYDay === 'Thursday' || todayNYDay === 'Friday';
-            if (!isThursdayOrFriday || selectedStrategy === 'STOP_HUNT') return null;
+            if (!isThursdayOrFriday || selectedStrategy !== 'CBDR') return null;
 
             return (
               <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-50 via-orange-50/40 to-amber-50 border border-amber-300 text-amber-950 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
@@ -929,14 +956,14 @@ export default function TradingDashboard() {
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="font-black text-sm text-slate-900 tracking-tight">
-                        ⚠️ TODAY IS {todayNYDay.toUpperCase()} — CBDR NON-TRADING DAY
+                        ⚠️ TODAY IS {todayNYDay.toUpperCase()} — CBDR NON-TRADING DAY FOR NEW ENTRIES
                       </span>
                       <span className="px-2 py-0.5 rounded-md bg-amber-200 text-amber-950 font-bold text-[10px] font-mono border border-amber-300">
-                        Rule: Mon–Wed Only
+                        Rule: Mon–Wed Entries Only
                       </span>
                     </div>
                     <p className="text-xs text-slate-700 mt-1 leading-relaxed">
-                      Under ICT CBDR institutional strategy rules, <strong>Thursday and Friday are strict Non-Trading Days (zero entries taken)</strong>. For active live trading setups today, select the <strong>Stop Hunt Model (5m)</strong> tab which trades all week (Monday through Friday).
+                      Under ICT CBDR institutional rules, <strong>no new entries are taken on Thursday or Friday</strong>. Only active carry-over trades entered during valid Wednesday sessions continue running until TP or SL is reached. For active fresh daily setups, select the <strong>Stop Hunt Model (5m)</strong> which trades Monday through Friday all week.
                     </p>
                   </div>
                 </div>
@@ -1015,7 +1042,7 @@ export default function TradingDashboard() {
               <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-3" />
               <p className="text-xs font-mono font-bold">Initializing Real-Time Stream...</p>
             </div>
-          ) : filteredSignals.length === 0 ? (
+          ) : displayedSignals.length === 0 ? (
             <div className="bg-white border border-slate-200 rounded-2xl p-12 text-center shadow-sm">
               {selectedStrategy === 'CBDR' ? (
                 <>
@@ -1023,10 +1050,10 @@ export default function TradingDashboard() {
                     <AlertTriangle className="w-6 h-6" />
                   </div>
                   <h3 className="text-base font-bold text-slate-900 mb-1">
-                    No CBDR Entries Today ({new Date().toLocaleDateString('en-US', { timeZone: 'America/New_York', weekday: 'long' })})
+                    No Running CBDR Trades
                   </h3>
                   <p className="text-xs text-slate-600 max-w-md mx-auto mb-4 font-medium leading-relaxed">
-                    Under ICT CBDR institutional rules, trading is strictly <strong>Monday, Tuesday, and Wednesday</strong> (London Session 03:00 – 11:45 NY). <strong>Thursday and Friday are strict Non-Trading Days</strong> (zero entries taken).
+                    Under ICT CBDR institutional rules, new entries are strictly taken on <strong>Monday, Tuesday, and Wednesday</strong> (London Session 03:00 – 11:45 NY). Previous trades that hit TP/SL have been archived to Backtest.
                   </p>
                   <div className="flex items-center justify-center gap-3">
                     <button
@@ -1094,7 +1121,7 @@ export default function TradingDashboard() {
             </div>
           ) : viewMode === 'cards' ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              {filteredSignals.map((signal) => (
+              {displayedSignals.map((signal) => (
                 <SignalCard
                   key={signal.id}
                   signal={signal}
@@ -1107,7 +1134,7 @@ export default function TradingDashboard() {
             </div>
           ) : (
             <SignalsTable
-              signals={filteredSignals}
+              signals={displayedSignals}
               onUpdateStatus={handleUpdateSignalStatus}
               onDeleteSignal={handleDeleteSignal}
               onViewPayload={handleViewPayload}

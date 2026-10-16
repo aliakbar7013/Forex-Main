@@ -758,9 +758,16 @@ export async function syncLiveMarketSignals(): Promise<{
     }
   }
 } else {
-  // Non-trading day for CBDR (Thursday, Friday, Saturday, Sunday)
-  // Strictly do not show or keep any active CBDR signals in the live feed!
-  db.prepare("DELETE FROM signals WHERE strategy = 'CBDR'").run();
+  // Non-trading day for CBDR entries (Thursday, Friday, Saturday, Sunday)
+  // 1. Remove any pending unexecuted CBDR orders (no new entries taken on non-trading days):
+  db.prepare("DELETE FROM signals WHERE strategy = 'CBDR' AND status = 'PENDING'").run();
+  
+  // 2. Prevent duplicate trades on the same instrument ("no double double"):
+  // If an instrument has a Stop Hunt setup, do not run CBDR on that same symbol!
+  db.prepare("DELETE FROM signals WHERE strategy = 'CBDR' AND symbol IN (SELECT symbol FROM signals WHERE strategy = 'STOP_HUNT')").run();
+  
+  // 3. Any active running (IN_TRADE) CBDR trade that has NOT hit TP/SL yet continues running,
+  // tracked and live-evaluated by tickLiveTradeEvaluator until it hits TP/SL!
 }
 
   // 3. For key Stop Hunt pairs, construct or maintain authentic Stop Hunt 5m signals
