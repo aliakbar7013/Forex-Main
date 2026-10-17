@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
       db.prepare('DELETE FROM backtest_trades').run();
       seedInitialBacktestTrades(db);
       const stats = getBacktestStats();
-      const trades = getAllBacktestTrades(500);
+      const trades = getAllBacktestTrades(2000);
       return NextResponse.json({ success: true, message: 'Backtest dataset reset to default', stats, trades });
     }
 
