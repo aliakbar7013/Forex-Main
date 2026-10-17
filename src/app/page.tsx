@@ -773,9 +773,9 @@ export default function TradingDashboard() {
   }
 
   return (
-    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-[#06080f] text-slate-100 flex flex-col selection:bg-blue-600 selection:text-white relative">
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-[#f8fafc] text-slate-900 flex flex-col selection:bg-slate-900 selection:text-white relative">
       
-      {/* 1. Institutional Top Navbar */}
+      {/* 1. Clean Top Navbar */}
       <Header
         clocks={clocks}
         isConnected={isConnected}
@@ -788,83 +788,78 @@ export default function TradingDashboard() {
         onLogout={handleLogout}
       />
 
-      {/* 2. Institutional Navigation Tabs Bar */}
-      <div className="border-b border-white/[0.08] bg-[#080c14]/90 backdrop-blur-xl select-none sticky top-0 z-20 shadow-[0_4px_20px_rgba(0,0,0,0.5)]">
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 flex items-center justify-between gap-3 py-2.5 overflow-x-auto no-scrollbar">
-          <div className="flex items-center gap-2 shrink-0">
+      {/* 2. Apple-Style Segmented Navigation Tabs Bar */}
+      <div className="border-b border-slate-200/80 bg-white/95 backdrop-blur-md select-none sticky top-0 z-20 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between gap-3 py-2.5 overflow-x-auto no-scrollbar">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <button
               onClick={() => setActiveTab('signals')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 ${
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all shrink-0 ${
                 activeTab === 'signals'
-                  ? 'bg-blue-500/15 text-blue-400 border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.2)]'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] border border-transparent'
+                  ? 'bg-slate-900 text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-transparent'
               }`}
             >
-              <Zap className="w-3.5 h-3.5 text-blue-400" />
-              <span>⚡ Live Signals</span>
-              <span className="hidden md:inline px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-300 font-mono text-[9px] font-bold border border-blue-500/20">
+              <Zap className={`w-3.5 h-3.5 ${activeTab === 'signals' ? 'text-amber-300' : 'text-slate-500'}`} />
+              <span>Live Signals</span>
+              <span className={`hidden md:inline px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${
+                activeTab === 'signals' ? 'bg-slate-800 text-slate-200' : 'bg-slate-100 text-slate-600'
+              }`}>
                 Live Feed
               </span>
             </button>
 
             <button
               onClick={() => setActiveTab('strategy')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 ${
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all shrink-0 ${
                 activeTab === 'strategy'
-                  ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.2)]'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] border border-transparent'
+                  ? 'bg-slate-900 text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-transparent'
               }`}
             >
-              <BookOpen className="w-3.5 h-3.5 text-emerald-400" />
-              <span>📖 Strategy</span>
-              <span className="hidden md:inline px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-300 font-mono text-[9px] font-bold border border-emerald-500/20">
-                Playbook
-              </span>
+              <BookOpen className={`w-3.5 h-3.5 ${activeTab === 'strategy' ? 'text-emerald-300' : 'text-slate-500'}`} />
+              <span>Strategy Playbook</span>
             </button>
 
             <button
               onClick={() => setActiveTab('chart')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 ${
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all shrink-0 ${
                 activeTab === 'chart'
-                  ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 shadow-[0_0_15px_rgba(6,182,212,0.2)]'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] border border-transparent'
+                  ? 'bg-slate-900 text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-transparent'
               }`}
             >
-              <BarChart2 className="w-3.5 h-3.5 text-cyan-400" />
-              <span>📈 Live Chart</span>
-              <span className="hidden md:inline px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-300 font-mono text-[9px] font-bold border border-cyan-500/20">
-                TradingView
-              </span>
+              <BarChart2 className={`w-3.5 h-3.5 ${activeTab === 'chart' ? 'text-blue-300' : 'text-slate-500'}`} />
+              <span>Live Chart</span>
             </button>
 
             <button
               onClick={() => setActiveTab('backtest')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 ${
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all shrink-0 ${
                 activeTab === 'backtest'
-                  ? 'bg-purple-500/15 text-purple-400 border border-purple-500/30 shadow-[0_0_15px_rgba(168,85,247,0.2)]'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] border border-transparent'
+                  ? 'bg-slate-900 text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-transparent'
               }`}
             >
-              <BarChart3 className="w-3.5 h-3.5 text-purple-400" />
-              <span>📊 Backtest Archive</span>
-              <span className="hidden md:inline px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-300 font-mono text-[9px] font-bold border border-purple-500/20">
+              <BarChart3 className={`w-3.5 h-3.5 ${activeTab === 'backtest' ? 'text-purple-300' : 'text-slate-500'}`} />
+              <span>Backtest Archive</span>
+              <span className={`hidden md:inline px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${
+                activeTab === 'backtest' ? 'bg-slate-800 text-slate-200' : 'bg-slate-100 text-slate-600'
+              }`}>
                 180 Trades
               </span>
             </button>
 
             <button
               onClick={() => setActiveTab('matrix')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 ${
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all shrink-0 ${
                 activeTab === 'matrix'
-                  ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30 shadow-[0_0_15px_rgba(245,158,11,0.2)]'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] border border-transparent'
+                  ? 'bg-slate-900 text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-transparent'
               }`}
             >
-              <Scale className="w-3.5 h-3.5 text-amber-400" />
-              <span>🌐 IPDA Matrix</span>
-              <span className="hidden md:inline px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-300 font-mono text-[9px] font-bold border border-amber-500/20">
-                28 Pairs
-              </span>
+              <Scale className={`w-3.5 h-3.5 ${activeTab === 'matrix' ? 'text-amber-300' : 'text-slate-500'}`} />
+              <span>IPDA Matrix</span>
             </button>
           </div>
         </div>
@@ -930,31 +925,33 @@ export default function TradingDashboard() {
 
           {/* Real-Time Trade Resolution Alert Toast / Banner (Auto-dismisses in 5s) */}
           {tradeToast && (
-            <div className={`relative overflow-hidden p-4 rounded-2xl border backdrop-blur-xl shadow-lg flex items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2 duration-300 ${
+            <div className={`relative overflow-hidden p-4 rounded-2xl border bg-white shadow-lg flex items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2 duration-300 ${
               tradeToast.outcome === 'WIN'
-                ? 'bg-emerald-950/40 border-emerald-500/30 text-emerald-200'
-                : 'bg-rose-950/40 border-rose-500/30 text-rose-200'
+                ? 'border-emerald-200'
+                : 'border-rose-200'
             }`}>
               <div className="flex items-center gap-3">
-                <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold shrink-0 ${
-                  tradeToast.outcome === 'WIN' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold shrink-0 border ${
+                  tradeToast.outcome === 'WIN' 
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                    : 'bg-rose-50 text-rose-700 border-rose-200'
                 }`}>
                   {tradeToast.outcome === 'WIN' ? <CheckCircle2 className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />}
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-black tracking-wide uppercase font-mono">
+                    <span className="text-xs font-bold tracking-wide uppercase font-mono text-slate-900">
                       {tradeToast.symbol} Trade Resolved: {tradeToast.outcome}
                     </span>
-                    <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border ${
+                    <span className={`text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full border ${
                       tradeToast.outcome === 'WIN'
-                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-                        : 'bg-rose-500/20 text-rose-300 border-rose-500/30'
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                        : 'bg-rose-50 text-rose-700 border-rose-200'
                     }`}>
                       ⏱️ 5s Auto-Dismiss
                     </span>
                   </div>
-                  <div className="text-sm font-bold mt-0.5 text-white">
+                  <div className="text-sm font-semibold mt-0.5 text-slate-700">
                     {tradeToast.message}
                   </div>
                 </div>
@@ -964,7 +961,7 @@ export default function TradingDashboard() {
                 <button
                   type="button"
                   onClick={() => setTradeToast(null)}
-                  className="p-1.5 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition-colors"
+                  className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors"
                   title="Dismiss immediately"
                 >
                   <X className="w-4 h-4" />
@@ -986,35 +983,35 @@ export default function TradingDashboard() {
 
           {/* Live Signal Feed Stream */}
           {isLoading ? (
-            <div className="py-24 text-center text-slate-400">
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-2 border-blue-500 border-t-transparent mb-3" />
-              <p className="text-xs font-mono font-bold text-slate-400 tracking-wider">INITIALIZING INSTITUTIONAL FEED...</p>
+            <div className="py-24 text-center text-slate-500">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-2 border-slate-900 border-t-transparent mb-3" />
+              <p className="text-xs font-medium text-slate-600 tracking-wide">Connecting to Live Signals Feed...</p>
             </div>
           ) : displayedSignals.length === 0 ? (
-            <div className="bg-[#0b101d]/80 border border-white/[0.08] rounded-2xl p-12 text-center backdrop-blur-xl shadow-xl">
+            <div className="bg-white border border-slate-200/80 rounded-2xl p-12 text-center shadow-xs">
               {selectedStrategy === 'CBDR' ? (
                 <>
-                  <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 mx-auto mb-3">
+                  <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-700 mx-auto mb-3">
                     <AlertTriangle className="w-6 h-6" />
                   </div>
-                  <h3 className="text-base font-bold text-white mb-1">
+                  <h3 className="text-base font-bold text-slate-900 mb-1">
                     No Running CBDR Trades
                   </h3>
-                  <p className="text-xs text-slate-400 max-w-md mx-auto mb-4 font-medium leading-relaxed">
-                    Under ICT CBDR institutional rules, new entries are strictly taken on <strong className="text-slate-200">Monday, Tuesday, and Wednesday</strong> (London Session 03:00 – 11:45 NY). Previous trades that hit TP/SL have been archived to Backtest.
+                  <p className="text-xs text-slate-500 max-w-md mx-auto mb-4 font-medium leading-relaxed">
+                    Under ICT CBDR institutional rules, new entries are strictly taken on <strong className="text-slate-800">Monday, Tuesday, and Wednesday</strong> (London Session 03:00 – 11:45 NY). Previous trades that reached target or SL are archived in Backtest.
                   </p>
                   <div className="flex items-center justify-center gap-3">
                     <button
                       type="button"
                       onClick={() => setSelectedStrategy('STOP_HUNT')}
-                      className="px-4 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 font-bold text-xs transition-colors"
+                      className="px-4 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 font-semibold text-xs transition-colors shadow-xs"
                     >
                       View Live Stop Hunt Trades (Mon–Fri)
                     </button>
                     <button
                       type="button"
                       onClick={() => setActiveTab('backtest')}
-                      className="px-4 py-2 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/40 font-bold text-xs transition-colors"
+                      className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs transition-colors shadow-xs"
                     >
                       View CBDR Backtest Archive
                     </button>
@@ -1022,20 +1019,20 @@ export default function TradingDashboard() {
                 </>
               ) : selectedStrategy === 'NEW_YORK' ? (
                 <>
-                  <div className="w-12 h-12 rounded-2xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400 mx-auto mb-3">
+                  <div className="w-12 h-12 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-700 mx-auto mb-3">
                     <Clock className="w-6 h-6" />
                   </div>
-                  <h3 className="text-base font-bold text-white mb-1">
+                  <h3 className="text-base font-bold text-slate-900 mb-1">
                     No Active New York Index Trades
                   </h3>
-                  <p className="text-xs text-slate-400 max-w-md mx-auto mb-4 font-medium leading-relaxed">
+                  <p className="text-xs text-slate-500 max-w-md mx-auto mb-4 font-medium leading-relaxed">
                     The New York Open Index model operates on NAS100, US30, and SPX500 during the 09:30 AM – 12:00 PM NY session.
                   </p>
                   <div className="flex items-center justify-center gap-3">
                     <button
                       type="button"
                       onClick={() => setSelectedStrategy('STOP_HUNT')}
-                      className="px-4 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 font-bold text-xs transition-colors"
+                      className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs shadow-xs transition-colors"
                     >
                       View Live Stop Hunt Trades
                     </button>
@@ -1043,23 +1040,23 @@ export default function TradingDashboard() {
                 </>
               ) : (
                 <>
-                  <Sparkles className="w-8 h-8 text-blue-400 mx-auto mb-3" />
-                  <h3 className="text-base font-bold text-white mb-1">No active signals found</h3>
-                  <p className="text-xs text-slate-400 max-w-md mx-auto mb-4 font-medium">
-                    There are no signals matching your filter. Check the Backtesting Archive for historical trades.
+                  <Sparkles className="w-8 h-8 text-slate-400 mx-auto mb-3" />
+                  <h3 className="text-base font-bold text-slate-900 mb-1">No active signals found</h3>
+                  <p className="text-xs text-slate-500 max-w-md mx-auto mb-4 font-medium">
+                    There are no signals matching your filter. Check the Backtest Archive for historical verified trades.
                   </p>
                   <div className="flex items-center justify-center gap-3">
                     <button
                       type="button"
                       onClick={() => setIsSimulatorOpen(true)}
-                      className="px-4 py-2 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/40 font-bold text-xs transition-colors"
+                      className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs shadow-xs transition-colors"
                     >
                       Launch Webhook Simulator
                     </button>
                     <button
                       type="button"
                       onClick={() => setActiveTab('backtest')}
-                      className="px-4 py-2 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/40 font-bold text-xs transition-colors"
+                      className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs border border-slate-200 shadow-xs transition-colors"
                     >
                       View Backtest Archive
                     </button>
@@ -1094,14 +1091,14 @@ export default function TradingDashboard() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-white/[0.08] bg-[#070b14]/90 backdrop-blur-xl py-4 px-6 text-center text-xs text-slate-400">
+      <footer className="border-t border-slate-200/80 bg-white py-4 px-6 text-center text-xs text-slate-500">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#10b981]" />
-            <span className="font-semibold text-slate-200">Apex ICT Institutional Terminal • IPDA Central Bank Direction Filter Active</span>
+            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+            <span className="font-semibold text-slate-700">Apex Signals • Interbank Quantitative Trading Terminal</span>
           </div>
-          <div className="font-mono text-[11px] text-slate-500 font-medium">
-            CBDR 15m • Stop Hunt 5m • NY Indices 1m • Smooth Live Tick Sync Active
+          <div className="font-mono text-[11px] text-slate-400 font-medium">
+            CBDR 15m • Stop Hunt 5m • Real-Time Tick Sync Active
           </div>
         </div>
       </footer>

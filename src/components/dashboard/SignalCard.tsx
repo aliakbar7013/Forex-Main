@@ -6,7 +6,6 @@ import {
   ArrowDownRight, 
   CheckCircle2, 
   AlertTriangle, 
-  XCircle, 
   Clock, 
   Copy, 
   Check, 
@@ -16,9 +15,7 @@ import {
   Skull, 
   BarChart2,
   Trash2,
-  ShieldCheck,
-  Zap,
-  Target
+  XCircle
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { Signal, SignalStatus } from '@/types';
@@ -37,7 +34,6 @@ export function SignalCardComponent({
   signal,
   onUpdateStatus,
   onDeleteSignal,
-  onViewPayload,
   onOpenChart
 }: SignalCardProps) {
   const [copied, setCopied] = useState(false);
@@ -60,8 +56,8 @@ export function SignalCardComponent({
     setIsUpdating(true);
     try {
       confetti({
-        particleCount: 80,
-        spread: 70,
+        particleCount: 60,
+        spread: 60,
         origin: { y: 0.6 }
       });
       soundEngine.playWinSound();
@@ -106,52 +102,52 @@ export function SignalCardComponent({
     hour12: true 
   });
   const timeFormatted = `${nyTime} NY • ${istTime} IST`;
-  const { dayName, dateFormatted } = getSignalTradingDay(signal);
+  const { dayName } = getSignalTradingDay(signal);
 
   const validationStatus = signal.validation?.overallStatus || 'PASSED';
   const isValid = validationStatus === 'PASSED';
 
-  // Status Badge
+  // Apple-style Minimal Status Badge
   const getStatusBadge = () => {
     switch (signal.status) {
       case 'PENDING':
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-800/80 text-slate-300 border border-slate-700">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
             <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
-            Pending Entry
+            Pending
           </span>
         );
       case 'IN_TRADE':
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-cyan-950/80 text-cyan-300 border border-cyan-500/40 glow-cyan">
-            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+            <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse" />
             In Trade
           </span>
         );
       case 'TP1_HIT':
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-950/80 text-emerald-300 border border-emerald-500/40 glow-emerald">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-            TP1 Hit (BE Active)
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
+            TP1 (BE Active)
           </span>
         );
       case 'CLOSED_PROFIT':
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-950/80 text-emerald-300 border border-emerald-500/40 glow-emerald">
-            <Trophy className="w-3 h-3 text-emerald-400" />
-            Closed Profit (+3R)
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+            <Trophy className="w-3 h-3 text-emerald-600" />
+            Target Hit (+3R)
           </span>
         );
       case 'SL_HIT':
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-950/80 text-rose-300 border border-rose-500/40 glow-rose">
-            <Skull className="w-3 h-3 text-rose-400" />
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200">
+            <Skull className="w-3 h-3 text-rose-600" />
             SL Hit (-1R)
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-300">
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 text-slate-600">
             {signal.status}
           </span>
         );
@@ -159,202 +155,183 @@ export function SignalCardComponent({
   };
 
   return (
-    <div className="relative bg-[#0d121f]/90 backdrop-blur-xl border border-white/[0.08] hover:border-cyan-500/40 rounded-2xl overflow-hidden shadow-2xl transition-all duration-300 group">
+    <div className="stripe-card rounded-2xl overflow-hidden flex flex-col justify-between">
       
-      {/* Top Accent Strip with Neon Glow */}
-      <div className={`h-1 w-full ${
-        isBuy ? 'bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-500' : 'bg-gradient-to-r from-rose-500 via-red-500 to-amber-500'
-      }`} />
-
-      {/* Card Header */}
-      <div className="p-4 sm:p-5 border-b border-white/[0.06] bg-[#090e1a]/60">
-        <div className="flex items-start justify-between gap-3">
+      {/* Top Card Body */}
+      <div className="p-4 sm:p-5">
+        
+        {/* Row 1: Symbol, Direction Pill & Status */}
+        <div className="flex items-start justify-between gap-3 mb-3">
           
-          {/* Symbol & Direction */}
-          <div className="flex items-center gap-3">
-            <div className={`flex items-center justify-center w-11 h-11 rounded-xl font-black border transition-transform group-hover:scale-105 ${
+          <div className="flex items-center gap-2.5">
+            <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 border ${
               isBuy 
-                ? 'bg-emerald-950/70 text-emerald-400 border-emerald-500/40 shadow-lg shadow-emerald-950/40' 
-                : 'bg-rose-950/70 text-rose-400 border-rose-500/40 shadow-lg shadow-rose-950/40'
+                ? 'bg-emerald-50 text-emerald-700 border-emerald-200/80' 
+                : 'bg-rose-50 text-rose-700 border-rose-200/80'
             }`}>
-              {isBuy ? <ArrowUpRight className="w-6 h-6" /> : <ArrowDownRight className="w-6 h-6" />}
+              {isBuy ? <ArrowUpRight className="w-5 h-5" /> : <ArrowDownRight className="w-5 h-5" />}
             </div>
 
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-xl font-black tracking-tight text-white font-mono">
+                <span className="text-lg font-bold text-slate-900 font-mono tracking-tight">
                   {signal.symbol.replace(/([A-Z]{3})([A-Z]{3})/, '$1 / $2')}
                 </span>
-                <span className={`px-2 py-0.5 rounded-md text-[11px] font-black tracking-wider border ${
+                <span className={`px-2 py-0.5 rounded-md text-[11px] font-bold tracking-wide uppercase border ${
                   isBuy 
-                    ? 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40' 
-                    : 'bg-rose-950/80 text-rose-300 border-rose-500/40'
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                    : 'bg-rose-50 text-rose-700 border-rose-200'
                 }`}>
                   {signal.action} {isBuy ? '▲' : '▼'}
                 </span>
               </div>
-              
-              <div className="flex flex-wrap items-center gap-2 mt-1.5">
-                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold font-mono bg-cyan-950/60 text-cyan-300 border border-cyan-800/50">
-                  {isCBDR ? '⚡ CBDR 15m (London)' : isStopHunt ? '🎯 Stop Hunt 5m' : signal.strategy}
+
+              <div className="flex items-center gap-1.5 mt-1">
+                <span className="text-[11px] font-medium text-slate-500">
+                  {isCBDR ? 'CBDR 15m' : isStopHunt ? 'Stop Hunt 5m' : signal.strategy}
                 </span>
-
-                {isCBDR && (
-                  <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${
-                    isMajorPair(signal.symbol)
-                      ? 'bg-blue-950/60 text-blue-300 border-blue-800/50'
-                      : 'bg-indigo-950/60 text-indigo-300 border-indigo-800/50'
-                  }`}>
-                    {isMajorPair(signal.symbol) ? '⚡ Major (PDH/PDL Swept)' : '🎯 Minor Cross'}
-                  </span>
-                )}
-
-                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-[#141b2d] text-slate-300 border border-white/[0.06]">
-                  📅 {dayName}
+                <span className="text-slate-300">•</span>
+                <span className="text-[11px] text-slate-400">
+                  {dayName}
                 </span>
               </div>
             </div>
           </div>
 
-          {/* Status Badge & Actions */}
-          <div className="flex flex-col items-end gap-1.5 shrink-0">
+          <div className="flex flex-col items-end gap-1.5">
             {getStatusBadge()}
             
-            {/* Quick Validation Check Pill */}
-            <button 
-              type="button"
-              onClick={() => setShowValidationDetails(!showValidationDetails)}
-              className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold text-slate-400 hover:text-white bg-[#121827] border border-white/[0.06] transition-colors"
-              title="View strategy validation criteria"
-            >
-              {isValid ? <CheckCircle2 className="w-3 h-3 text-emerald-400" /> : <AlertTriangle className="w-3 h-3 text-amber-400" />}
-              <span>{validationStatus}</span>
-              {showValidationDetails ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-            </button>
+            {/* Live Floating Pips Pill */}
+            {signal.raw_payload?.floatingPips !== undefined && (
+              <span className={`px-2 py-0.5 rounded-full font-mono text-[11px] font-semibold border ${
+                Number(signal.raw_payload.floatingPips) >= 0
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                  : 'bg-rose-50 text-rose-700 border-rose-200'
+              }`}>
+                {Number(signal.raw_payload.floatingPips) >= 0 ? '+' : ''}{String(signal.raw_payload.floatingPips)} pips
+              </span>
+            )}
           </div>
 
         </div>
-      </div>
 
-      {/* Dedicated Trade Entry Date & Time Ribbon */}
-      <div className="px-4 py-2 bg-[#0a0e19]/90 border-b border-white/[0.06] flex flex-wrap items-center justify-between gap-2 text-xs">
-        <div className="flex items-center gap-1.5 text-slate-400 font-medium">
-          <Clock className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-          <span className="text-slate-300 font-bold">Execution Window:</span>
-          <span className="font-mono text-[11px] bg-[#121829] px-2 py-0.5 rounded border border-white/[0.08] font-bold text-cyan-300">
-            {signal.session_name || timeFormatted}
-          </span>
+        {/* Execution Time Ribbon */}
+        <div className="flex items-center justify-between text-xs py-2 px-3 bg-slate-50 border border-slate-100 rounded-xl mb-4">
+          <div className="flex items-center gap-1.5 text-slate-500 font-medium">
+            <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+            <span className="text-slate-400">Window:</span>
+            <span className="font-mono text-slate-700 font-semibold text-[11px]">
+              {signal.session_name || timeFormatted}
+            </span>
+          </div>
+
+          <button 
+            type="button"
+            onClick={() => setShowValidationDetails(!showValidationDetails)}
+            className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-slate-700 font-medium"
+            title="View validation criteria"
+          >
+            {isValid ? <CheckCircle2 className="w-3 h-3 text-emerald-600" /> : <AlertTriangle className="w-3 h-3 text-amber-500" />}
+            <span>Rules</span>
+            {showValidationDetails ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+          </button>
         </div>
 
-        {signal.raw_payload?.floatingPips !== undefined && (
-          <span className={`px-2 py-0.5 rounded font-mono text-[11px] font-bold border ${
-            Number(signal.raw_payload.floatingPips) >= 0
-              ? 'bg-emerald-950/70 text-emerald-300 border-emerald-500/40'
-              : 'bg-rose-950/70 text-rose-300 border-rose-500/40'
-          }`}>
-            Live PnL: {Number(signal.raw_payload.floatingPips) >= 0 ? '+' : ''}{String(signal.raw_payload.floatingPips)} pips
-          </span>
-        )}
-      </div>
-
-      {/* Validation Checklist Drawer (Accordion) */}
-      {showValidationDetails && signal.validation && (
-        <div className="p-3.5 bg-[#0a0f1d] border-b border-white/[0.08] text-xs">
-          <div className="font-bold text-white mb-2 flex items-center justify-between">
-            <span>Automated Strategy Rules Checklist:</span>
-            <span className="text-[10px] text-slate-400">{signal.validation.summary}</span>
-          </div>
-          <div className="space-y-1.5">
-            {signal.validation.checks.map((check) => (
-              <div 
-                key={check.id} 
-                className={`p-2 rounded-xl border flex items-start justify-between gap-2 ${
-                  check.passed 
-                    ? 'bg-[#101728] border-emerald-500/30 text-slate-200' 
-                    : check.severity === 'ERROR'
-                      ? 'bg-rose-950/40 border-rose-500/40 text-rose-200'
-                      : 'bg-amber-950/40 border-amber-500/40 text-amber-200'
-                }`}
-              >
-                <div className="flex items-start gap-2">
-                  {check.passed ? (
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                  ) : check.severity === 'ERROR' ? (
-                    <XCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
-                  ) : (
-                    <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-                  )}
-                  <div>
-                    <span className="font-bold block text-[11px] text-white">{check.name}</span>
-                    <span className="text-[10px] text-slate-400">{check.message}</span>
+        {/* Validation Drawer (Collapsible) */}
+        {showValidationDetails && signal.validation && (
+          <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl mb-4 text-xs">
+            <div className="font-semibold text-slate-700 mb-2 flex items-center justify-between">
+              <span>Strategy Verification:</span>
+              <span className="text-[10px] text-slate-400">{signal.validation.summary}</span>
+            </div>
+            <div className="space-y-1.5">
+              {signal.validation.checks.map((check) => (
+                <div 
+                  key={check.id} 
+                  className={`p-2 rounded-lg border flex items-start justify-between gap-2 text-xs ${
+                    check.passed 
+                      ? 'bg-white border-emerald-200 text-slate-700' 
+                      : check.severity === 'ERROR'
+                        ? 'bg-rose-50 border-rose-200 text-rose-800'
+                        : 'bg-amber-50 border-amber-200 text-amber-800'
+                  }`}
+                >
+                  <div className="flex items-start gap-1.5">
+                    {check.passed ? (
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                    ) : check.severity === 'ERROR' ? (
+                      <XCircle className="w-3.5 h-3.5 text-rose-600 shrink-0 mt-0.5" />
+                    ) : (
+                      <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
+                    )}
+                    <div>
+                      <span className="font-semibold block text-[11px]">{check.name}</span>
+                      <span className="text-[10px] text-slate-500">{check.message}</span>
+                    </div>
                   </div>
+                  {check.received && (
+                    <span className="text-[10px] font-mono bg-slate-100 px-1.5 py-0.5 rounded text-slate-600 font-semibold shrink-0">
+                      {check.received}
+                    </span>
+                  )}
                 </div>
-                {check.received && (
-                  <span className="text-[10px] font-mono bg-white/[0.08] px-1.5 py-0.5 rounded text-slate-300 font-bold shrink-0">
-                    {check.received}
-                  </span>
-                )}
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Main Trade Prices Matrix */}
-      <div className="p-4 sm:p-5 space-y-4">
-        
-        {/* 3-Level Grid (Entry, SL, TP1) */}
-        <div className="grid grid-cols-3 gap-2.5">
+        {/* Core 3-Box Price Matrix (Stripe Minimalist Style) */}
+        <div className="grid grid-cols-3 gap-2 mb-3">
           
           {/* Limit Entry */}
-          <div className="p-3 rounded-xl bg-[#111728] border border-white/[0.08] relative">
-            <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1 flex items-center justify-between">
-              <span>Limit Entry</span>
+          <div className="p-2.5 rounded-xl bg-slate-50/80 border border-slate-100 text-center">
+            <div className="text-[10px] uppercase font-semibold text-slate-400 tracking-wide mb-1">
+              Entry Price
             </div>
-            <div className="text-base font-black text-white font-mono">
+            <div className="text-sm sm:text-base font-bold text-slate-800 font-mono">
               {signal.entry.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 5 })}
             </div>
-            <div className="text-[9px] text-cyan-400 font-mono mt-1 font-bold">
+            <div className="text-[10px] text-slate-400 font-medium mt-0.5">
               1st 15m FVG
             </div>
           </div>
 
           {/* Stop Loss */}
-          <div className="p-3 rounded-xl bg-rose-950/20 border border-rose-500/30 relative">
-            <div className="text-[10px] uppercase font-bold text-rose-400 tracking-wider mb-1 flex items-center justify-between">
-              <span>Stop Loss</span>
+          <div className="p-2.5 rounded-xl bg-rose-50/40 border border-rose-100 text-center">
+            <div className="text-[10px] uppercase font-semibold text-rose-500 tracking-wide mb-1">
+              Stop Loss
             </div>
-            <div className="text-base font-black text-rose-300 font-mono">
+            <div className="text-sm sm:text-base font-bold text-rose-700 font-mono">
               {signal.sl.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 5 })}
             </div>
-            <div className="text-[9px] text-rose-400/80 font-mono mt-1 font-bold">
-              {signal.sl_distance_pips_points} pips risk
+            <div className="text-[10px] text-rose-600 font-medium mt-0.5">
+              -{signal.sl_distance_pips_points} pips
             </div>
           </div>
 
           {/* Take Profit (1:3 RR) */}
-          <div className="p-3 rounded-xl bg-emerald-950/20 border border-emerald-500/30 relative">
-            <div className="text-[10px] uppercase font-bold text-emerald-400 tracking-wider mb-1 flex items-center justify-between">
-              <span>Take Profit</span>
+          <div className="p-2.5 rounded-xl bg-emerald-50/40 border border-emerald-100 text-center">
+            <div className="text-[10px] uppercase font-semibold text-emerald-600 tracking-wide mb-1">
+              Target (1:3)
             </div>
-            <div className="text-base font-black text-emerald-300 font-mono">
+            <div className="text-sm sm:text-base font-bold text-emerald-700 font-mono">
               {signal.tp1.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 5 })}
             </div>
-            <div className="text-[9px] text-emerald-400 font-mono mt-1 font-bold">
-              1:{signal.primary_risk_reward || 3.0} RR Target
+            <div className="text-[10px] text-emerald-600 font-medium mt-0.5">
+              +{Math.round(signal.sl_distance_pips_points * 3)} pips
             </div>
           </div>
 
         </div>
 
-        {/* Position Sizing & Lots Row */}
-        <div className="p-3 rounded-xl bg-[#111728]/80 border border-white/[0.06] flex items-center justify-between">
+        {/* Lot Sizing Pill */}
+        <div className="py-2 px-3 rounded-xl bg-slate-50/80 border border-slate-100 flex items-center justify-between text-xs">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-slate-300">Lot Sizing:</span>
-            <span className="text-base font-black text-cyan-400 font-mono">
+            <span className="text-slate-400 font-medium">Position Size:</span>
+            <span className="font-bold text-slate-800 font-mono">
               {signal.calculated_lot_size} Lots
             </span>
-            <span className="text-[10px] text-blue-300 font-mono bg-blue-950/80 border border-blue-800/60 px-1.5 py-0.5 rounded font-bold">
+            <span className="text-[10px] text-slate-500 font-mono bg-white border border-slate-200 px-1.5 py-0.2 rounded font-semibold">
               {signal.risk_percent}% Risk
             </span>
           </div>
@@ -362,17 +339,17 @@ export function SignalCardComponent({
           <button
             type="button"
             onClick={handleCopyLots}
-            className="flex items-center gap-1 text-[11px] text-cyan-400 hover:text-cyan-300 font-bold transition-colors bg-white/[0.04] hover:bg-white/[0.08] px-2 py-1 rounded-lg border border-white/[0.08]"
+            className="flex items-center gap-1 text-[11px] text-slate-500 hover:text-slate-900 font-medium transition-colors"
           >
-            {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-            <span>{copied ? 'Copied' : 'Copy Lots'}</span>
+            {copied ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+            <span>{copied ? 'Copied' : 'Copy'}</span>
           </button>
         </div>
 
       </div>
 
-      {/* Action Footer */}
-      <div className="p-3 border-t border-white/[0.06] bg-[#090e1a]/80 flex items-center justify-between gap-2">
+      {/* Card Action Footer */}
+      <div className="px-4 py-3 bg-slate-50/60 border-t border-slate-100 flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5">
           {signal.status === 'IN_TRADE' && (
             <>
@@ -380,7 +357,7 @@ export function SignalCardComponent({
                 type="button"
                 disabled={isUpdating}
                 onClick={handleMarkWin}
-                className="px-2.5 py-1 rounded-lg bg-emerald-950/80 hover:bg-emerald-900/80 text-emerald-300 border border-emerald-500/40 text-[11px] font-bold transition-all"
+                className="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-semibold transition-all shadow-xs"
                 title="Mark trade as 1:3 Win"
               >
                 Mark Win (+3R)
@@ -389,7 +366,7 @@ export function SignalCardComponent({
                 type="button"
                 disabled={isUpdating}
                 onClick={handleMoveBE}
-                className="px-2.5 py-1 rounded-lg bg-[#141b2d] hover:bg-[#1a233b] text-cyan-300 border border-white/[0.08] text-[11px] font-bold transition-all"
+                className="px-2.5 py-1 rounded-lg bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-semibold transition-all shadow-xs"
                 title="Move Stop Loss to Breakeven"
               >
                 Move to BE
@@ -398,7 +375,7 @@ export function SignalCardComponent({
                 type="button"
                 disabled={isUpdating}
                 onClick={handleMarkLoss}
-                className="px-2.5 py-1 rounded-lg bg-rose-950/80 hover:bg-rose-900/80 text-rose-300 border border-rose-500/40 text-[11px] font-bold transition-all"
+                className="px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold transition-all shadow-xs"
                 title="Mark trade as Stop Loss Hit"
               >
                 Mark SL (-1R)
@@ -411,7 +388,7 @@ export function SignalCardComponent({
               type="button"
               disabled={isUpdating}
               onClick={() => onUpdateStatus(signal.id, 'IN_TRADE')}
-              className="px-2.5 py-1 rounded-lg bg-cyan-950/80 hover:bg-cyan-900/80 text-cyan-300 border border-cyan-500/40 text-[11px] font-bold transition-all"
+              className="px-3 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-semibold transition-all shadow-xs"
             >
               Fill Limit Order
             </button>
@@ -420,7 +397,7 @@ export function SignalCardComponent({
           <button
             type="button"
             onClick={() => onDeleteSignal(signal.id)}
-            className="p-1 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-950/40 transition-colors"
+            className="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
             title="Delete signal"
           >
             <Trash2 className="w-3.5 h-3.5" />
@@ -431,11 +408,11 @@ export function SignalCardComponent({
           <button
             type="button"
             onClick={() => onOpenChart(signal.symbol, signal)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-950/60 hover:bg-cyan-900/60 text-cyan-300 border border-cyan-500/30 text-xs font-bold transition-all shadow-xs"
-            title={`Open Interactive TradingView Chart for ${signal.symbol}`}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium transition-colors shadow-xs"
+            title={`Open Interactive Chart for ${signal.symbol}`}
           >
-            <BarChart2 className="w-3.5 h-3.5 text-cyan-400" />
-            <span>View Chart</span>
+            <BarChart2 className="w-3.5 h-3.5 text-slate-300" />
+            <span>Chart</span>
           </button>
         )}
       </div>
