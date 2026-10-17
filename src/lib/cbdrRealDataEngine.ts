@@ -208,7 +208,13 @@ export function backtestCbdrOnCandles(symbol: string, candles: Candle[]): RealEn
 
         const entry = c0.low; // Entry on top of imbalance gap
         const imbalanceLow = Math.min(c2.high, c1.low);
-        const sl = Number((imbalanceLow - slBufferPrice).toFixed(5)); // Below imbalance + 7 pips buffer
+        let sl: number;
+        if (isMajor) {
+          const londonLowSoFar = Math.min(...londonCandles.slice(0, cIdx + 1).map(c => c.low));
+          sl = Number(londonLowSoFar.toFixed(5));
+        } else {
+          sl = Number((imbalanceLow - slBufferPrice).toFixed(5)); // Below imbalance + 7 pips buffer
+        }
         const riskDist = entry - sl;
 
         if (riskDist > 0) {
@@ -240,6 +246,9 @@ export function backtestCbdrOnCandles(symbol: string, candles: Candle[]): RealEn
           const sweepTag = isMajor 
             ? 'Major Pair: Previous Day Low (PDL) Swept' 
             : 'Minor Pair: Direct 1st Imbalance (No PDH/PDL Sweep)';
+          const slDesc = isMajor 
+            ? `SL placed at London Session Low (${sl})` 
+            : `SL ${slBufferPips} pips below imbalance (${sl})`;
 
           // Case 1: Trade reached TP1 (1:3) or SL -> Add to Backtest Archive
           if (outcome !== null) {
@@ -263,7 +272,7 @@ export function backtestCbdrOnCandles(symbol: string, candles: Candle[]): RealEn
               outcome,
               realized_pnl: outcome === 'WIN' ? 3000 : -1000,
               riskRewardAchieved,
-              notes: `[IPDA Approved: ${ipdaBuyCheck.details?.effectiveDirection} (${ratioDesc})] [${sweepTag}] 15m 1st London Imbalance (03:00-11:45 NY). SL ${slBufferPips} pips below imbalance (${sl}). 1:3 Target (+3.0R).`,
+              notes: `[IPDA Approved: ${ipdaBuyCheck.details?.effectiveDirection} (${ratioDesc})] [${sweepTag}] 15m 1st London Imbalance (03:00-11:45 NY). ${slDesc}. 1:3 Target (+3.0R).`,
               isCbdrValidDay: true
             });
 
@@ -373,7 +382,13 @@ export function backtestCbdrOnCandles(symbol: string, candles: Candle[]): RealEn
 
         const entry = c0.high; // Entry on bottom of imbalance gap
         const imbalanceHigh = Math.max(c2.low, c1.high);
-        const sl = Number((imbalanceHigh + slBufferPrice).toFixed(5)); // Above imbalance + 7 pips buffer
+        let sl: number;
+        if (isMajor) {
+          const londonHighSoFar = Math.max(...londonCandles.slice(0, cIdx + 1).map(c => c.high));
+          sl = Number(londonHighSoFar.toFixed(5));
+        } else {
+          sl = Number((imbalanceHigh + slBufferPrice).toFixed(5)); // Above imbalance + 7 pips buffer
+        }
         const riskDist = sl - entry;
 
         if (riskDist > 0) {
@@ -404,6 +419,9 @@ export function backtestCbdrOnCandles(symbol: string, candles: Candle[]): RealEn
           const sweepTag = isMajor 
             ? 'Major Pair: Previous Day High (PDH) Swept' 
             : 'Minor Pair: Direct 1st Imbalance (No PDH/PDL Sweep)';
+          const slDesc = isMajor 
+            ? `SL placed at London Session High (${sl})` 
+            : `SL ${slBufferPips} pips above imbalance (${sl})`;
 
           // Case 1: Trade reached TP1 (1:3) or SL -> Add to Backtest Archive
           if (outcome !== null) {
@@ -427,7 +445,7 @@ export function backtestCbdrOnCandles(symbol: string, candles: Candle[]): RealEn
               outcome,
               realized_pnl: outcome === 'WIN' ? 3000 : -1000,
               riskRewardAchieved,
-              notes: `[IPDA Approved: ${ipdaSellCheck.details?.effectiveDirection} (${ratioDesc})] [${sweepTag}] 15m 1st London Imbalance (03:00-11:45 NY). SL ${slBufferPips} pips above imbalance (${sl}). 1:3 Target (+3.0R).`,
+              notes: `[IPDA Approved: ${ipdaSellCheck.details?.effectiveDirection} (${ratioDesc})] [${sweepTag}] 15m 1st London Imbalance (03:00-11:45 NY). ${slDesc}. 1:3 Target (+3.0R).`,
               isCbdrValidDay: true
             });
 

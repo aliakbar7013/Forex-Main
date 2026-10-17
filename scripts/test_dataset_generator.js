@@ -38,7 +38,7 @@ function generateSixMonthsBacktestDataset() {
     'USDCHF': { basePrice: 0.83400, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 22, lotMultiplier: 1.0, action: 'BUY', isMajor: true, asianPips: 26 },
     'AUDUSD': { basePrice: 0.69610, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 20, lotMultiplier: 1.0, action: 'SELL', isMajor: true, asianPips: 26 },
     'USDCAD': { basePrice: 1.42740, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 24, lotMultiplier: 1.0, action: 'BUY', isMajor: true, asianPips: 30 },
-    'NZDUSD': { basePrice: 0.55900, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 20, lotMultiplier: 1.0, action: 'SELL', isMajor: true, asianPips: 24 },
+    'NZDUSD': { basePrice: 0.55900, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 20, lotMultiplier: 1.0, action: 'BUY', isMajor: true, asianPips: 24 },
 
     // Crosses (No PDH/PDL sweep required for CBDR)
     'GBPJPY': { basePrice: 209.54, pipDecimals: 2, pipUnit: 0.01, pipsPerSl: 40, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 42 },
@@ -57,11 +57,47 @@ function generateSixMonthsBacktestDataset() {
   const crossKeys = ['GBPNZD', 'GBPJPY', 'EURJPY', 'EURGBP', 'EURCAD', 'GBPAUD', 'GBPCHF', 'EURCHF', 'AUDJPY', 'CADJPY'];
 
   // Helper 1: CBDR Record Generator (15m, London 03:00-11:45 NY, Mon-Wed only, strict 1:3 RR)
-  const createCbdrRecord = (symbol, day, dateStr, outcome, customAction) => {
+  const createCbdrRecord = (symbol, day, dateStr, outcome, customAction, overrideParams) => {
     const spec = pairSpecs[symbol] || pairSpecs['EURUSD'];
     const action = customAction || spec.action;
     const { usedRisk, usedState } = applyTradeOutcome(outcome);
     const targetRrMultiple = 3.0; // Strictly 1:3.0 RR
+
+    if (overrideParams) {
+      const exit_price = outcome === 'WIN' ? overrideParams.tp1 : overrideParams.sl;
+      const isBuy = action === 'BUY';
+      const risk = isBuy ? (overrideParams.entry - overrideParams.sl) : (overrideParams.sl - overrideParams.entry);
+      const reward = isBuy ? (overrideParams.tp1 - overrideParams.entry) : (overrideParams.entry - overrideParams.tp1);
+      const calcRr = Number((reward / risk).toFixed(1));
+      const rr = outcome === 'WIN' ? calcRr : -1.0;
+      const pnl = Number((rr * 1000 * usedRisk).toFixed(2));
+      trades.push({
+        id: `bt_trade_${String(tradeSeq++).padStart(3, '0')}`,
+        symbol,
+        strategy: 'CBDR',
+        action,
+        timeframe: '15m',
+        entry: overrideParams.entry,
+        sl: overrideParams.sl,
+        tp1: overrideParams.tp1,
+        tp2: undefined,
+        exit_price,
+        risk_percent: usedRisk,
+        defensive_state: usedState,
+        calculated_lot_size: Number((spec.lotMultiplier * usedRisk).toFixed(2)),
+        risk_amount_usd: 1000 * usedRisk,
+        outcome,
+        realized_pnl: overrideParams.realized_pnl !== undefined ? overrideParams.realized_pnl : pnl,
+        riskRewardAchieved: rr,
+        trading_day: day,
+        isCbdrValidDay: true,
+        session: 'London (03:00 – 11:45 NY)',
+        date_executed: dateStr,
+        notes: overrideParams.note,
+        created_at: `${dateStr}T07:30:00.000Z`
+      });
+      return;
+    }
 
     const slDist = Number((spec.pipsPerSl * spec.pipUnit).toFixed(spec.pipDecimals));
     const tpDist = Number((slDist * targetRrMultiple).toFixed(spec.pipDecimals));
@@ -82,11 +118,28 @@ function generateSixMonthsBacktestDataset() {
     const lots = Number((spec.lotMultiplier * usedRisk).toFixed(2));
     const pnl = Number((rr * 1000 * usedRisk).toFixed(2));
 
-    const note = outcome === 'WIN'
-      ? (spec.isMajor
-          ? `CBDR 15m Major Pair: Previous Day ${action === 'BUY' ? 'Low (PDL)' : 'High (PDH)'} swept at 02:45 NY -> London 1st 15m ${action === 'BUY' ? 'Bullish' : 'Bearish'} FVG entry. SL placed 7 pips beyond FVG. Target 1:3.0 (+3.0R) hit. Strategy rule satisfied.`
-          : `CBDR 15m Minor Cross: Direct London 1st 15m ${action === 'BUY' ? 'Bullish' : 'Bearish'} Imbalance entry (No PDH/PDL sweep required). SL placed 7 pips beyond FVG. Target 1:3.0 (+3.0R) hit. Strategy rule satisfied.`)
-      : `CBDR 15m ${day} London: Stop loss hit at ${sl} (-1.0R) on session trend extension. Defensive risk stepped down to ${activeRiskPercent}%.`;
+    let note = '';
+    if (outcome === 'WIN') {
+      if (spec.isMajor) {
+        note = action === 'BUY'
+          ? `CBDR 15m Major Pair: Previous Day Low (PDL) swept at 02:45 NY -> London 1st 15m Bullish FVG entry @ ${entry}. SL placed at London Session Low (${sl}). Target 1:3.0 (+3.0R) hit at ${tp1}. Strategy rule satisfied.`
+          : `CBDR 15m Major Pair: Previous Day High (PDH) swept at 02:45 NY -> London 1st 15m Bearish FVG entry @ ${entry}. SL placed at London Session High (${sl}). Target 1:3.0 (+3.0R) hit at ${tp1}. Strategy rule satisfied.`;
+      } else {
+        note = action === 'BUY'
+          ? `CBDR 15m Minor Cross: Direct London 1st 15m Bullish Imbalance entry @ ${entry} (No PDH/PDL sweep required). SL placed below FVG at ${sl}. Target 1:3.0 (+3.0R) hit at ${tp1}. Strategy rule satisfied.`
+          : `CBDR 15m Minor Cross: Direct London 1st 15m Bearish Imbalance entry @ ${entry} (No PDH/PDL sweep required). SL placed above FVG at ${sl}. Target 1:3.0 (+3.0R) hit at ${tp1}. Strategy rule satisfied.`;
+      }
+    } else {
+      if (spec.isMajor) {
+        note = action === 'BUY'
+          ? `CBDR 15m Major Pair: Previous Day Low (PDL) swept -> London 1st 15m Bullish FVG entry @ ${entry}. London Session Low broken, SL hit at ${sl} (-1.0R). Defensive risk stepped down to ${activeRiskPercent}%.`
+          : `CBDR 15m Major Pair: Previous Day High (PDH) swept -> London 1st 15m Bearish FVG entry @ ${entry}. London Session High broken, SL hit at ${sl} (-1.0R). Defensive risk stepped down to ${activeRiskPercent}%.`;
+      } else {
+        note = action === 'BUY'
+          ? `CBDR 15m Minor Cross: Direct London 1st 15m Bullish Imbalance entry @ ${entry} (No PDH/PDL sweep required). FVG invalidated, SL hit at ${sl} (-1.0R). Defensive risk stepped down to ${activeRiskPercent}%.`
+          : `CBDR 15m Minor Cross: Direct London 1st 15m Bearish Imbalance entry @ ${entry} (No PDH/PDL sweep required). FVG invalidated, SL hit at ${sl} (-1.0R). Defensive risk stepped down to ${activeRiskPercent}%.`;
+      }
+    }
 
     trades.push({
       id: `bt_trade_${String(tradeSeq++).padStart(3, '0')}`,
@@ -255,21 +308,48 @@ function generateSixMonthsBacktestDataset() {
     // Monday Loss -> Tuesday trade. If Win -> Holiday Wed to Fri!
     // Tuesday Loss -> Wednesday trade.
     // Thursday & Friday are ALWAYS 0 TRADES!
-    const isMonWin = (w % 4 !== 1);
-    const pairChoice = (w % 2 === 0) ? majorKeys[(w / 2) % majorKeys.length] : crossKeys[Math.floor(w / 2) % crossKeys.length];
-
-    if (isMonWin) {
-      createCbdrRecord(pairChoice, 'Monday', monStr, 'WIN');
+    if (w === 27) {
+      // Week 27 (Oct 12 - Oct 16, 2026): User's live verified trading week!
+      // Monday Oct 12: Mon loss on GBPUSD BUY (SL hit at London Session Low)
+      createCbdrRecord('GBPUSD', 'Monday', monStr, 'LOSS', 'BUY', {
+        entry: 1.30650,
+        sl: 1.30320,
+        tp1: 1.31640,
+        note: 'CBDR 15m Major Pair: Previous Day Low (PDL) swept at 02:45 NY -> London 1st 15m Bullish FVG entry @ 1.30650. London Session Low broken, SL hit at 1.30320 (-1.0R). Defensive risk stepped down to 0.5%.'
+      });
+      // Tuesday Oct 13: Tue loss on GBPJPY BUY (SL hit below FVG)
+      createCbdrRecord('GBPJPY', 'Tuesday', tueStr, 'LOSS', 'BUY', {
+        entry: 200.850,
+        sl: 200.450,
+        tp1: 202.050,
+        note: 'CBDR 15m Minor Cross: Direct London 1st 15m Bullish Imbalance entry @ 200.850 (No PDH/PDL sweep required). FVG invalidated, SL hit at 200.450 (-1.0R). Defensive risk stepped down to 0.25%.'
+      });
+      // Wednesday Oct 14: User verified live trade execution: EURUSD SELL (+3.0R WIN / +$3,000)
+      createCbdrRecord('EURUSD', 'Wednesday', wedStr, 'WIN', 'SELL', {
+        entry: 1.12647,
+        sl: 1.12812,
+        tp1: 1.12152,
+        realized_pnl: 3000,
+        note: '[CBDR 15m Major Pair] Previous Day High (PDH) swept at 02:45 NY -> London 1st 15m Bearish FVG entered @ 1.12647. Stop Loss placed at London Session High (1.12812). Target 1:3.0 (+3.0R / +$3,000 WIN) hit at 1.12152. Strategy rule satisfied; weekly holiday active for Thursday and Friday.'
+      });
+      // Thursday Oct 15 & Friday Oct 16: STRICTLY 0 TRADES FOR CBDR!
     } else {
-      createCbdrRecord(pairChoice, 'Monday', monStr, 'LOSS');
-      const isTueWin = (w % 8 === 1);
-      const tuePair = crossKeys[(w + 3) % crossKeys.length];
-      if (isTueWin) {
-        createCbdrRecord(tuePair, 'Tuesday', tueStr, 'WIN');
+      const isMonWin = (w % 4 !== 1);
+      const pairChoice = (w % 2 === 0) ? majorKeys[(w / 2) % majorKeys.length] : crossKeys[Math.floor(w / 2) % crossKeys.length];
+
+      if (isMonWin) {
+        createCbdrRecord(pairChoice, 'Monday', monStr, 'WIN');
       } else {
-        createCbdrRecord(tuePair, 'Tuesday', tueStr, 'LOSS');
-        const wedPair = majorKeys[(w + 4) % majorKeys.length];
-        createCbdrRecord(wedPair, 'Wednesday', wedStr, 'WIN');
+        createCbdrRecord(pairChoice, 'Monday', monStr, 'LOSS');
+        const isTueWin = (w % 8 === 1);
+        const tuePair = crossKeys[(w + 3) % crossKeys.length];
+        if (isTueWin) {
+          createCbdrRecord(tuePair, 'Tuesday', tueStr, 'WIN');
+        } else {
+          createCbdrRecord(tuePair, 'Tuesday', tueStr, 'LOSS');
+          const wedPair = majorKeys[(w + 4) % majorKeys.length];
+          createCbdrRecord(wedPair, 'Wednesday', wedStr, 'WIN');
+        }
       }
     }
 
