@@ -15,8 +15,6 @@ import {
 import { getCurrentMarketClocks, getTradingSessions, SessionClocks } from '@/lib/sessionTracker';
 import { soundEngine } from '@/lib/soundEngine';
 import { Header } from '@/components/dashboard/Header';
-import { SessionRibbon } from '@/components/dashboard/SessionRibbon';
-import { StrategyControlCards } from '@/components/dashboard/StrategyControlCards';
 import { IpdaDirectionMatrix } from '@/components/dashboard/IpdaDirectionMatrix';
 import { FilterAndControlsBar } from '@/components/dashboard/FilterAndControlsBar';
 import { SignalCard } from '@/components/dashboard/SignalCard';
@@ -775,9 +773,9 @@ export default function TradingDashboard() {
   }
 
   return (
-    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-slate-50 text-slate-900 flex flex-col selection:bg-blue-600 selection:text-white">
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-[#06080f] text-slate-100 flex flex-col selection:bg-blue-600 selection:text-white relative">
       
-      {/* 1. Top Navbar */}
+      {/* 1. Institutional Top Navbar */}
       <Header
         clocks={clocks}
         isConnected={isConnected}
@@ -790,84 +788,81 @@ export default function TradingDashboard() {
         onLogout={handleLogout}
       />
 
-      {/* 2. Macro Session Timeline Bar */}
-      <SessionRibbon sessions={sessions} />
-
-      {/* 3. Primary Dashboard Navigation Tabs */}
-      <div className="border-b border-slate-200 bg-white shadow-xs select-none">
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 flex items-center justify-between gap-3 py-2 overflow-x-auto no-scrollbar">
-          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+      {/* 2. Institutional Navigation Tabs Bar */}
+      <div className="border-b border-white/[0.08] bg-[#080c14]/90 backdrop-blur-xl select-none sticky top-0 z-20 shadow-[0_4px_20px_rgba(0,0,0,0.5)]">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 flex items-center justify-between gap-3 py-2.5 overflow-x-auto no-scrollbar">
+          <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={() => setActiveTab('signals')}
-              className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-xs font-bold transition-all shrink-0 ${
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 ${
                 activeTab === 'signals'
-                  ? 'bg-blue-50 text-blue-700 border border-blue-200 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-transparent'
+                  ? 'bg-blue-500/15 text-blue-400 border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.2)]'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] border border-transparent'
               }`}
             >
-              <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-600" />
+              <Zap className="w-3.5 h-3.5 text-blue-400" />
               <span>⚡ Live Signals</span>
-              <span className="hidden md:inline px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 font-mono text-[9px] sm:text-[10px] font-bold border border-blue-200">
-                CBDR Mon–Wed
+              <span className="hidden md:inline px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-300 font-mono text-[9px] font-bold border border-blue-500/20">
+                Live Feed
               </span>
             </button>
 
             <button
               onClick={() => setActiveTab('strategy')}
-              className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-xs font-bold transition-all shrink-0 ${
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 ${
                 activeTab === 'strategy'
-                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-transparent'
+                  ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.2)]'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] border border-transparent'
               }`}
             >
-              <BookOpen className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600" />
+              <BookOpen className="w-3.5 h-3.5 text-emerald-400" />
               <span>📖 Strategy</span>
-              <span className="hidden md:inline px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-mono text-[9px] sm:text-[10px] font-bold border border-emerald-200">
-                Playbook &amp; Rules
+              <span className="hidden md:inline px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-300 font-mono text-[9px] font-bold border border-emerald-500/20">
+                Playbook
               </span>
             </button>
 
             <button
               onClick={() => setActiveTab('chart')}
-              className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-xs font-bold transition-all shrink-0 ${
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 ${
                 activeTab === 'chart'
-                  ? 'bg-blue-50 text-blue-700 border border-blue-200 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-transparent'
+                  ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 shadow-[0_0_15px_rgba(6,182,212,0.2)]'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] border border-transparent'
               }`}
             >
-              <BarChart2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-600" />
+              <BarChart2 className="w-3.5 h-3.5 text-cyan-400" />
               <span>📈 Live Chart</span>
-              <span className="hidden md:inline px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-mono text-[9px] sm:text-[10px] font-bold border border-emerald-200">
+              <span className="hidden md:inline px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-300 font-mono text-[9px] font-bold border border-cyan-500/20">
                 TradingView
               </span>
             </button>
 
             <button
               onClick={() => setActiveTab('backtest')}
-              className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-xs font-bold transition-all shrink-0 ${
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 ${
                 activeTab === 'backtest'
-                  ? 'bg-purple-50 text-purple-700 border border-purple-200 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-transparent'
+                  ? 'bg-purple-500/15 text-purple-400 border border-purple-500/30 shadow-[0_0_15px_rgba(168,85,247,0.2)]'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] border border-transparent'
               }`}
             >
-              <BarChart3 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-purple-600" />
+              <BarChart3 className="w-3.5 h-3.5 text-purple-400" />
               <span>📊 Backtest Archive</span>
-              <span className="hidden md:inline px-1.5 py-0.5 rounded bg-purple-100 text-purple-800 font-mono text-[9px] sm:text-[10px] font-bold border border-purple-200">
-                Active
+              <span className="hidden md:inline px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-300 font-mono text-[9px] font-bold border border-purple-500/20">
+                180 Trades
               </span>
             </button>
 
             <button
               onClick={() => setActiveTab('matrix')}
-              className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-xs font-bold transition-all shrink-0 ${
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 ${
                 activeTab === 'matrix'
-                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-transparent'
+                  ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30 shadow-[0_0_15px_rgba(245,158,11,0.2)]'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] border border-transparent'
               }`}
             >
-              <Scale className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600" />
+              <Scale className="w-3.5 h-3.5 text-amber-400" />
               <span>🌐 IPDA Matrix</span>
-              <span className="hidden md:inline px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-mono text-[9px] sm:text-[10px] font-bold border border-emerald-200">
+              <span className="hidden md:inline px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-300 font-mono text-[9px] font-bold border border-amber-500/20">
                 28 Pairs
               </span>
             </button>
@@ -908,18 +903,10 @@ export default function TradingDashboard() {
           />
         </div>
 
-        {/* Live Signal Stream View */}
+        {/* Live Signal Stream View - Ultra Minimal Institutional Design */}
         <div className={activeTab === 'signals' ? 'space-y-6 block' : 'hidden'} aria-hidden={activeTab !== 'signals'}>
-          {/* Defensive Risk Stepping & Performance Engine */}
-          <StrategyControlCards
-            ipdaBiases={ipdaBiases}
-            ipdaMatrix={ipdaMatrix}
-            riskSettings={riskSettings}
-            onToggleBias={handleToggleIpdaBias}
-            onOpenSettings={() => setIsSettingsOpen(true)}
-          />
-
-          {/* Filter and View Controls Bar */}
+          
+          {/* Minimal Filter and View Controls Bar */}
           <FilterAndControlsBar
             selectedStrategy={selectedStrategy}
             onSelectStrategy={setSelectedStrategy}
@@ -941,55 +928,16 @@ export default function TradingDashboard() {
             countdown={countdown}
           />
 
-          {/* CBDR Non-Trading Day Banner for Thursday / Friday (Shown when viewing CBDR) */}
-          {(() => {
-            const todayNYDay = new Date().toLocaleDateString('en-US', { timeZone: 'America/New_York', weekday: 'long' });
-            const isThursdayOrFriday = todayNYDay === 'Thursday' || todayNYDay === 'Friday';
-            if (!isThursdayOrFriday || selectedStrategy !== 'CBDR') return null;
-
-            return (
-              <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-50 via-orange-50/40 to-amber-50 border border-amber-300 text-amber-950 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
-                <div className="flex items-start gap-3">
-                  <div className="p-2 rounded-xl bg-amber-500 text-white shadow-xs shrink-0 mt-0.5">
-                    <AlertTriangle className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-black text-sm text-slate-900 tracking-tight">
-                        ⚠️ TODAY IS {todayNYDay.toUpperCase()} — CBDR NON-TRADING DAY FOR NEW ENTRIES
-                      </span>
-                      <span className="px-2 py-0.5 rounded-md bg-amber-200 text-amber-950 font-bold text-[10px] font-mono border border-amber-300">
-                        Rule: Mon–Wed Entries Only
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-700 mt-1 leading-relaxed">
-                      Under ICT CBDR institutional rules, <strong>no new entries are taken on Thursday or Friday</strong>. Only active carry-over trades entered during valid Wednesday sessions continue running until TP or SL is reached. For active fresh daily setups, select the <strong>Stop Hunt Model (5m)</strong> which trades Monday through Friday all week.
-                    </p>
-                  </div>
-                </div>
-                <div className="text-right shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedStrategy('STOP_HUNT')}
-                    className="px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-xs transition-colors flex items-center gap-1.5"
-                  >
-                    <span>Switch to Stop Hunt (5m)</span>
-                  </button>
-                </div>
-              </div>
-            );
-          })()}
-
           {/* Real-Time Trade Resolution Alert Toast / Banner (Auto-dismisses in 5s) */}
           {tradeToast && (
-            <div className={`relative overflow-hidden p-4 rounded-2xl border shadow-md flex items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2 duration-300 ${
+            <div className={`relative overflow-hidden p-4 rounded-2xl border backdrop-blur-xl shadow-lg flex items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2 duration-300 ${
               tradeToast.outcome === 'WIN'
-                ? 'bg-emerald-50 border-emerald-300 text-emerald-950'
-                : 'bg-rose-50 border-rose-300 text-rose-950'
+                ? 'bg-emerald-950/40 border-emerald-500/30 text-emerald-200'
+                : 'bg-rose-950/40 border-rose-500/30 text-rose-200'
             }`}>
               <div className="flex items-center gap-3">
                 <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold shrink-0 ${
-                  tradeToast.outcome === 'WIN' ? 'bg-emerald-600 text-white shadow-xs' : 'bg-rose-600 text-white shadow-xs'
+                  tradeToast.outcome === 'WIN' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
                 }`}>
                   {tradeToast.outcome === 'WIN' ? <CheckCircle2 className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />}
                 </div>
@@ -1000,13 +948,13 @@ export default function TradingDashboard() {
                     </span>
                     <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border ${
                       tradeToast.outcome === 'WIN'
-                        ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
-                        : 'bg-rose-100 text-rose-800 border-rose-300'
+                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                        : 'bg-rose-500/20 text-rose-300 border-rose-500/30'
                     }`}>
                       ⏱️ 5s Auto-Dismiss
                     </span>
                   </div>
-                  <div className="text-sm font-bold mt-0.5 text-slate-900">
+                  <div className="text-sm font-bold mt-0.5 text-white">
                     {tradeToast.message}
                   </div>
                 </div>
@@ -1016,7 +964,7 @@ export default function TradingDashboard() {
                 <button
                   type="button"
                   onClick={() => setTradeToast(null)}
-                  className="p-1.5 rounded-lg hover:bg-black/5 text-slate-500 hover:text-slate-900 transition-colors"
+                  className="p-1.5 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition-colors"
                   title="Dismiss immediately"
                 >
                   <X className="w-4 h-4" />
@@ -1036,37 +984,37 @@ export default function TradingDashboard() {
             </div>
           )}
 
-          {/* Live Signal Feed */}
+          {/* Live Signal Feed Stream */}
           {isLoading ? (
-            <div className="py-20 text-center text-slate-500">
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-3" />
-              <p className="text-xs font-mono font-bold">Initializing Real-Time Stream...</p>
+            <div className="py-24 text-center text-slate-400">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-2 border-blue-500 border-t-transparent mb-3" />
+              <p className="text-xs font-mono font-bold text-slate-400 tracking-wider">INITIALIZING INSTITUTIONAL FEED...</p>
             </div>
           ) : displayedSignals.length === 0 ? (
-            <div className="bg-white border border-slate-200 rounded-2xl p-12 text-center shadow-sm">
+            <div className="bg-[#0b101d]/80 border border-white/[0.08] rounded-2xl p-12 text-center backdrop-blur-xl shadow-xl">
               {selectedStrategy === 'CBDR' ? (
                 <>
-                  <div className="w-12 h-12 rounded-2xl bg-amber-100 border border-amber-300 flex items-center justify-center text-amber-700 mx-auto mb-3">
+                  <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 mx-auto mb-3">
                     <AlertTriangle className="w-6 h-6" />
                   </div>
-                  <h3 className="text-base font-bold text-slate-900 mb-1">
+                  <h3 className="text-base font-bold text-white mb-1">
                     No Running CBDR Trades
                   </h3>
-                  <p className="text-xs text-slate-600 max-w-md mx-auto mb-4 font-medium leading-relaxed">
-                    Under ICT CBDR institutional rules, new entries are strictly taken on <strong>Monday, Tuesday, and Wednesday</strong> (London Session 03:00 – 11:45 NY). Previous trades that hit TP/SL have been archived to Backtest.
+                  <p className="text-xs text-slate-400 max-w-md mx-auto mb-4 font-medium leading-relaxed">
+                    Under ICT CBDR institutional rules, new entries are strictly taken on <strong className="text-slate-200">Monday, Tuesday, and Wednesday</strong> (London Session 03:00 – 11:45 NY). Previous trades that hit TP/SL have been archived to Backtest.
                   </p>
                   <div className="flex items-center justify-center gap-3">
                     <button
                       type="button"
                       onClick={() => setSelectedStrategy('STOP_HUNT')}
-                      className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs shadow-xs"
+                      className="px-4 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 font-bold text-xs transition-colors"
                     >
                       View Live Stop Hunt Trades (Mon–Fri)
                     </button>
                     <button
                       type="button"
                       onClick={() => setActiveTab('backtest')}
-                      className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-xs"
+                      className="px-4 py-2 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/40 font-bold text-xs transition-colors"
                     >
                       View CBDR Backtest Archive
                     </button>
@@ -1074,20 +1022,20 @@ export default function TradingDashboard() {
                 </>
               ) : selectedStrategy === 'NEW_YORK' ? (
                 <>
-                  <div className="w-12 h-12 rounded-2xl bg-purple-100 border border-purple-300 flex items-center justify-center text-purple-700 mx-auto mb-3">
+                  <div className="w-12 h-12 rounded-2xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400 mx-auto mb-3">
                     <Clock className="w-6 h-6" />
                   </div>
-                  <h3 className="text-base font-bold text-slate-900 mb-1">
+                  <h3 className="text-base font-bold text-white mb-1">
                     No Active New York Index Trades
                   </h3>
-                  <p className="text-xs text-slate-600 max-w-md mx-auto mb-4 font-medium leading-relaxed">
+                  <p className="text-xs text-slate-400 max-w-md mx-auto mb-4 font-medium leading-relaxed">
                     The New York Open Index model operates on NAS100, US30, and SPX500 during the 09:30 AM – 12:00 PM NY session.
                   </p>
                   <div className="flex items-center justify-center gap-3">
                     <button
                       type="button"
                       onClick={() => setSelectedStrategy('STOP_HUNT')}
-                      className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs shadow-xs"
+                      className="px-4 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 font-bold text-xs transition-colors"
                     >
                       View Live Stop Hunt Trades
                     </button>
@@ -1095,23 +1043,23 @@ export default function TradingDashboard() {
                 </>
               ) : (
                 <>
-                  <Sparkles className="w-8 h-8 text-blue-600 mx-auto mb-3" />
-                  <h3 className="text-base font-bold text-slate-900 mb-1">No active signals found</h3>
-                  <p className="text-xs text-slate-600 max-w-md mx-auto mb-4 font-medium">
+                  <Sparkles className="w-8 h-8 text-blue-400 mx-auto mb-3" />
+                  <h3 className="text-base font-bold text-white mb-1">No active signals found</h3>
+                  <p className="text-xs text-slate-400 max-w-md mx-auto mb-4 font-medium">
                     There are no signals matching your filter. Check the Backtesting Archive for historical trades.
                   </p>
                   <div className="flex items-center justify-center gap-3">
                     <button
                       type="button"
                       onClick={() => setIsSimulatorOpen(true)}
-                      className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs"
+                      className="px-4 py-2 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/40 font-bold text-xs transition-colors"
                     >
                       Launch Webhook Simulator
                     </button>
                     <button
                       type="button"
                       onClick={() => setActiveTab('backtest')}
-                      className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-xs"
+                      className="px-4 py-2 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/40 font-bold text-xs transition-colors"
                     >
                       View Backtest Archive
                     </button>
@@ -1146,14 +1094,14 @@ export default function TradingDashboard() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-slate-200 bg-white py-4 px-6 text-center text-xs text-slate-600">
+      <footer className="border-t border-white/[0.08] bg-[#070b14]/90 backdrop-blur-xl py-4 px-6 text-center text-xs text-slate-400">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-500" />
-            <span className="font-semibold text-slate-900">Apex ICT Quantitative Trading Signals Engine • IPDA Central Bank Direction Filter Active</span>
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#10b981]" />
+            <span className="font-semibold text-slate-200">Apex ICT Institutional Terminal • IPDA Central Bank Direction Filter Active</span>
           </div>
           <div className="font-mono text-[11px] text-slate-500 font-medium">
-            CBDR 15m • Stop Hunt 5m • NY Indices 1m • Smooth Background Live Sync Active
+            CBDR 15m • Stop Hunt 5m • NY Indices 1m • Smooth Live Tick Sync Active
           </div>
         </div>
       </footer>

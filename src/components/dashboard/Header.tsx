@@ -13,7 +13,9 @@ import {
   Key,
   LogOut,
   Crown,
-  User
+  User,
+  Radio,
+  Clock
 } from 'lucide-react';
 import { SessionClocks } from '@/lib/sessionTracker';
 import { soundEngine } from '@/lib/soundEngine';
@@ -79,7 +81,7 @@ export function HeaderComponent({
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs select-none">
+    <header className="sticky top-0 z-50 w-full bg-[#080c14]/90 backdrop-blur-xl border-b border-white/[0.08] select-none">
       <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2.5">
         
         {/* Main Header Row */}
@@ -87,38 +89,40 @@ export function HeaderComponent({
           
           {/* LEFT: Brand Logo & Title */}
           <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
-            <div className="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-blue-600 via-indigo-600 to-indigo-800 text-white font-black shadow-sm shrink-0">
-              <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-blue-100" />
+            <div className="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-cyan-500 via-blue-600 to-indigo-700 text-white font-black shadow-lg shadow-cyan-500/20 shrink-0 border border-white/20">
+              <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-100" />
             </div>
             <div>
-              <div className="flex items-center gap-1.5 sm:gap-2">
-                <span className="text-sm sm:text-base font-black tracking-tight text-slate-900 uppercase">
-                  Apex<span className="text-blue-600">Signal</span>
+              <div className="flex items-center gap-2">
+                <span className="text-sm sm:text-base font-black tracking-tight text-white uppercase font-sans">
+                  APEX<span className="text-cyan-400">TERMINAL</span>
                 </span>
-                <span className="text-[9px] sm:text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.2 rounded bg-blue-50 text-blue-700 border border-blue-200 shrink-0">
-                  ICT Quant
+                <span className="text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded-full bg-cyan-950/80 text-cyan-300 border border-cyan-800/60 shrink-0">
+                  ICT v2.4
                 </span>
               </div>
-              <p className="text-[10px] text-slate-500 font-medium hidden sm:block">
-                Forex &amp; Indices IPDA Direction Engine
+              <p className="text-[10px] text-slate-400 font-medium hidden sm:block">
+                Interbank Institutional Liquidity Engine
               </p>
             </div>
           </div>
 
           {/* CENTER: Dual Time Clocks Strictly (NY & IST) */}
-          <div className="flex items-center gap-2 sm:gap-2.5 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs">
-            <div className="flex items-center gap-1.5 bg-white px-2.5 py-0.5 rounded-lg border border-slate-200 shadow-2xs">
-              <span className="text-[10px] font-bold text-slate-500 uppercase">NY</span>
-              <strong className="text-slate-900 font-bold tabular-nums text-xs sm:text-sm font-mono">
+          <div className="flex items-center gap-2 sm:gap-2.5 bg-[#0f1422]/90 px-3 py-1.5 rounded-xl border border-white/[0.08] shadow-inner">
+            <div className="flex items-center gap-1.5 bg-[#141b2d] px-2.5 py-0.5 rounded-lg border border-white/[0.06]">
+              <Clock className="w-3 h-3 text-cyan-400 shrink-0" />
+              <span className="text-[10px] font-bold text-slate-400 uppercase">NY</span>
+              <strong className="text-white font-bold tabular-nums text-xs sm:text-sm font-mono">
                 {clocks.nyTime}
               </strong>
             </div>
             
-            <span className="text-slate-300 font-bold">•</span>
+            <span className="text-slate-600 font-bold">•</span>
 
-            <div className="flex items-center gap-1.5 bg-white px-2.5 py-0.5 rounded-lg border border-slate-200 shadow-2xs">
-              <span className="text-[10px] font-bold text-emerald-700 uppercase">IST</span>
-              <strong className="text-slate-900 font-bold tabular-nums text-xs sm:text-sm font-mono">
+            <div className="flex items-center gap-1.5 bg-[#141b2d] px-2.5 py-0.5 rounded-lg border border-white/[0.06]">
+              <Clock className="w-3 h-3 text-emerald-400 shrink-0" />
+              <span className="text-[10px] font-bold text-emerald-400 uppercase">IST</span>
+              <strong className="text-white font-bold tabular-nums text-xs sm:text-sm font-mono">
                 {clocks.istTime}
               </strong>
             </div>
@@ -129,12 +133,12 @@ export function HeaderComponent({
             
             {/* Live Feed Status Dot */}
             <div className="flex items-center">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-emerald-50 text-emerald-900 border border-emerald-300 text-xs font-bold shadow-2xs">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-emerald-950/60 text-emerald-300 border border-emerald-500/30 text-xs font-bold glow-emerald">
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
                 </span>
-                <span className="hidden xs:inline">LIVE FEED</span>
+                <span className="hidden xs:inline tracking-wider text-[11px]">LIVE FEED</span>
               </span>
             </div>
 
@@ -143,10 +147,10 @@ export function HeaderComponent({
               <button
                 type="button"
                 onClick={onOpenTelegram}
-                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-sky-50 hover:bg-sky-100 text-sky-900 border border-sky-300 text-xs font-bold shadow-2xs transition-all shrink-0"
+                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-sky-950/60 hover:bg-sky-900/60 text-sky-300 border border-sky-500/30 text-xs font-bold transition-all shrink-0"
                 title="Connect Telegram Bot for Instant Real-Time Signal Push Alerts"
               >
-                <Send className="w-3.5 h-3.5 text-sky-600" />
+                <Send className="w-3.5 h-3.5 text-sky-400" />
                 <span className="hidden sm:inline">Telegram</span>
               </button>
             )}
@@ -158,26 +162,26 @@ export function HeaderComponent({
                 onClick={() => setShowAudioPopover(!showAudioPopover)}
                 className={`p-1.5 sm:p-2 rounded-xl border transition-all ${
                   isMuted 
-                    ? 'bg-slate-100 border-slate-200 text-slate-500 hover:text-slate-900' 
-                    : 'bg-blue-50 border-blue-200 text-blue-700 shadow-2xs'
+                    ? 'bg-[#121827] border-white/[0.06] text-slate-400 hover:text-white' 
+                    : 'bg-cyan-950/60 border-cyan-500/40 text-cyan-300 shadow-xs'
                 }`}
                 title={isMuted ? 'Unmute Audio Chimes' : 'Audio Settings & Volume'}
               >
-                {isMuted ? <VolumeX className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <Volume2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
+                {isMuted ? <VolumeX className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <Volume2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-400" />}
               </button>
 
               {/* Audio Controls Popover */}
               {showAudioPopover && (
-                <div className="absolute right-0 mt-2 w-52 p-3 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 animate-in fade-in">
-                  <div className="flex items-center justify-between text-xs text-slate-800 mb-2 font-medium">
-                    <span className="font-bold flex items-center gap-1">
-                      <Volume2 className="w-3.5 h-3.5 text-blue-600" />
+                <div className="absolute right-0 mt-2 w-52 p-3 bg-[#0f1422] border border-white/[0.1] rounded-2xl shadow-2xl z-50 animate-in fade-in">
+                  <div className="flex items-center justify-between text-xs text-white mb-2 font-medium">
+                    <span className="font-bold flex items-center gap-1.5">
+                      <Volume2 className="w-3.5 h-3.5 text-cyan-400" />
                       Chime Audio
                     </span>
                     <button
                       type="button"
                       onClick={() => soundEngine.playBuySignalChime()}
-                      className="text-[10px] text-blue-600 font-bold hover:underline"
+                      className="text-[10px] text-cyan-400 font-bold hover:underline"
                     >
                       Test Chime
                     </button>
@@ -191,25 +195,25 @@ export function HeaderComponent({
                       step="0.05"
                       value={volume}
                       onChange={handleVolumeChange}
-                      className="w-full accent-blue-600 h-1.5 bg-slate-200 rounded-lg cursor-pointer"
+                      className="w-full accent-cyan-400 h-1.5 bg-slate-800 rounded-lg cursor-pointer"
                     />
-                    <span className="text-[10px] text-slate-700 font-mono font-bold w-7 text-right">
+                    <span className="text-[10px] text-slate-300 font-mono font-bold w-7 text-right">
                       {Math.round(volume * 100)}%
                     </span>
                   </div>
 
-                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
-                    <span className="text-[11px] text-slate-600 font-medium">Mute Sounds</span>
+                  <div className="pt-2 border-t border-white/[0.08] flex items-center justify-between">
+                    <span className="text-[11px] text-slate-400 font-medium">Mute Sounds</span>
                     <button
                       type="button"
                       onClick={toggleMute}
                       className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase transition-all ${
                         isMuted 
-                          ? 'bg-rose-100 text-rose-800 border border-rose-300' 
-                          : 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                          ? 'bg-rose-950/80 text-rose-300 border border-rose-500/40' 
+                          : 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/40'
                       }`}
                     >
-                      {isMuted ? 'Muted' : 'Unmuted'}
+                      {isMuted ? 'Muted' : 'Active'}
                     </button>
                   </div>
                 </div>
@@ -224,11 +228,11 @@ export function HeaderComponent({
                     <button
                       type="button"
                       onClick={onOpenPinManager}
-                      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-900 text-xs font-black transition-all shadow-2xs"
-                      title="Manage User Access PINs"
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-amber-950/60 hover:bg-amber-900/60 border border-amber-500/40 text-amber-300 text-xs font-black transition-all"
+                      title="Master Admin PIN: 9398"
                     >
-                      <Crown className="w-3.5 h-3.5 text-amber-600" />
-                      <span className="hidden sm:inline">Owner PIN: 9398</span>
+                      <Crown className="w-3.5 h-3.5 text-amber-400" />
+                      <span className="hidden sm:inline font-mono">PIN: 9398</span>
                       <span className="sm:hidden font-mono">9398</span>
                     </button>
 
@@ -236,17 +240,17 @@ export function HeaderComponent({
                       <button
                         type="button"
                         onClick={onOpenPinManager}
-                        className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-800 text-xs font-bold transition-all shadow-2xs"
+                        className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-[#141b2d] hover:bg-[#1a233b] border border-white/[0.08] text-slate-300 text-xs font-bold transition-all"
                         title="Manage user access PINs"
                       >
-                        <Key className="w-3.5 h-3.5 text-blue-600" />
-                        <span>Manage PINs</span>
+                        <Key className="w-3.5 h-3.5 text-cyan-400" />
+                        <span>PINs</span>
                       </button>
                     )}
                   </>
                 ) : (
-                  <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-blue-50 border border-blue-200 text-blue-900 text-xs font-bold">
-                    <User className="w-3.5 h-3.5 text-blue-600" />
+                  <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-[#141b2d] border border-white/[0.08] text-slate-300 text-xs font-bold">
+                    <User className="w-3.5 h-3.5 text-cyan-400" />
                     <span>{authSession.label || 'Trader'}</span>
                   </div>
                 )}
@@ -255,7 +259,7 @@ export function HeaderComponent({
                   <button
                     type="button"
                     onClick={onLogout}
-                    className="p-1.5 sm:p-2 rounded-xl bg-white hover:bg-rose-50 border border-slate-200 hover:border-rose-300 text-slate-500 hover:text-rose-600 transition-all shadow-2xs"
+                    className="p-1.5 sm:p-2 rounded-xl bg-[#121827] hover:bg-rose-950/60 border border-white/[0.06] hover:border-rose-500/40 text-slate-400 hover:text-rose-400 transition-all"
                     title="Logout"
                   >
                     <LogOut className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -269,21 +273,21 @@ export function HeaderComponent({
               <button
                 type="button"
                 onClick={() => setShowMoreMenu(!showMoreMenu)}
-                className="p-1.5 sm:p-2 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 transition-all shadow-2xs"
+                className="p-1.5 sm:p-2 rounded-xl bg-[#121827] hover:bg-[#1a2236] border border-white/[0.08] text-slate-300 transition-all"
                 title="Options & Configuration"
               >
                 <SlidersHorizontal className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </button>
 
               {showMoreMenu && (
-                <div className="absolute right-0 mt-2 w-52 p-1.5 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 animate-in fade-in flex flex-col gap-0.5 text-xs font-semibold text-slate-700">
+                <div className="absolute right-0 mt-2 w-52 p-1.5 bg-[#0f1422] border border-white/[0.1] rounded-2xl shadow-2xl z-50 animate-in fade-in flex flex-col gap-0.5 text-xs font-semibold text-slate-300">
                   {authSession?.role === 'ADMIN' && onOpenPinManager && (
                     <button
                       type="button"
                       onClick={() => { setShowMoreMenu(false); onOpenPinManager(); }}
-                      className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-100 text-left transition-colors text-slate-800"
+                      className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-white/[0.06] text-left transition-colors text-white"
                     >
-                      <Key className="w-4 h-4 text-blue-600" />
+                      <Key className="w-4 h-4 text-cyan-400" />
                       <span>Manage Access PINs</span>
                     </button>
                   )}
@@ -292,9 +296,9 @@ export function HeaderComponent({
                     <button
                       type="button"
                       onClick={() => { setShowMoreMenu(false); onOpenSettings(); }}
-                      className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-100 text-left transition-colors text-slate-800"
+                      className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-white/[0.06] text-left transition-colors text-white"
                     >
-                      <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                      <ShieldCheck className="w-4 h-4 text-emerald-400" />
                       <span>Risk &amp; Account Sizing</span>
                     </button>
                   )}
@@ -303,22 +307,22 @@ export function HeaderComponent({
                     <button
                       type="button"
                       onClick={() => { setShowMoreMenu(false); onOpenLogs(); }}
-                      className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-100 text-left transition-colors text-slate-800"
+                      className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-white/[0.06] text-left transition-colors text-white"
                     >
-                      <ListFilter className="w-4 h-4 text-purple-600" />
+                      <ListFilter className="w-4 h-4 text-purple-400" />
                       <span>Activity &amp; Audit Logs</span>
                     </button>
                   )}
 
                   {onResetSeedData && (
                     <>
-                      <div className="my-1 border-t border-slate-100" />
+                      <div className="my-1 border-t border-white/[0.08]" />
                       <button
                         type="button"
                         onClick={() => { setShowMoreMenu(false); onResetSeedData(); }}
-                        className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-rose-50 text-rose-700 text-left transition-colors"
+                        className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-rose-950/60 text-rose-300 text-left transition-colors"
                       >
-                        <RotateCcw className="w-4 h-4 text-rose-600" />
+                        <RotateCcw className="w-4 h-4 text-rose-400" />
                         <span>Reset Demo Data</span>
                       </button>
                     </>
@@ -326,13 +330,13 @@ export function HeaderComponent({
 
                   {onLogout && (
                     <>
-                      <div className="my-1 border-t border-slate-100" />
+                      <div className="my-1 border-t border-white/[0.08]" />
                       <button
                         type="button"
                         onClick={() => { setShowMoreMenu(false); onLogout(); }}
-                        className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-rose-50 text-rose-700 text-left transition-colors"
+                        className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-rose-950/60 text-rose-300 text-left transition-colors"
                       >
-                        <LogOut className="w-4 h-4 text-rose-600" />
+                        <LogOut className="w-4 h-4 text-rose-400" />
                         <span>Logout</span>
                       </button>
                     </>
