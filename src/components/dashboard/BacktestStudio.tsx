@@ -30,6 +30,15 @@ import { PairFilterSelect } from '@/components/dashboard/PairFilterSelect';
 import { PairPerformancePieChart } from '@/components/dashboard/PairPerformancePieChart';
 import { isMajorPair } from '@/lib/strategyValidator';
 
+function extractTradeTime(session: string): string {
+  if (!session) return '03:15 NY (12:45 IST)';
+  const match = session.match(/Entry:\s*([0-9]{2}:[0-9]{2}\s*NY\s*\([0-9]{2}:[0-9]{2}\s*IST\))/i);
+  if (match) return match[1];
+  const parenMatch = session.match(/\(([^)]+)\)/);
+  if (parenMatch) return parenMatch[1];
+  return session;
+}
+
 export function BacktestStudio() {
   const [trades, setTrades] = useState<BacktestTradeRecord[]>([]);
   const [stats, setStats] = useState<BacktestStats | null>(null);
@@ -839,7 +848,7 @@ export function BacktestStudio() {
           <table className="w-full text-left text-xs">
             <thead>
               <tr className="bg-slate-50 text-slate-700 uppercase tracking-wider text-[10px] font-bold border-b border-slate-200">
-                <th className="py-3 px-4">Entry Date &amp; Day</th>
+                <th className="py-3 px-4">Entry Date, Day &amp; Time</th>
                 <th className="py-3 px-4">Strategy</th>
                 <th className="py-3 px-4">Symbol / Action</th>
                 <th className="py-3 px-4">Entry &amp; Exit Price</th>
@@ -862,19 +871,25 @@ export function BacktestStudio() {
                 filteredTrades.map(trade => (
                   <tr key={trade.id} className="hover:bg-slate-50 transition-colors">
                     
-                    {/* Entry Date & Day */}
+                    {/* Entry Date, Day & Time */}
                     <td className="py-3.5 px-4 whitespace-nowrap">
                       <div className="text-slate-900 font-bold text-[11px] flex items-center gap-1.5">
                         <Calendar className="w-3.5 h-3.5 text-blue-600 shrink-0" />
                         <span>{trade.date_executed}</span>
                       </div>
-                      <span className={`inline-block px-1.5 py-0.2 rounded text-[9px] font-bold mt-0.5 ${
-                        trade.isCbdrValidDay 
-                           ? 'bg-teal-100 text-teal-900 border border-teal-300' 
-                           : 'bg-rose-100 text-rose-900 border border-rose-300'
-                      }`}>
-                        📅 {trade.trading_day}
-                      </span>
+                      <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                        <span className={`inline-block px-1.5 py-0.2 rounded text-[9px] font-bold ${
+                          trade.isCbdrValidDay 
+                             ? 'bg-teal-100 text-teal-900 border border-teal-300' 
+                             : 'bg-rose-100 text-rose-900 border border-rose-300'
+                        }`}>
+                          📅 {trade.trading_day}
+                        </span>
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-bold bg-blue-50 text-blue-800 border border-blue-200">
+                          <Clock className="w-2.5 h-2.5 text-blue-600" />
+                          <span>{extractTradeTime(trade.session)}</span>
+                        </span>
+                      </div>
                     </td>
 
                     {/* Strategy */}

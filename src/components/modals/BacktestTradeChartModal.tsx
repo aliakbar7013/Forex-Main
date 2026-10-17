@@ -217,8 +217,9 @@ export function BacktestTradeChartModal({
               <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-800 font-bold font-mono text-[10px] border border-slate-200">
                 {trade.strategy} • {trade.timeframe}
               </span>
-              <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-900 border border-blue-200 font-bold text-[10px]">
-                📅 Entry Placed: {trade.trading_day}, {trade.date_executed}
+              <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-900 border border-blue-200 font-bold text-[10px] flex items-center gap-1">
+                <Clock className="w-3 h-3 text-blue-600" />
+                <span>{trade.trading_day}, {trade.date_executed} • {trade.session}</span>
               </span>
             </div>
 
