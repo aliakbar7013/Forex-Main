@@ -232,6 +232,140 @@ export function BacktestStudio() {
     });
   }, [trades, strategyFilter, monthFilter, pairFilter, pairTypeFilter, dayFilter, outcomeFilter]);
 
+  // Dynamic metrics calculated directly from active filteredTrades
+  const dynamicStats = useMemo(() => {
+    const totalTrades = filteredTrades.length;
+    let totalWins = 0;
+    let totalLosses = 0;
+    let totalBe = 0;
+    let totalPnl = 0;
+    let grossProfit = 0;
+    let grossLoss = 0;
+    let totalRR = 0;
+
+    for (const t of filteredTrades) {
+      totalPnl += t.realized_pnl || 0;
+      totalRR += t.riskRewardAchieved || 0;
+      if (t.outcome === 'WIN') {
+        totalWins++;
+        grossProfit += (t.realized_pnl || 0);
+      } else if (t.outcome === 'LOSS') {
+        totalLosses++;
+        grossLoss += Math.abs(t.realized_pnl || 0);
+      } else {
+        totalBe++;
+      }
+    }
+
+    const winRate = totalTrades > 0 ? Number(((totalWins / totalTrades) * 100).toFixed(1)) : 0;
+    const profitFactor = grossLoss > 0 ? Number((grossProfit / grossLoss).toFixed(2)) : (grossProfit > 0 ? 99.9 : 0);
+    const avgRiskReward = totalTrades > 0 ? Number((totalRR / totalTrades).toFixed(2)) : 0;
+    const netReturnR = Number(((avgRiskReward * totalWins) - totalLosses).toFixed(1));
+
+    let peak = 0;
+    let maxDd = 0;
+    let running = 0;
+    for (const t of [...filteredTrades].reverse()) {
+      running += (t.realized_pnl || 0);
+      if (running > peak) peak = running;
+      const dd = peak - running;
+      if (dd > maxDd) maxDd = dd;
+    }
+    const maxDrawdownPercent = peak > 0 ? Number(((maxDd / peak) * 100).toFixed(1)) : 0;
+
+    return {
+      totalTrades,
+      totalWins,
+      totalLosses,
+      totalBe,
+      winRate,
+      totalPnl,
+      grossProfit,
+      grossLoss,
+      profitFactor,
+      avgRiskReward,
+      netReturnR,
+      maxDrawdownPercent
+    };
+  }, [filteredTrades]);
+
+  // Day-of-week metrics computed strictly for CBDR (Mon-Wed only, Thu-Fri strictly 0)
+  const cbdrDayMetrics = useMemo(() => {
+    const cbdrTrades = trades.filter(t => t.strategy === 'CBDR');
+    const dayMap: Record<string, { trades: number; wins: number; losses: number; winRate: number; isCbdrPermitted: boolean }> = {
+      'Monday': { trades: 0, wins: 0, losses: 0, winRate: 0, isCbdrPermitted: true },
+      'Tuesday': { trades: 0, wins: 0, losses: 0, winRate: 0, isCbdrPermitted: true },
+      'Wednesday': { trades: 0, wins: 0, losses: 0, winRate: 0, isCbdrPermitted: true },
+      'Thursday': { trades: 0, wins: 0, losses: 0, winRate: 0, isCbdrPermitted: false },
+      'Friday': { trades: 0, wins: 0, losses: 0, winRate: 0, isCbdrPermitted: false }
+    };
+    for (const t of cbdrTrades) {
+      const d = t.trading_day;
+      if (dayMap[d]) {
+        dayMap[d].trades++;
+        if (t.outcome === 'WIN') dayMap[d].wins++;
+        else if (t.outcome === 'LOSS') dayMap[d].losses++;
+      }
+    }
+    for (const d of Object.keys(dayMap)) {
+      dayMap[d].winRate = dayMap[d].trades > 0 ? Number(((dayMap[d].wins / dayMap[d].trades) * 100).toFixed(1)) : 0;
+    }
+    return dayMap;
+  }, [trades]);
+
+  // Day-of-week metrics computed strictly for Stop Hunt (Mon-Fri all permitted)
+  const stopHuntDayMetrics = useMemo(() => {
+    const shTrades = trades.filter(t => t.strategy === 'STOP_HUNT');
+    const dayMap: Record<string, { trades: number; wins: number; losses: number; winRate: number; isPermitted: boolean }> = {
+      'Monday': { trades: 0, wins: 0, losses: 0, winRate: 0, isPermitted: true },
+      'Tuesday': { trades: 0, wins: 0, losses: 0, winRate: 0, isPermitted: true },
+      'Wednesday': { trades: 0, wins: 0, losses: 0, winRate: 0, isPermitted: true },
+      'Thursday': { trades: 0, wins: 0, losses: 0, winRate: 0, isPermitted: true },
+      'Friday': { trades: 0, wins: 0, losses: 0, winRate: 0, isPermitted: true }
+    };
+    for (const t of shTrades) {
+      const d = t.trading_day;
+      if (dayMap[d]) {
+        dayMap[d].trades++;
+        if (t.outcome === 'WIN') dayMap[d].wins++;
+        else if (t.outcome === 'LOSS') dayMap[d].losses++;
+      }
+    }
+    for (const d of Object.keys(dayMap)) {
+      dayMap[d].winRate = dayMap[d].trades > 0 ? Number(((dayMap[d].wins / dayMap[d].trades) * 100).toFixed(1)) : 0;
+    }
+    return dayMap;
+  }, [trades]);
+
+  // Strategy edge metrics computed from dataset
+  const strategyEdgeStats = useMemo(() => {
+    const stratMap: Record<string, { trades: number; wins: number; losses: number; winRate: number; profitFactor: number }> = {
+      'CBDR': { trades: 0, wins: 0, losses: 0, winRate: 0, profitFactor: 0 },
+      'STOP_HUNT': { trades: 0, wins: 0, losses: 0, winRate: 0, profitFactor: 0 }
+    };
+    const grossP: Record<string, number> = { CBDR: 0, STOP_HUNT: 0 };
+    const grossL: Record<string, number> = { CBDR: 0, STOP_HUNT: 0 };
+
+    for (const t of trades) {
+      const k = t.strategy;
+      if (stratMap[k]) {
+        stratMap[k].trades++;
+        if (t.outcome === 'WIN') {
+          stratMap[k].wins++;
+          grossP[k] += (t.realized_pnl || 0);
+        } else if (t.outcome === 'LOSS') {
+          stratMap[k].losses++;
+          grossL[k] += Math.abs(t.realized_pnl || 0);
+        }
+      }
+    }
+    for (const k of Object.keys(stratMap)) {
+      stratMap[k].winRate = stratMap[k].trades > 0 ? Number(((stratMap[k].wins / stratMap[k].trades) * 100).toFixed(1)) : 0;
+      stratMap[k].profitFactor = grossL[k] > 0 ? Number((grossP[k] / grossL[k]).toFixed(2)) : (grossP[k] > 0 ? 99.9 : 0);
+    }
+    return stratMap;
+  }, [trades]);
+
   return (
     <div className="space-y-6">
       
@@ -362,233 +496,230 @@ export function BacktestStudio() {
         </div>
       </div>
 
-      {/* 2. Hero KPI Stats Grid (No Dollar Pricing) */}
-      {stats && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          <div className="p-3.5 sm:p-4 rounded-xl bg-white border border-slate-200 shadow-sm">
-            <span className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-              Total Setups
-            </span>
-            <div className="text-xl sm:text-2xl font-black text-slate-900 font-mono">
-              {stats.totalTrades}
-            </div>
-            <span className="text-[10px] text-slate-500 flex items-center gap-1 mt-1 font-medium">
-              <span className="text-emerald-700 font-bold">{stats.totalWins}W</span> / <span className="text-rose-700 font-bold">{stats.totalLosses}L</span> / <span>{stats.totalBe}BE</span>
-            </span>
+      {/* 2. Hero KPI Stats Grid (Dynamic & Reactive to Active Filters) */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="p-3.5 sm:p-4 rounded-xl bg-white border border-slate-200 shadow-sm">
+          <span className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+            Total Setups
+          </span>
+          <div className="text-xl sm:text-2xl font-black text-slate-900 font-mono">
+            {dynamicStats.totalTrades}
           </div>
-
-          <div className="p-3.5 sm:p-4 rounded-xl bg-white border border-slate-200 shadow-sm">
-            <span className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-              Win Rate %
-            </span>
-            <div className="text-xl sm:text-2xl font-black text-emerald-700 font-mono">
-              {stats.winRate}%
-            </div>
-            <span className="text-[10px] text-emerald-700 font-bold block mt-1">
-              ICT Confluence Edge
-            </span>
-          </div>
-
-          <div className="p-3.5 sm:p-4 rounded-xl bg-white border border-slate-200 shadow-sm">
-            <span className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-              Net Return (R)
-            </span>
-            <div className="text-xl sm:text-2xl font-black font-mono text-emerald-700">
-              +{((stats.avgRiskReward * stats.totalWins) - stats.totalLosses).toFixed(1)}R
-            </div>
-            <span className="text-[10px] text-slate-500 block mt-1 font-medium">
-              Risk Multiplier Output
-            </span>
-          </div>
-
-          <div className="p-3.5 sm:p-4 rounded-xl bg-white border border-slate-200 shadow-sm">
-            <span className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-              Profit Factor
-            </span>
-            <div className="text-xl sm:text-2xl font-black text-blue-700 font-mono">
-              {stats.profitFactor}
-            </div>
-            <span className="text-[10px] text-blue-700 font-bold block mt-1">
-              Win / Loss RR Ratio
-            </span>
-          </div>
-
-          <div className="p-3.5 sm:p-4 rounded-xl bg-white border border-slate-200 shadow-sm">
-            <span className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-              Avg Risk:Reward
-            </span>
-            <div className="text-xl sm:text-2xl font-black text-amber-700 font-mono">
-              {stats.avgRiskReward}R
-            </div>
-            <span className="text-[10px] text-slate-500 block mt-1 font-medium">
-              Asymmetrical Edge
-            </span>
-          </div>
-
-          <div className="p-3.5 sm:p-4 rounded-xl bg-white border border-slate-200 shadow-sm">
-            <span className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-              Max Drawdown
-            </span>
-            <div className="text-xl sm:text-2xl font-black text-slate-900 font-mono">
-              {stats.maxDrawdownPercent}%
-            </div>
-            <span className="text-[10px] text-emerald-700 font-bold block mt-1">
-              Defensive Stepping
-            </span>
-          </div>
+          <span className="text-[10px] text-slate-500 flex items-center gap-1 mt-1 font-medium">
+            <span className="text-emerald-700 font-bold">{dynamicStats.totalWins}W</span> / <span className="text-rose-700 font-bold">{dynamicStats.totalLosses}L</span> / <span>{dynamicStats.totalBe}BE</span>
+          </span>
         </div>
-      )}
 
-      {/* 3. Deep-Dive Analytics: CBDR Day of Week vs Strategy Breakdown */}
-      {stats && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-6">
-          
-          {/* A. CBDR Day-of-Week Probability Matrix */}
-          <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-              <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-blue-600" />
-                <h3 className="font-bold text-slate-900 text-sm">
-                  CBDR Day-of-Week Execution Probability
-                </h3>
-              </div>
-              <span className="px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 text-[10px] font-bold border border-blue-200">
-                Mon / Tue / Wed Only
-              </span>
+        <div className="p-3.5 sm:p-4 rounded-xl bg-white border border-slate-200 shadow-sm">
+          <span className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+            Win Rate %
+          </span>
+          <div className="text-xl sm:text-2xl font-black text-emerald-700 font-mono">
+            {dynamicStats.winRate}%
+          </div>
+          <span className="text-[10px] text-emerald-700 font-bold block mt-1">
+            ICT Confluence Edge
+          </span>
+        </div>
+
+        <div className="p-3.5 sm:p-4 rounded-xl bg-white border border-slate-200 shadow-sm">
+          <span className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+            Net Return (R)
+          </span>
+          <div className="text-xl sm:text-2xl font-black font-mono text-emerald-700">
+            {dynamicStats.netReturnR >= 0 ? `+${dynamicStats.netReturnR}` : dynamicStats.netReturnR}R
+          </div>
+          <span className="text-[10px] text-slate-500 block mt-1 font-medium">
+            Risk Multiplier Output
+          </span>
+        </div>
+
+        <div className="p-3.5 sm:p-4 rounded-xl bg-white border border-slate-200 shadow-sm">
+          <span className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+            Profit Factor
+          </span>
+          <div className="text-xl sm:text-2xl font-black text-blue-700 font-mono">
+            {dynamicStats.profitFactor}
+          </div>
+          <span className="text-[10px] text-blue-700 font-bold block mt-1">
+            Win / Loss RR Ratio
+          </span>
+        </div>
+
+        <div className="p-3.5 sm:p-4 rounded-xl bg-white border border-slate-200 shadow-sm">
+          <span className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+            Avg Risk:Reward
+          </span>
+          <div className="text-xl sm:text-2xl font-black text-amber-700 font-mono">
+            {dynamicStats.avgRiskReward}R
+          </div>
+          <span className="text-[10px] text-slate-500 block mt-1 font-medium">
+            Asymmetrical Edge
+          </span>
+        </div>
+
+        <div className="p-3.5 sm:p-4 rounded-xl bg-white border border-slate-200 shadow-sm">
+          <span className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+            Max Drawdown
+          </span>
+          <div className="text-xl sm:text-2xl font-black text-slate-900 font-mono">
+            {dynamicStats.maxDrawdownPercent}%
+          </div>
+          <span className="text-[10px] text-emerald-700 font-bold block mt-1">
+            Defensive Stepping
+          </span>
+        </div>
+      </div>
+
+      {/* 3. Deep-Dive Analytics: Day of Week vs Strategy Breakdown */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-6">
+        
+        {/* A. Day-of-Week Probability Matrix */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+            <div className="flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-blue-600" />
+              <h3 className="font-bold text-slate-900 text-sm">
+                {strategyFilter === 'STOP_HUNT' ? 'Stop Hunt Day-of-Week Execution Matrix' : 'CBDR Day-of-Week Execution Probability'}
+              </h3>
             </div>
-
-            <p className="text-xs text-slate-600 font-medium">
-              Institutional weekly sequence: Trade <strong className="text-slate-900">Monday</strong> (Sweep Sunday H/L). If TP hit &rarr; <span className="text-emerald-700 font-bold">Holiday Tue–Fri</span>. Trade Tuesday only if Mon SL; trade Wednesday only if Tue SL (If SL &rarr; Week over). Thursdays &amp; Fridays are strictly <strong className="text-rose-700">NO TRADING</strong> (Retailer study days). Max 3 trades/week • 15m ONLY • 1st FVG Only • 1:3–1:4+ RR.
-            </p>
-
-            <div className="space-y-2.5">
-              {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].map((day) => {
-                const dayData = stats.dayBreakdown[day] || {
-                  dayName: day,
-                  trades: 0,
-                  wins: 0,
-                  losses: 0,
-                  be: 0,
-                  winRate: 0,
-                  totalPnl: 0,
-                  isCbdrPermitted: day === 'Monday' || day === 'Tuesday' || day === 'Wednesday'
-                };
-
-                return (
-                  <div key={day} className={`p-3 rounded-xl border transition-all ${
-                    dayData.isCbdrPermitted 
-                      ? 'bg-slate-50 border-slate-200' 
-                      : 'bg-rose-50/50 border-rose-200'
-                  }`}>
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 mb-1.5">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-xs text-slate-900">
-                          📅 {day}
-                        </span>
-                        {dayData.isCbdrPermitted ? (
-                          <span className="px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-900 font-mono text-[9px] font-bold border border-emerald-300">
-                            PERMITTED ✅
-                          </span>
-                        ) : (
-                          <span className="px-1.5 py-0.2 rounded bg-rose-100 text-rose-900 font-mono text-[9px] font-bold border border-rose-300">
-                            BLOCKED BY FILTER 🚫
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="flex items-center gap-3 text-xs font-mono">
-                        <span className="text-slate-500 font-medium">
-                          {dayData.trades} Trades ({dayData.wins}W - {dayData.losses}L)
-                        </span>
-                        <span className="font-black text-blue-700">
-                          {dayData.winRate}% WR
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Progress Bar */}
-                    <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
-                      <div 
-                        className={`h-full rounded-full ${
-                          dayData.isCbdrPermitted ? 'bg-gradient-to-r from-blue-500 to-emerald-500' : 'bg-rose-500'
-                        }`}
-                        style={{ width: `${dayData.winRate}%` }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+              strategyFilter === 'STOP_HUNT'
+                ? 'bg-purple-100 text-purple-800 border-purple-200'
+                : 'bg-blue-100 text-blue-800 border-blue-200'
+            }`}>
+              {strategyFilter === 'STOP_HUNT' ? 'Mon – Fri All Week' : 'Mon / Tue / Wed Only'}
+            </span>
           </div>
 
-          {/* B. Strategy Edge Performance Breakdown */}
-          <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-              <div className="flex items-center gap-2">
-                <Layers className="w-4 h-4 text-purple-600" />
-                <h3 className="font-bold text-slate-900 text-sm">
-                  Strategy Performance &amp; Edge Breakdown
-                </h3>
-              </div>
-              <span className="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-bold border border-slate-200">
-                Defensive Risk Stepping Active
-              </span>
-            </div>
+          <p className="text-xs text-slate-600 font-medium">
+            {strategyFilter === 'STOP_HUNT' ? (
+              <>Stop Hunt 5m model trades <strong className="text-slate-900">all week (Monday to Friday)</strong> following Asian Killzone (21:00–01:00 NY) sweep, 5m CHoCH, and FVG entry buffer targeting opposing Asian liquidity.</>
+            ) : (
+              <>Institutional weekly sequence: Trade <strong className="text-slate-900">Monday</strong> (Sweep Sunday H/L). If TP hit &rarr; <span className="text-emerald-700 font-bold">Holiday Tue–Fri</span>. Trade Tuesday only if Mon SL; trade Wednesday only if Tue SL (If SL &rarr; Week over). Thursdays &amp; Fridays are strictly <strong className="text-rose-700">NO TRADING</strong> (Retailer study days). Max 3 trades/week • 15m ONLY • 1st FVG Only • 1:3–1:4+ RR.</>
+            )}
+          </p>
 
-            <p className="text-xs text-slate-600 font-medium">
-              Comparative backtest metrics across the 2 institutional models with IPDA rate alignment and defensive capital protection.
-            </p>
+          <div className="space-y-2.5">
+            {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].map((day) => {
+              const isStopHuntView = strategyFilter === 'STOP_HUNT';
+              const dayData = isStopHuntView
+                ? (stopHuntDayMetrics[day] || { trades: 0, wins: 0, losses: 0, winRate: 0, isPermitted: true })
+                : (cbdrDayMetrics[day] || { trades: 0, wins: 0, losses: 0, winRate: 0, isCbdrPermitted: day === 'Monday' || day === 'Tuesday' || day === 'Wednesday' });
+              
+              const isPermitted = isStopHuntView ? true : (day === 'Monday' || day === 'Tuesday' || day === 'Wednesday');
 
-            <div className="space-y-3">
-              {[
-                { key: 'CBDR', name: '1. CBDR Strategy (15m London Mon–Wed)', badge: 'Mandatory IPDA • Strict 1:3 RR' },
-                { key: 'STOP_HUNT', name: '2. Stop Hunt Model (5m Post-Asian KZ)', badge: 'Asian 21:00-01:00 KZ • Mon-Fri • Opposing Asian TP' }
-              ].map(strat => {
-                const stratData = stats.strategyBreakdown[strat.key] || {
-                  strategy: strat.key,
-                  trades: 0,
-                  wins: 0,
-                  losses: 0,
-                  be: 0,
-                  winRate: 0,
-                  totalPnl: 0,
-                  profitFactor: 0
-                };
-
-                return (
-                  <div key={strat.key} className="p-3.5 sm:p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-xs text-slate-900">
-                          {strat.name}
+              return (
+                <div key={day} className={`p-3 rounded-xl border transition-all ${
+                  isPermitted 
+                    ? 'bg-slate-50 border-slate-200' 
+                    : 'bg-rose-50/50 border-rose-200'
+                }`}>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 mb-1.5">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-xs text-slate-900">
+                        📅 {day}
+                      </span>
+                      {isPermitted ? (
+                        <span className="px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-900 font-mono text-[9px] font-bold border border-emerald-300">
+                          PERMITTED ✅
                         </span>
-                        <span className="px-1.5 py-0.5 rounded bg-white text-blue-700 font-mono text-[9px] font-bold border border-slate-200">
-                          {strat.badge}
+                      ) : (
+                        <span className="px-1.5 py-0.2 rounded bg-rose-100 text-rose-900 font-mono text-[9px] font-bold border border-rose-300">
+                          BLOCKED BY FILTER 🚫
                         </span>
-                      </div>
-                      <span className="font-mono font-bold text-emerald-700 text-xs">
-                        {stratData.winRate}% Win Rate
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-3 text-xs font-mono">
+                      <span className="text-slate-500 font-medium">
+                        {dayData.trades} Trades ({dayData.wins}W - {dayData.losses}L)
+                      </span>
+                      <span className="font-black text-blue-700">
+                        {dayData.winRate}% WR
                       </span>
                     </div>
-
-                    <div className="grid grid-cols-2 gap-2 pt-1 text-[11px] font-mono">
-                      <div className="p-2 rounded bg-white border border-slate-200">
-                        <span className="text-slate-500 text-[10px] block font-medium">Executed Trades:</span>
-                        <span className="font-bold text-slate-900">{stratData.trades} ({stratData.wins}W / {stratData.losses}L)</span>
-                      </div>
-                      <div className="p-2 rounded bg-white border border-slate-200">
-                        <span className="text-slate-500 text-[10px] block font-medium">Profit Factor:</span>
-                        <span className="font-bold text-blue-700">{stratData.profitFactor}</span>
-                      </div>
-                    </div>
                   </div>
-                );
-              })}
+
+                  {/* Progress Bar */}
+                  <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
+                    <div 
+                      className={`h-full rounded-full ${
+                        isPermitted ? 'bg-gradient-to-r from-blue-500 to-emerald-500' : 'bg-rose-500'
+                      }`}
+                      style={{ width: `${dayData.winRate}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* B. Strategy Edge Performance Breakdown */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+            <div className="flex items-center gap-2">
+              <Layers className="w-4 h-4 text-purple-600" />
+              <h3 className="font-bold text-slate-900 text-sm">
+                Strategy Performance &amp; Edge Breakdown
+              </h3>
             </div>
+            <span className="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-bold border border-slate-200">
+              Defensive Risk Stepping Active
+            </span>
           </div>
 
+          <p className="text-xs text-slate-600 font-medium">
+            Comparative backtest metrics across the 2 institutional models with IPDA rate alignment and defensive capital protection.
+          </p>
+
+          <div className="space-y-3">
+            {[
+              { key: 'CBDR', name: '1. CBDR Strategy (15m London Mon–Wed)', badge: 'Mandatory IPDA • Strict 1:3 RR' },
+              { key: 'STOP_HUNT', name: '2. Stop Hunt Model (5m Post-Asian KZ)', badge: 'Asian 21:00-01:00 KZ • Mon-Fri • Opposing Asian TP' }
+            ].map(strat => {
+              const stratData = strategyEdgeStats[strat.key] || {
+                trades: 0,
+                wins: 0,
+                losses: 0,
+                winRate: 0,
+                profitFactor: 0
+              };
+
+              return (
+                <div key={strat.key} className="p-3.5 sm:p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-xs text-slate-900">
+                        {strat.name}
+                      </span>
+                      <span className="px-1.5 py-0.5 rounded bg-white text-blue-700 font-mono text-[9px] font-bold border border-slate-200">
+                        {strat.badge}
+                      </span>
+                    </div>
+                    <span className="font-mono font-bold text-emerald-700 text-xs">
+                      {stratData.winRate}% Win Rate
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 pt-1 text-[11px] font-mono">
+                    <div className="p-2 rounded bg-white border border-slate-200">
+                      <span className="text-slate-500 text-[10px] block font-medium">Executed Trades:</span>
+                      <span className="font-bold text-slate-900">{stratData.trades} ({stratData.wins}W / {stratData.losses}L)</span>
+                    </div>
+                    <div className="p-2 rounded bg-white border border-slate-200">
+                      <span className="text-slate-500 text-[10px] block font-medium">Profit Factor:</span>
+                      <span className="font-bold text-blue-700">{stratData.profitFactor}</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
-      )}
+
+      </div>
 
       {/* 4. Interactive Pair Performance Pie View & Leaderboard */}
       <PairPerformancePieChart

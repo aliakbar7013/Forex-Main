@@ -1119,16 +1119,18 @@ export function getBacktestStats(): BacktestStats {
       totalBe++;
     }
 
-    // Day breakdown
-    const day = t.trading_day || 'Monday';
-    if (!dayMap[day]) {
-      dayMap[day] = { trades: 0, wins: 0, losses: 0, be: 0, pnl: 0, isCbdr: day === 'Monday' || day === 'Tuesday' || day === 'Wednesday' };
+    // Day breakdown: Specifically tracks CBDR days (Mon-Wed active, Thu-Fri strictly 0 / blocked)
+    if (t.strategy === 'CBDR') {
+      const day = t.trading_day || 'Monday';
+      if (!dayMap[day]) {
+        dayMap[day] = { trades: 0, wins: 0, losses: 0, be: 0, pnl: 0, isCbdr: day === 'Monday' || day === 'Tuesday' || day === 'Wednesday' };
+      }
+      dayMap[day].trades++;
+      dayMap[day].pnl += t.realized_pnl;
+      if (t.outcome === 'WIN') dayMap[day].wins++;
+      else if (t.outcome === 'LOSS') dayMap[day].losses++;
+      else dayMap[day].be++;
     }
-    dayMap[day].trades++;
-    dayMap[day].pnl += t.realized_pnl;
-    if (t.outcome === 'WIN') dayMap[day].wins++;
-    else if (t.outcome === 'LOSS') dayMap[day].losses++;
-    else dayMap[day].be++;
 
     // Strategy breakdown
     const strat = t.strategy || 'CBDR';
