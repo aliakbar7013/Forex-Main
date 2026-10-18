@@ -81,7 +81,7 @@ export const TWELVE_DATA_BASELINE_PRICES: Record<string, number> = {
   'USDCHF': 0.82394,
   'AUDUSD': 0.69460,
   'NZDUSD': 0.56533,
-  'XAUUSD': 4165.42,
+  'XAUUSD': 2685.50,
 
   // Pound & Euro Crosses
   'GBPAUD': 1.91890,

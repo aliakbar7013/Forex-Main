@@ -191,15 +191,15 @@ export function BacktestTradeChartModal({
 
             {/* Direct External Link to TradingView OANDA Chart */}
             <a
-              href={`https://in.tradingview.com/chart/?symbol=${encodeURIComponent(getTradingViewSymbol(trade.symbol))}`}
+              href={`https://in.tradingview.com/chart/J4O68zfP/?symbol=OANDA%3A${trade.symbol}`}
               target="_blank"
               rel="noreferrer"
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-bold text-xs shadow-xs transition-colors"
-              title={`Open ${getTradingViewSymbol(trade.symbol)} on TradingView with OANDA broker`}
+              title={`Open OANDA:${trade.symbol} on TradingView with OANDA broker`}
             >
               <ExternalLink className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Open {getTradingViewSymbol(trade.symbol)} on TradingView</span>
-              <span className="sm:hidden">TradingView</span>
+              <span className="hidden sm:inline">Open OANDA:{trade.symbol} on TradingView</span>
+              <span className="sm:hidden">OANDA Chart</span>
             </a>
 
             <button
@@ -221,6 +221,9 @@ export function BacktestTradeChartModal({
             <div className="flex items-center gap-2.5">
               <span className="font-mono font-black text-slate-900 text-base sm:text-lg">
                 {trade.symbol}
+              </span>
+              <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-900 border border-emerald-300 font-black font-mono text-[10px]">
+                Broker: OANDA
               </span>
               <span className={`px-2.5 py-0.5 rounded-md text-xs font-black font-mono text-white ${
                 isBuy ? 'bg-emerald-600' : 'bg-rose-600'

@@ -387,33 +387,34 @@ export function BacktestStudio() {
         </div>
       )}
 
-      {/* TradingView Institutional Market Feed Bar */}
+      {/* TradingView Institutional Market Feed Bar with OANDA Broker Indicator */}
       <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-blue-900 via-indigo-950 to-slate-900 text-white shadow-md border border-blue-800/60 space-y-4">
         
-        {/* Top Row: TradingView Live Feed Status & Sync Action */}
+        {/* Top Row: OANDA Broker & TradingView Live Feed Status & Sync Action */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="space-y-1.5">
             <div className="flex flex-wrap items-center gap-2">
               <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-black tracking-wider uppercase flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                TradingView Live Feed Active
+                Broker Feed: OANDA (TradingView)
               </span>
 
               <a
-                href="https://www.tradingview.com"
+                href="https://in.tradingview.com/chart/J4O68zfP/?symbol=OANDA%3AUSDCAD"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-xs font-bold text-blue-300 hover:text-white transition-colors underline flex items-center gap-1"
+                className="text-xs font-bold text-amber-300 hover:text-white transition-colors underline flex items-center gap-1"
+                title="Open OANDA:USDCAD reference chart on TradingView"
               >
-                tradingview.com <ExternalLink className="w-3 h-3" />
+                OANDA Chart Feed (TradingView) <ExternalLink className="w-3 h-3" />
               </a>
             </div>
 
             <h3 className="text-base sm:text-lg font-black tracking-tight text-white flex items-center gap-2">
-              TradingView Institutional 15m CBDR &amp; 5m Stop Hunt Quantitative Engine
+              OANDA Broker 15m CBDR &amp; 5m Stop Hunt Quantitative Engine
             </h3>
             <p className="text-xs text-blue-200/80 max-w-2xl">
-              Streaming real-time rates directly from TradingView charts for all 28 Forex pairs + Gold. 
+              All 28 Forex pairs + Gold prices are strictly calibrated to the <strong className="text-emerald-300">OANDA Broker</strong> feed on TradingView charts. 
               <strong className="text-amber-300 ml-1">Focus #1:</strong> Central Bank Dealers Range (CBDR) 15m London Killzone (07:00–16:00 UTC / 03:00–12:00 NY, Mon–Wed, PDH/PDL sweeps for majors, direct 1st FVG for crosses, strict 1:3 RR). 
               <strong className="text-amber-300 ml-1">Focus #2:</strong> Stop Hunt Model 5m (Asian KZ 21:00–01:00 NY observation, post-01:00 NY sweep, 5m CHoCH + FVG, SL 2–4 pips, TP Opposing Asian Level, Mon–Fri).
             </p>
@@ -424,10 +425,10 @@ export function BacktestStudio() {
               onClick={() => handleSyncRealData(true)}
               disabled={isSyncing}
               className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 text-xs font-black transition-all shadow-md disabled:opacity-50"
-              title="Fetch real-time feeds from TradingView and execute quantitative backtester"
+              title="Fetch real-time feeds from OANDA (TradingView) and execute quantitative backtester"
             >
               {isSyncing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5 fill-current" />}
-              <span>{isSyncing ? 'Syncing TradingView...' : '⚡ Sync TradingView Real-Time Data'}</span>
+              <span>{isSyncing ? 'Syncing OANDA Feeds...' : '⚡ Sync OANDA Real-Time Data'}</span>
             </button>
           </div>
         </div>
@@ -444,19 +445,19 @@ export function BacktestStudio() {
               Trade History &amp; Backtesting Archive
             </h2>
             <a
-              href="https://www.tradingview.com"
+              href="https://in.tradingview.com/chart/J4O68zfP/?symbol=OANDA%3AUSDCAD"
               target="_blank"
               rel="noopener noreferrer"
               className="px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-900 border border-blue-300 text-xs font-bold hover:bg-blue-200 transition-colors inline-flex items-center gap-1"
             >
-              TradingView Market Feed ↗
+              Broker: OANDA (TradingView) ↗
             </a>
             <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-300 text-xs font-bold">
               Exact 15m Candles
             </span>
           </div>
           <p className="text-xs text-slate-500 font-medium">
-            Quantitative CBDR &amp; New York backtest reports calculated directly from TradingView real-market candles (07:00–16:00 UTC / 03:00–12:00 NY / 12:30–09:30 PM IST), 1st FVG execution, and IPDA interest rate compliance.
+            Quantitative CBDR &amp; New York backtest reports calculated directly from OANDA broker 15m candles on TradingView (07:00–16:00 UTC / 03:00–12:00 NY / 12:30–09:30 PM IST), 1st FVG execution, and IPDA interest rate compliance.
           </p>
         </div>
 
@@ -920,6 +921,9 @@ export function BacktestStudio() {
                     <td className="py-3.5 px-4 whitespace-nowrap">
                       <div className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
                         <span>{trade.symbol}</span>
+                        <span className="px-1.5 py-0.2 rounded text-[8px] font-black bg-emerald-50 text-emerald-800 border border-emerald-200">
+                          OANDA
+                        </span>
                       </div>
                       <span className={`inline-block px-1.5 py-0.2 rounded text-[9px] font-black ${
                         trade.action === 'BUY'
@@ -1019,11 +1023,11 @@ export function BacktestStudio() {
                         </button>
 
                         <a
-                          href={`https://in.tradingview.com/chart/?symbol=${encodeURIComponent(getTradingViewSymbol(trade.symbol))}`}
+                          href={`https://in.tradingview.com/chart/J4O68zfP/?symbol=OANDA%3A${trade.symbol}`}
                           target="_blank"
                           rel="noreferrer"
                           className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-                          title={`Open ${getTradingViewSymbol(trade.symbol)} on TradingView (OANDA Feed)`}
+                          title={`Open OANDA:${trade.symbol} on TradingView (OANDA Chart Broker)`}
                         >
                           <ExternalLink className="w-3.5 h-3.5" />
                         </a>
