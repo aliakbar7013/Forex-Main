@@ -76,6 +76,7 @@ export const STATIC_INITIAL_SIGNALS: Signal[] = [
         { id: 'sh4', name: 'Opposing Asian Low TP', passed: true, message: 'Targeting Asian Low at 1.08280.', severity: 'INFO' }
       ]
     },
+    date_of_entry: '2026-10-16',
     created_at: '2026-10-16T04:15:00.000Z',
     updated_at: new Date().toISOString(),
     session_name: 'Post-Asian KZ (04:15 NY)',
@@ -120,6 +121,7 @@ export const STATIC_INITIAL_SIGNALS: Signal[] = [
         { id: 'sh4', name: 'Opposing Asian High TP', passed: true, message: 'Targeting Asian High at 155.650.', severity: 'INFO' }
       ]
     },
+    date_of_entry: '2026-10-16',
     created_at: '2026-10-16T04:15:00.000Z',
     updated_at: new Date().toISOString(),
     session_name: 'Post-Asian KZ (04:15 NY)',

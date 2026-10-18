@@ -26,6 +26,7 @@ export function CreateSignalModal({
   const [tp1, setTp1] = useState('1.09100');
   const [tp2, setTp2] = useState('1.09700');
   const [tp3, setTp3] = useState('');
+  const [dateOfEntry, setDateOfEntry] = useState(new Date().toISOString().split('T')[0]);
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,6 +42,7 @@ export function CreateSignalModal({
         symbol: symbol.toUpperCase().trim(),
         timeframe,
         action,
+        date_of_entry: dateOfEntry,
         entry: parseFloat(entry),
         sl: parseFloat(sl),
         tp1: parseFloat(tp1),
@@ -184,6 +186,20 @@ export function CreateSignalModal({
               </button>
             </div>
           </div>
+        </div>
+
+        {/* Date of Entry */}
+        <div>
+          <label className="text-xs font-bold text-slate-900 uppercase tracking-wider block mb-1">
+            Date of Entry:
+          </label>
+          <input
+            type="date"
+            required
+            value={dateOfEntry}
+            onChange={(e) => setDateOfEntry(e.target.value)}
+            className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white"
+          />
         </div>
 
         {/* Stop Hunt Helper Banner */}

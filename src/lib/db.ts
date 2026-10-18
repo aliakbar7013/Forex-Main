@@ -134,6 +134,12 @@ function initDatabase(db: Database.Database) {
     );
   `);
 
+  try {
+    db.prepare('ALTER TABLE signals ADD COLUMN date_of_entry TEXT').run();
+  } catch {
+    // Column already exists
+  }
+
   // 6. Trade Logs Table
   db.exec(`
     CREATE TABLE IF NOT EXISTS trade_logs (
@@ -788,13 +794,13 @@ export function insertSignal(signal: Signal): Signal {
       risk_percent, defensive_state, calculated_lot_size, raw_quantity, risk_amount_usd,
       sl_distance_price, sl_distance_pips_points, primary_risk_reward, targets_json,
       validation_json, status, outcome, realized_pnl_usd, exit_price, session_name,
-      notes, raw_payload_json, created_at, updated_at
+      notes, raw_payload_json, created_at, updated_at, date_of_entry
     ) VALUES (
       ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
       ?, ?, ?, ?, ?,
       ?, ?, ?, ?,
       ?, ?, ?, ?, ?, ?,
-      ?, ?, ?, ?
+      ?, ?, ?, ?, ?
     )
   `).run(
     signal.id,
@@ -825,7 +831,8 @@ export function insertSignal(signal: Signal): Signal {
     signal.notes || null,
     JSON.stringify(signal.raw_payload || {}),
     signal.created_at,
-    signal.updated_at
+    signal.updated_at,
+    signal.date_of_entry || (signal.created_at ? signal.created_at.split('T')[0] : new Date().toISOString().split('T')[0])
   );
 
   return signal;
@@ -983,7 +990,8 @@ function rowToSignal(row: any): Signal {
     notes: row.notes || undefined,
     raw_payload: JSON.parse(row.raw_payload_json || '{}'),
     created_at: row.created_at,
-    updated_at: row.updated_at
+    updated_at: row.updated_at,
+    date_of_entry: row.date_of_entry || (row.created_at ? row.created_at.split('T')[0] : undefined)
   };
 }
 

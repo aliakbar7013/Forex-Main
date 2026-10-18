@@ -7,6 +7,7 @@ import {
   CheckCircle2, 
   AlertTriangle, 
   Clock, 
+  Calendar,
   Copy, 
   Check, 
   ChevronDown, 
@@ -88,20 +89,33 @@ export function SignalCardComponent({
     }
   };
 
-  const createdDate = new Date(signal.created_at);
-  const nyTime = createdDate.toLocaleTimeString('en-US', { 
+  const rawDateStr = signal.date_of_entry || signal.created_at;
+  const createdDate = new Date(rawDateStr);
+  const isValidDate = !isNaN(createdDate.getTime());
+  
+  // Date of Entry formatting
+  const entryIsoDate = signal.date_of_entry || (isValidDate ? createdDate.toISOString().split('T')[0] : (signal.created_at ? signal.created_at.split('T')[0] : ''));
+  const entryDateFormatted = isValidDate ? createdDate.toLocaleDateString('en-US', { 
+    timeZone: 'America/New_York', 
+    weekday: 'short',
+    month: 'short', 
+    day: 'numeric', 
+    year: 'numeric' 
+  }) : entryIsoDate;
+
+  const nyTime = isValidDate ? createdDate.toLocaleTimeString('en-US', { 
     timeZone: 'America/New_York', 
     hour: '2-digit', 
     minute: '2-digit', 
     hour12: true 
-  });
-  const istTime = createdDate.toLocaleTimeString('en-US', { 
+  }) : '';
+  const istTime = isValidDate ? createdDate.toLocaleTimeString('en-US', { 
     timeZone: 'Asia/Kolkata', 
     hour: '2-digit', 
     minute: '2-digit', 
     hour12: true 
-  });
-  const timeFormatted = `${nyTime} NY • ${istTime} IST`;
+  }) : '';
+  const timeFormatted = nyTime && istTime ? `${nyTime} NY • ${istTime} IST` : '';
   const { dayName } = getSignalTradingDay(signal);
 
   const validationStatus = signal.validation?.overallStatus || 'PASSED';
@@ -201,6 +215,12 @@ export function SignalCardComponent({
                   </span>
                 )}
 
+                {/* Prominent Date of Entry Pill */}
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-50 text-blue-900 border border-blue-200/80 font-mono">
+                  <Calendar className="w-3 h-3 text-blue-600 shrink-0" />
+                  <span>Entry: {entryIsoDate}</span>
+                </span>
+
                 <span className="text-slate-300">•</span>
                 <span className="text-[11px] text-slate-500 font-medium">
                   {dayName}
@@ -226,20 +246,24 @@ export function SignalCardComponent({
 
         </div>
 
-        {/* Execution Time Ribbon */}
+        {/* Execution Time & Date Ribbon */}
         <div className="flex items-center justify-between text-xs py-2 px-3 bg-slate-50 border border-slate-100 rounded-xl mb-4">
-          <div className="flex items-center gap-1.5 text-slate-500 font-medium">
-            <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-            <span className="text-slate-400">Window:</span>
-            <span className="font-mono text-slate-700 font-semibold text-[11px]">
-              {signal.session_name || timeFormatted}
-            </span>
+          <div className="flex items-center gap-2 text-slate-500 font-medium flex-wrap">
+            <div className="flex items-center gap-1 text-slate-900 font-bold font-mono text-[11px]">
+              <Calendar className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+              <span>{entryDateFormatted}</span>
+            </div>
+            <span className="text-slate-300 hidden sm:inline">•</span>
+            <div className="flex items-center gap-1 text-slate-600 text-[11px]">
+              <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              <span className="font-mono text-slate-700 font-semibold">{signal.session_name || timeFormatted}</span>
+            </div>
           </div>
 
           <button 
             type="button"
             onClick={() => setShowValidationDetails(!showValidationDetails)}
-            className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-slate-700 font-medium"
+            className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-slate-700 font-medium shrink-0 ml-1"
             title="View validation criteria"
           >
             {isValid ? <CheckCircle2 className="w-3 h-3 text-emerald-600" /> : <AlertTriangle className="w-3 h-3 text-amber-500" />}
@@ -295,11 +319,12 @@ export function SignalCardComponent({
         <div className="grid grid-cols-3 gap-2 mb-3">
           
           {/* Limit Entry */}
-          <div className="p-2.5 rounded-xl bg-slate-50/80 border border-slate-100 text-center">
-            <div className="text-[10px] uppercase font-semibold text-slate-400 tracking-wide mb-1">
-              Entry Price
+          <div className="p-2.5 rounded-xl bg-blue-50/50 border border-blue-100 text-center">
+            <div className="text-[10px] uppercase font-semibold text-blue-600 tracking-wide mb-1 flex items-center justify-center gap-1">
+              <Calendar className="w-2.5 h-2.5 text-blue-500" />
+              <span>Entry ({entryIsoDate})</span>
             </div>
-            <div className="text-sm sm:text-base font-bold text-slate-800 font-mono">
+            <div className="text-sm sm:text-base font-bold text-slate-900 font-mono">
               {signal.entry.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 5 })}
             </div>
             <div className="text-[10px] text-slate-500 font-medium mt-0.5">

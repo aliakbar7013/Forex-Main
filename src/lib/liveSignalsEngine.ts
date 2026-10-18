@@ -724,6 +724,7 @@ export async function syncLiveMarketSignals(): Promise<{
           timeIST: triggerCandle.timeStrIST,
           liveStatus: 'LIVE_MARKET_FEED'
         },
+        date_of_entry: lastSessionDate,
         created_at: `${lastSessionDate}T${String(triggerCandle.hourNY).padStart(2, '0')}:${String(triggerCandle.minuteNY).padStart(2, '0')}:00.000Z`,
         updated_at: new Date().toISOString()
       };
@@ -934,6 +935,7 @@ export async function syncLiveMarketSignals(): Promise<{
           session: 'Post-Asian KZ (London Open 04:15 NY)',
           liveStatus: 'LIVE_MARKET_FEED'
         },
+        date_of_entry: todayDateStr,
         created_at: `${todayDateStr}T08:15:00.000Z`,
         updated_at: new Date().toISOString()
       };

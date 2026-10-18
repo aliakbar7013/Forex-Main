@@ -128,9 +128,10 @@ export interface Signal {
   realized_pnl_usd?: number;
   exit_price?: number;
   
-  // Timestamps
+  // Timestamps & Entry Date
   created_at: string;
   updated_at: string;
+  date_of_entry?: string;
   session_name?: string;
   
   // Additional TradingView metadata
@@ -233,11 +234,10 @@ export interface IncomingWebhookPayload {
   liquidity_sweep?: boolean | string;
   fvg_number?: number | string;
   bpr_confirmed?: boolean | string;
-  choch_confirmed?: boolean | string;
-  asian_sweep?: boolean | string;
-  asian_kz_completed?: boolean | string;
   ny_15m_range_marked?: boolean | string;
   ny_1m_choch?: boolean | string;
+  date_of_entry?: string;
+  date?: string;
   notes?: string;
   [key: string]: unknown;
 }

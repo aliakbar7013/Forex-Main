@@ -5,6 +5,7 @@ import {
   Copy, 
   Check, 
   Clock,
+  Calendar,
   BarChart2,
   Trophy,
   Skull
@@ -46,6 +47,7 @@ export function SignalsTableComponent({
         <table className="w-full text-left text-xs">
           <thead className="bg-slate-50/80 border-b border-slate-200/80 text-slate-500 font-semibold uppercase tracking-wider text-[10px]">
             <tr>
+              <th className="py-3 px-4 font-sans">Date of Entry</th>
               <th className="py-3 px-4">Strategy &amp; Day</th>
               <th className="py-3 px-4">Window</th>
               <th className="py-3 px-4">Symbol / Action</th>
@@ -64,9 +66,44 @@ export function SignalsTableComponent({
               const isBuy = s.action === 'BUY';
               const { dayName } = getSignalTradingDay(s);
 
+              const rawDateStr = s.date_of_entry || s.created_at;
+              const createdDate = new Date(rawDateStr);
+              const isValidDate = !isNaN(createdDate.getTime());
+              const entryIsoDate = s.date_of_entry || (isValidDate ? createdDate.toISOString().split('T')[0] : (s.created_at ? s.created_at.split('T')[0] : ''));
+              const entryDateFormatted = isValidDate ? createdDate.toLocaleDateString('en-US', { 
+                timeZone: 'America/New_York', 
+                month: 'short', 
+                day: 'numeric', 
+                year: 'numeric' 
+              }) : entryIsoDate;
+              const nyTime = isValidDate ? createdDate.toLocaleTimeString('en-US', { 
+                timeZone: 'America/New_York', 
+                hour: '2-digit', 
+                minute: '2-digit', 
+                hour12: true 
+              }) : '';
+              const istTime = isValidDate ? createdDate.toLocaleTimeString('en-US', { 
+                timeZone: 'Asia/Kolkata', 
+                hour: '2-digit', 
+                minute: '2-digit', 
+                hour12: true 
+              }) : '';
+              const timeFormatted = nyTime && istTime ? `${nyTime} NY • ${istTime} IST` : '';
+
               return (
                 <tr key={s.id} className="hover:bg-slate-50/60 transition-colors">
                   
+                  {/* Date of Entry */}
+                  <td className="py-3 px-4 whitespace-nowrap font-sans">
+                    <div className="text-slate-900 font-bold text-xs flex items-center gap-1.5 font-mono">
+                      <Calendar className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                      <span>{entryIsoDate}</span>
+                    </div>
+                    <div className="text-[10px] text-slate-500 font-medium mt-0.5">
+                      <span>{entryDateFormatted}</span>
+                    </div>
+                  </td>
+
                   {/* Strategy & Day */}
                   <td className="py-3 px-4 whitespace-nowrap">
                     <div className="flex items-center gap-1.5 font-sans">
@@ -88,10 +125,15 @@ export function SignalsTableComponent({
 
                   {/* Execution Window */}
                   <td className="py-3 px-4 whitespace-nowrap font-sans">
-                    <div className="text-slate-600 font-medium text-xs flex items-center gap-1">
+                    <div className="text-slate-700 font-semibold text-xs flex items-center gap-1">
                       <Clock className="w-3 h-3 text-slate-400 shrink-0" />
                       <span>{s.session_name || 'London Session'}</span>
                     </div>
+                    {timeFormatted && (
+                      <div className="text-[10px] text-slate-500 font-mono mt-0.5">
+                        {timeFormatted}
+                      </div>
+                    )}
                   </td>
 
                   {/* Symbol & Action */}
