@@ -1625,6 +1625,15 @@ export function generateSixMonthsBacktestDataset(): BacktestTradeRecord[] {
         entryTime: { ny: '03:30', ist: '13:00' },
         note: '[TradingView OANDA Feed] [CBDR 15m Major Pair] Previous Day High (PDH) swept at 02:45 NY. London 1st 15m Bearish FVG entry executed at 03:30 NY (13:00 IST) @ 1.12647. Stop Loss placed at London Session High (1.12812). Target 1:3.0 (+3.0R / +$3,000 WIN) hit at 1.12152. Strategy rule satisfied; weekly holiday active for Thursday and Friday.'
       });
+      // Wednesday Oct 14: User verified TradingView chart: GBPAUD 15m Minor Cross 1st Imbalance (+3.0R WIN / +$3,000)
+      createCbdrRecord('GBPAUD', 'Wednesday', wedStr, 'WIN', 'BUY', {
+        entry: 1.89350,
+        sl: 1.88900,
+        tp1: 1.90700,
+        realized_pnl: 3000,
+        entryTime: { ny: '07:45', ist: '17:15' },
+        note: '[TradingView OANDA Feed] [CBDR 15m Minor Cross] Direct London 1st 15m Imbalance entry executed inside blue London session at 07:45 NY (17:15 IST) @ 1.89350 (No PDH/PDL sweep required). SL placed with buffer below session low at 1.88900. Target 1:3.0 (+3.0R / +$3,000 WIN) reached at 1.90700 on Thursday continuation. Strategy rule satisfied.'
+      });
       // Thursday Oct 15 & Friday Oct 16: STRICTLY 0 TRADES FOR CBDR!
     } else {
       const isMonWin = (w % 4 !== 1);

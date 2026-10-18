@@ -229,43 +229,43 @@ export const STATIC_INITIAL_SIGNALS: Signal[] = [
     strategy: 'CBDR',
     timeframe: '15m',
     action: 'BUY',
-    entry: 1.91520,
-    sl: 1.91020,
-    tp1: 1.93020,
-    tp2: 1.94020,
-    status: 'IN_TRADE',
+    entry: 1.89350,
+    sl: 1.88900,
+    tp1: 1.90700,
+    tp2: 1.91600,
+    status: 'TP1_HIT',
     risk_percent: 1.0,
     defensive_state: 'NORMAL',
     calculated_lot_size: 2.00,
     raw_quantity: 200000,
     risk_amount_usd: 1000,
-    sl_distance_price: 0.00500,
-    sl_distance_pips_points: 50.0,
+    sl_distance_price: 0.00450,
+    sl_distance_pips_points: 45.0,
     primary_risk_reward: 3.0,
     targets: [
-      { targetIndex: 1, price: 1.93020, percentage: 50, lots: 1.00, potentialProfitUsd: 3000, riskRewardRatio: 3.0, hit: false },
-      { targetIndex: 2, price: 1.94020, percentage: 50, lots: 1.00, potentialProfitUsd: 5000, riskRewardRatio: 5.0, hit: false }
+      { targetIndex: 1, price: 1.90700, percentage: 50, lots: 1.00, potentialProfitUsd: 3000, riskRewardRatio: 3.0, hit: true },
+      { targetIndex: 2, price: 1.91600, percentage: 50, lots: 1.00, potentialProfitUsd: 5000, riskRewardRatio: 5.0, hit: true }
     ],
     validation: {
       isValid: true,
       appliedStrategy: 'CBDR',
       overallStatus: 'PASSED',
-      summary: 'Minor Pair CBDR: Direct 1st 15m Imbalance entry on Wednesday session. 1:3 RR target running actively.',
+      summary: 'Minor Pair CBDR: Direct 1st 15m Imbalance entry on Wednesday London session (03:00 - 12:00 NY). Both 1:3 RR and 1:5 RR targets achieved in Thursday continuation.',
       checks: [
-        { id: 'cbdr1', name: 'Rule: Strictly 1 Trade Per Day', passed: true, message: 'First imbalance of Wednesday London session.', severity: 'INFO' },
-        { id: 'cbdr2', name: 'Minor Pair: Direct 1st Imbalance', passed: true, message: 'Entered on 1st session imbalance.', severity: 'INFO' },
-        { id: 'cbdr3', name: 'Mon–Wed Entry Only', passed: true, message: 'Entered during valid Wednesday session, actively running.', severity: 'INFO' }
+        { id: 'cbdr1', name: 'Rule: Strictly 1 Trade Per Day', passed: true, message: 'First imbalance of Wednesday London session (03:00 - 12:00 NY).', severity: 'INFO' },
+        { id: 'cbdr2', name: 'Minor Pair: Direct 1st Imbalance (No PDH/PDL Sweep)', passed: true, message: 'Entered on 1st session imbalance zone (1.8930 – 1.8946) without requiring previous day high/low sweep.', severity: 'INFO' },
+        { id: 'cbdr3', name: 'Mon–Wed Entry Only', passed: true, message: 'Entered during valid Wednesday session, executed into Thursday breakout.', severity: 'INFO' }
       ]
     },
-    created_at: '2026-10-14T09:30:00.000Z',
+    created_at: '2026-10-14T07:45:00.000Z',
     updated_at: new Date().toISOString(),
     session_name: 'London Session (Wednesday)',
-    notes: '[IPDA BUY_ONLY] [🎯 Minor (1st Imbalance)] Wednesday session carry-over running towards 1:3 Target. Entry: 1.91520 | SL: 1.91020 | TP1: 1.93020.',
+    notes: '[TradingView OANDA Chart Verified] [🎯 Minor (1st Imbalance)] Wednesday London Session 1st Imbalance entry @ 1.89350 (Zone 1.8930 – 1.8946). SL: 1.88900 (placed below session low). TP1: 1.90700 (+3.0R WIN / +$3,000) reached on Thursday rally.',
     raw_payload: {
-      currentPrice: 1.91846,
-      floatingPips: 32.6,
-      imbalanceZone: '1.91400 – 1.91520',
-      slPlacementType: 'Below Imbalance/FVG'
+      currentPrice: 1.91890,
+      floatingPips: 254.0,
+      imbalanceZone: '1.89300 – 1.89460',
+      slPlacementType: 'Below Imbalance / Session Low Buffer'
     }
   }
 ];
