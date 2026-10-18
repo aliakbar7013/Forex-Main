@@ -19,6 +19,7 @@ import { IpdaDirectionMatrix } from '@/components/dashboard/IpdaDirectionMatrix'
 import { FilterAndControlsBar } from '@/components/dashboard/FilterAndControlsBar';
 import { SignalCard } from '@/components/dashboard/SignalCard';
 import { SignalsTable } from '@/components/dashboard/SignalsTable';
+import { V2Dashboard } from '@/components/dashboard/V2Dashboard';
 import { WebhookSimulatorModal } from '@/components/modals/WebhookSimulatorModal';
 import { WebhookDocsModal } from '@/components/modals/WebhookDocsModal';
 import { AccountSettingsModal } from '@/components/modals/AccountSettingsModal';
@@ -91,6 +92,31 @@ export default function TradingDashboard() {
   const [authSession, setAuthSession] = useState<AuthSession>({ authenticated: false });
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [isPinManagerOpen, setIsPinManagerOpen] = useState(false);
+
+  // Version Selector State (v1 = original minimal release, v2 = new active workspace)
+  const [currentVersion, setCurrentVersion] = useState<'v1' | 'v2'>('v1');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlV = urlParams.get('v') || urlParams.get('version');
+      if (urlV === 'v2' || urlV === '2') {
+        setCurrentVersion('v2');
+        return;
+      }
+      const saved = localStorage.getItem('apex_terminal_version') as 'v1' | 'v2' | null;
+      if (saved === 'v1' || saved === 'v2') {
+        setCurrentVersion(saved);
+      }
+    }
+  }, []);
+
+  const handleSelectVersion = (v: 'v1' | 'v2') => {
+    setCurrentVersion(v);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('apex_terminal_version', v);
+    }
+  };
 
   // Check auth session on mount
   useEffect(() => {
@@ -780,6 +806,8 @@ export default function TradingDashboard() {
         clocks={clocks}
         isConnected={isConnected}
         authSession={authSession}
+        currentVersion={currentVersion}
+        onSelectVersion={handleSelectVersion}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenLogs={() => setIsLogsOpen(true)}
         onResetSeedData={handleResetSeedData}
@@ -898,11 +926,45 @@ export default function TradingDashboard() {
           />
         </div>
 
-        {/* Live Signal Stream View - Ultra Minimal Institutional Design */}
+        {/* Live Signal Stream View - Supports both v1 (original preserved) and v2 (isolated workspace) */}
         <div className={activeTab === 'signals' ? 'space-y-6 block' : 'hidden'} aria-hidden={activeTab !== 'signals'}>
-          
-          {/* Minimal Filter and View Controls Bar */}
-          <FilterAndControlsBar
+          {currentVersion === 'v2' ? (
+            <V2Dashboard
+              displayedSignals={displayedSignals}
+              allSignals={signals}
+              isLoading={isLoading}
+              viewMode={viewMode}
+              setViewMode={setViewMode}
+              selectedStrategy={selectedStrategy}
+              setSelectedStrategy={setSelectedStrategy}
+              selectedStatus={selectedStatus}
+              setSelectedStatus={setSelectedStatus}
+              selectedDirection={selectedDirection}
+              setSelectedDirection={setSelectedDirection}
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
+              strategyCounts={strategyCounts}
+              isRefreshingLive={isRefreshingLive}
+              isBackgroundSyncing={isBackgroundSyncing}
+              autoSync5s={autoSync5s}
+              setAutoSync5s={setAutoSync5s}
+              countdown={countdown}
+              tradeToast={tradeToast}
+              setTradeToast={setTradeToast}
+              handleRefreshLiveSignals={handleRefreshLiveSignals}
+              handleUpdateSignalStatus={handleUpdateSignalStatus}
+              handleDeleteSignal={handleDeleteSignal}
+              handleViewPayload={handleViewPayload}
+              handleOpenChart={handleOpenChart}
+              setIsCreateOpen={setIsCreateOpen}
+              setIsSimulatorOpen={setIsSimulatorOpen}
+              setActiveTab={setActiveTab}
+              onSwitchToV1={() => handleSelectVersion('v1')}
+            />
+          ) : (
+            <>
+              {/* Minimal Filter and View Controls Bar */}
+              <FilterAndControlsBar
             selectedStrategy={selectedStrategy}
             onSelectStrategy={setSelectedStrategy}
             selectedStatus={selectedStatus}
@@ -1078,13 +1140,15 @@ export default function TradingDashboard() {
               ))}
             </div>
           ) : (
-            <SignalsTable
-              signals={displayedSignals}
-              onUpdateStatus={handleUpdateSignalStatus}
-              onDeleteSignal={handleDeleteSignal}
-              onViewPayload={handleViewPayload}
-              onOpenChart={handleOpenChart}
-            />
+              <SignalsTable
+                signals={displayedSignals}
+                onUpdateStatus={handleUpdateSignalStatus}
+                onDeleteSignal={handleDeleteSignal}
+                onViewPayload={handleViewPayload}
+                onOpenChart={handleOpenChart}
+              />
+            )}
+            </>
           )}
         </div>
 

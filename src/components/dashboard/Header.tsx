@@ -14,7 +14,10 @@ import {
   LogOut,
   Crown,
   User,
-  Clock
+  Clock,
+  ChevronDown,
+  Check,
+  Layers
 } from 'lucide-react';
 import { SessionClocks } from '@/lib/sessionTracker';
 import { soundEngine } from '@/lib/soundEngine';
@@ -23,6 +26,8 @@ interface HeaderProps {
   clocks: SessionClocks;
   isConnected: boolean;
   authSession?: { authenticated: boolean; role?: 'ADMIN' | 'USER'; label?: string; pin?: string };
+  currentVersion?: 'v1' | 'v2';
+  onSelectVersion?: (version: 'v1' | 'v2') => void;
   onOpenSettings?: () => void;
   onOpenLogs?: () => void;
   onResetSeedData?: () => void;
@@ -35,6 +40,8 @@ export function HeaderComponent({
   clocks,
   isConnected,
   authSession,
+  currentVersion = 'v1',
+  onSelectVersion,
   onOpenSettings,
   onOpenLogs,
   onResetSeedData,
@@ -46,9 +53,11 @@ export function HeaderComponent({
   const [volume, setVolume] = useState(() => soundEngine.getVolume());
   const [showAudioPopover, setShowAudioPopover] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [showVersionDropdown, setShowVersionDropdown] = useState(false);
 
   const audioMenuRef = useRef<HTMLDivElement>(null);
   const moreMenuRef = useRef<HTMLDivElement>(null);
+  const versionMenuRef = useRef<HTMLDivElement>(null);
 
   // Close popovers on click outside
   useEffect(() => {
@@ -58,6 +67,9 @@ export function HeaderComponent({
       }
       if (moreMenuRef.current && !moreMenuRef.current.contains(event.target as Node)) {
         setShowMoreMenu(false);
+      }
+      if (versionMenuRef.current && !versionMenuRef.current.contains(event.target as Node)) {
+        setShowVersionDropdown(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -96,9 +108,82 @@ export function HeaderComponent({
                 <span className="text-sm sm:text-base font-bold tracking-tight text-slate-900 font-sans">
                   Apex <span className="text-slate-500 font-normal">Signals</span>
                 </span>
-                <span className="text-[10px] uppercase font-semibold tracking-wide px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200 shrink-0">
-                  ICT v2.4
-                </span>
+                {/* Version Selector Dropdown */}
+                <div className="relative" ref={versionMenuRef}>
+                  <button
+                    type="button"
+                    onClick={() => setShowVersionDropdown(prev => !prev)}
+                    className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-100 hover:bg-slate-200/90 border border-slate-200 text-slate-800 text-[11px] font-bold font-mono transition-colors shadow-2xs cursor-pointer"
+                    title="Switch Dashboard Version"
+                  >
+                    <span className={`w-1.5 h-1.5 rounded-full ${currentVersion === 'v2' ? 'bg-purple-600 animate-pulse' : 'bg-blue-600'}`} />
+                    <span>{currentVersion.toUpperCase()}</span>
+                    <span className="text-[10px] text-slate-400 font-sans font-medium hidden sm:inline">
+                      {currentVersion === 'v1' ? '• v1' : '• v2'}
+                    </span>
+                    <ChevronDown className="w-3 h-3 text-slate-400" />
+                  </button>
+
+                  {showVersionDropdown && (
+                    <div className="absolute left-0 mt-2 w-64 rounded-2xl bg-white border border-slate-200 shadow-xl p-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+                      <div className="px-2 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+                        <span>Select Version</span>
+                        <Layers className="w-3 h-3 text-slate-400" />
+                      </div>
+
+                      <div className="mt-1 space-y-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onSelectVersion?.('v1');
+                            setShowVersionDropdown(false);
+                          }}
+                          className={`w-full flex items-start gap-2.5 p-2 rounded-xl text-left transition-colors cursor-pointer ${
+                            currentVersion === 'v1' ? 'bg-blue-50/80 border border-blue-200/60 text-blue-900' : 'hover:bg-slate-50 text-slate-700'
+                          }`}
+                        >
+                          <div className="w-2 h-2 rounded-full bg-blue-600 mt-1 shrink-0" />
+                          <div className="flex-1">
+                            <div className="text-xs font-bold flex items-center justify-between">
+                              <span>Version 1 (v1)</span>
+                              {currentVersion === 'v1' && <Check className="w-3.5 h-3.5 text-blue-600" />}
+                            </div>
+                            <p className="text-[10px] text-slate-500 font-normal mt-0.5 leading-snug">
+                              Exact original minimal design with Live Signals, OANDA broker feeds, and Date of Entry.
+                            </p>
+                          </div>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onSelectVersion?.('v2');
+                            setShowVersionDropdown(false);
+                          }}
+                          className={`w-full flex items-start gap-2.5 p-2 rounded-xl text-left transition-colors cursor-pointer ${
+                            currentVersion === 'v2' ? 'bg-purple-50/80 border border-purple-200/60 text-purple-900' : 'hover:bg-slate-50 text-slate-700'
+                          }`}
+                        >
+                          <div className="w-2 h-2 rounded-full bg-purple-600 mt-1 shrink-0" />
+                          <div className="flex-1">
+                            <div className="text-xs font-bold flex items-center justify-between">
+                              <span className="flex items-center gap-1.5">
+                                Version 2 (v2)
+                                <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-purple-200 text-purple-800">
+                                  ACTIVE
+                                </span>
+                              </span>
+                              {currentVersion === 'v2' && <Check className="w-3.5 h-3.5 text-purple-600" />}
+                            </div>
+                            <p className="text-[10px] text-slate-500 font-normal mt-0.5 leading-snug">
+                              Next-gen workspace. All upcoming changes and modifications apply here.
+                            </p>
+                          </div>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
               <p className="text-[11px] text-slate-400 font-medium hidden sm:block">
                 Interbank Quantitative Execution
