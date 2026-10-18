@@ -10,9 +10,9 @@ var string G_IPDA    = "IPDA Macro Central Bank Filter"
 var string G_RISK    = "Risk, SL Buffer & RR Targets"
 var string G_ALERTS  = "Webhook Alerts"
 
-// Session Window: 03:00 AM – 11:45 AM New York Time (12:30 PM – 09:15 PM IST)
-sessionInput         = input.session("0300-1145", "London Session Hours (NY Time)", group = G_TIME, tooltip = "Strict execution window: 03:00 AM to 11:45 AM NY Time (12:30 PM to 09:15 PM IST)")
-timezoneInput        = input.string("America/New_York", "Timezone", group = G_TIME)
+// Session Window: 07:00 – 16:00 UTC / 03:00 AM – 12:00 PM NY Time (12:30 PM – 09:30 PM IST)
+sessionInput         = input.session("0700-1600", "London Session Hours (LuxAlgo)", group = G_TIME, tooltip = "Strict execution window: 07:00 to 16:00 UTC / 03:00 AM to 12:00 PM NY Time (12:30 PM to 09:30 PM IST)")
+timezoneInput        = input.string("UTC", "Timezone", group = G_TIME)
 tradeMon             = input.bool(true, "Trade Monday", group = G_TIME)
 tradeTue             = input.bool(true, "Trade Tuesday", group = G_TIME)
 tradeWed             = input.bool(true, "Trade Wednesday", group = G_TIME)
@@ -149,11 +149,11 @@ if inSession and isPermittedDay and not sessionFirstImbalanceFound
 // WEBHOOK ALERTS (JSON Payload for Dashboard)
 // =====================================================================================
 if buySignal
-    string buyPayload = '{"strategy":"CBDR","symbol":"' + syminfo.ticker + '","timeframe":"15m","action":"BUY","entry":' + str.tostring(entryPrice) + ',"sl":' + str.tostring(slPrice) + ',"tp1":' + str.tostring(tp1Price) + ',"tp2":' + str.tostring(tp2Price) + ',"session":"London","fvg_number":1,"secret":"' + webhookSecret + '","notes":"1st London Imbalance (03:00-11:45 NY). SL below imbalance + 7 pips. TP 1:3."}'
+    string buyPayload = '{"strategy":"CBDR","symbol":"' + syminfo.ticker + '","timeframe":"15m","action":"BUY","entry":' + str.tostring(entryPrice) + ',"sl":' + str.tostring(slPrice) + ',"tp1":' + str.tostring(tp1Price) + ',"tp2":' + str.tostring(tp2Price) + ',"session":"London","fvg_number":1,"secret":"' + webhookSecret + '","notes":"1st London Imbalance (07:00-16:00 UTC / 03:00-12:00 NY). SL below imbalance + 7 pips. TP 1:3."}'
     alert(buyPayload, alert.freq_once_per_bar_close)
 
 if sellSignal
-    string sellPayload = '{"strategy":"CBDR","symbol":"' + syminfo.ticker + '","timeframe":"15m","action":"SELL","entry":' + str.tostring(entryPrice) + ',"sl":' + str.tostring(slPrice) + ',"tp1":' + str.tostring(tp1Price) + ',"tp2":' + str.tostring(tp2Price) + ',"session":"London","fvg_number":1,"secret":"' + webhookSecret + '","notes":"1st London Imbalance (03:00-11:45 NY). SL above imbalance + 7 pips. TP 1:3."}'
+    string sellPayload = '{"strategy":"CBDR","symbol":"' + syminfo.ticker + '","timeframe":"15m","action":"SELL","entry":' + str.tostring(entryPrice) + ',"sl":' + str.tostring(slPrice) + ',"tp1":' + str.tostring(tp1Price) + ',"tp2":' + str.tostring(tp2Price) + ',"session":"London","fvg_number":1,"secret":"' + webhookSecret + '","notes":"1st London Imbalance (07:00-16:00 UTC / 03:00-12:00 NY). SL above imbalance + 7 pips. TP 1:3."}'
     alert(sellPayload, alert.freq_once_per_bar_close)
 
 // Plot Shapes

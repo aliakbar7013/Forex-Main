@@ -133,7 +133,7 @@ export function StrategyStudio() {
             </div>
             <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-xs">
               <span className="text-[10px] text-slate-500 font-bold block uppercase">Session Window</span>
-              <span className="font-mono font-black text-sm text-emerald-700">03:00–11:45 AM NY (12:30–09:15 PM IST)</span>
+              <span className="font-mono font-black text-sm text-emerald-700">07:00–16:00 UTC (03:00–12:00 NY / 12:30–21:30 IST)</span>
             </div>
             <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-xs">
               <span className="text-[10px] text-slate-500 font-bold block uppercase">Trading Days</span>
@@ -256,7 +256,7 @@ export function StrategyStudio() {
 
               <ul className="space-y-2 text-xs text-indigo-950 font-medium list-disc list-inside">
                 <li><strong>No PDH/PDL Sweep Required:</strong> Cross pairs respect internal London session orderflow directly.</li>
-                <li><strong>Entry Trigger:</strong> Enter directly on the <strong>1st 15m Fair Value Gap (FVG) / Imbalance</strong> that forms inside the London trading window (03:00–11:45 AM NY / 12:30–09:15 PM IST).</li>
+                <li><strong>Entry Trigger:</strong> Enter directly on the <strong>1st 15m Fair Value Gap (FVG) / Imbalance</strong> that forms inside the London trading window (07:00–16:00 UTC / 03:00–12:00 NY / 12:30–21:30 IST).</li>
                 <li><strong>Target:</strong> Minimum 1:3 RR (Take Profit 1). Move Stop Loss to Breakeven after TP1 hit.</li>
               </ul>
             </div>

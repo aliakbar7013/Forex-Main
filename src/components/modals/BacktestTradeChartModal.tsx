@@ -471,7 +471,7 @@ export function BacktestTradeChartModal({
                     <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                     <div>
                       <strong className="text-slate-900 block">London Session Execution:</strong>
-                      <span className="text-slate-500 text-[11px]">Between 03:00 AM – 11:45 AM NY (12:30 PM – 09:15 PM IST).</span>
+                      <span className="text-slate-500 text-[11px]">Between 07:00 – 16:00 UTC (03:00 AM – 12:00 PM NY / 12:30 PM – 09:30 PM IST).</span>
                     </div>
                   </div>
 

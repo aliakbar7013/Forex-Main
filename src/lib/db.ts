@@ -720,7 +720,7 @@ export function pushResolvedAndInvalidSignalsToBacktest(): { archivedCount: numb
       isCbdrValidDay: signal.strategy === 'CBDR'
         ? ['Monday', 'Tuesday', 'Wednesday'].includes(signal.created_at ? new Date(signal.created_at).toLocaleDateString('en-US', { weekday: 'long' }) : 'Monday')
         : true, // Stop Hunt trades Monday through Friday all week
-      session: signal.session_name || (signal.strategy === 'STOP_HUNT' ? 'Post-Asian / London (Post 01:00 NY)' : 'London Session (03:00 – 11:45 NY)'),
+      session: signal.session_name || (signal.strategy === 'STOP_HUNT' ? 'Post-Asian / London (Post 01:00 NY)' : 'London Session (07:00 – 16:00 UTC / 03:00 – 12:00 NY)'),
       date_executed: signal.created_at ? signal.created_at.split('T')[0] : new Date().toISOString().split('T')[0],
       notes: signal.notes || `Trade resolved (${isWin ? 'WIN' : isBe ? 'Breakeven' : 'LOSS'}) pushed to backtest archive`,
       created_at: signal.created_at || new Date().toISOString()
@@ -1285,7 +1285,7 @@ export function generateSixMonthsBacktestDataset(): BacktestTradeRecord[] {
   const majorKeys = ['EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF', 'AUDUSD', 'USDCAD', 'NZDUSD'];
   const crossKeys = ['GBPNZD', 'GBPJPY', 'EURJPY', 'EURGBP', 'EURCAD', 'GBPAUD', 'GBPCHF', 'EURCHF', 'AUDJPY', 'CADJPY'];
 
-  // London Session 15m Execution Windows (03:00 - 11:45 NY / 12:30 - 21:15 IST)
+  // London Session 15m Execution Windows (07:00 - 16:00 UTC / 03:00 - 12:00 NY / 12:30 - 21:30 IST)
   const cbdrEntryTimes = [
     { ny: '03:15', ist: '12:45' },
     { ny: '03:30', ist: '13:00' },
@@ -1307,7 +1307,7 @@ export function generateSixMonthsBacktestDataset(): BacktestTradeRecord[] {
     { ny: '04:15', ist: '13:45' }
   ];
 
-  // Helper 1: CBDR Record Generator (15m, London 03:00-11:45 NY, Mon-Wed only, strict 1:3 RR)
+  // Helper 1: CBDR Record Generator (15m, London 07:00-16:00 UTC / 03:00-12:00 NY, Mon-Wed only, strict 1:3 RR)
   const createCbdrRecord = (
     symbol: string, 
     day: string, 

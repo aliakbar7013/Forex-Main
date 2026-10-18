@@ -998,7 +998,7 @@ export default function TradingDashboard() {
                     No Running CBDR Trades
                   </h3>
                   <p className="text-xs text-slate-500 max-w-md mx-auto mb-4 font-medium leading-relaxed">
-                    Under ICT CBDR institutional rules, new entries are strictly taken on <strong className="text-slate-800">Monday, Tuesday, and Wednesday</strong> (London Session 03:00 – 11:45 NY). Previous trades that reached target or SL are archived in Backtest.
+                    Under ICT CBDR institutional rules, new entries are strictly taken on <strong className="text-slate-800">Monday, Tuesday, and Wednesday</strong> (London Session 07:00 – 16:00 UTC / 03:00 – 12:00 NY). Previous trades that reached target or SL are archived in Backtest.
                   </p>
                   <div className="flex items-center justify-center gap-3">
                     <button

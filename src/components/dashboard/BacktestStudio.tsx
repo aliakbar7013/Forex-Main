@@ -413,7 +413,7 @@ export function BacktestStudio() {
             </h3>
             <p className="text-xs text-blue-200/80 max-w-2xl">
               Streaming real-time rates directly from TradingView charts for all 28 Forex pairs + Gold. 
-              <strong className="text-amber-300 ml-1">Focus #1:</strong> Central Bank Dealers Range (CBDR) 15m London Killzone (03:00–11:45 NY, Mon–Wed, PDH/PDL sweeps for majors, direct 1st FVG for crosses, strict 1:3 RR). 
+              <strong className="text-amber-300 ml-1">Focus #1:</strong> Central Bank Dealers Range (CBDR) 15m London Killzone (07:00–16:00 UTC / 03:00–12:00 NY, Mon–Wed, PDH/PDL sweeps for majors, direct 1st FVG for crosses, strict 1:3 RR). 
               <strong className="text-amber-300 ml-1">Focus #2:</strong> Stop Hunt Model 5m (Asian KZ 21:00–01:00 NY observation, post-01:00 NY sweep, 5m CHoCH + FVG, SL 2–4 pips, TP Opposing Asian Level, Mon–Fri).
             </p>
           </div>
@@ -455,7 +455,7 @@ export function BacktestStudio() {
             </span>
           </div>
           <p className="text-xs text-slate-500 font-medium">
-            Quantitative CBDR &amp; New York backtest reports calculated directly from TradingView real-market candles (03:00–11:45 AM NY / 12:30–09:15 PM IST), 1st FVG execution, and IPDA interest rate compliance.
+            Quantitative CBDR &amp; New York backtest reports calculated directly from TradingView real-market candles (07:00–16:00 UTC / 03:00–12:00 NY / 12:30–09:30 PM IST), 1st FVG execution, and IPDA interest rate compliance.
           </p>
         </div>
 

@@ -4,6 +4,7 @@ export interface SessionClocks {
   nyTime: string;          // e.g. "08:22:28 AM"
   nyTimeWithTz: string;    // e.g. "08:22:28 AM NY"
   istTime: string;         // e.g. "05:52:28 PM IST"
+  utcTime?: string;        // e.g. "12:22:28 PM UTC"
   nyDateStr: string;
   dayOfWeekName: string;
   activeSessions: string[];
@@ -31,6 +32,15 @@ export function getCurrentMarketClocks(now: Date = new Date()): SessionClocks {
     second: '2-digit' 
   });
 
+  // 3. UTC Time (LuxAlgo Base Timezone)
+  const utcTime = now.toLocaleTimeString('en-US', {
+    timeZone: 'UTC',
+    hour12: true,
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  });
+
   const nyDateStr = now.toLocaleDateString('en-US', { 
     timeZone: 'America/New_York', 
     weekday: 'short', 
@@ -51,20 +61,19 @@ export function getCurrentMarketClocks(now: Date = new Date()): SessionClocks {
     nyTime,
     nyTimeWithTz,
     istTime,
+    utcTime,
     nyDateStr,
     dayOfWeekName,
     activeSessions,
-    tzLabel: 'New York / Indian Time'
+    tzLabel: 'LuxAlgo UTC / NY / IST'
   };
 }
 
 export function getTradingSessions(now: Date = new Date()): TradingSession[] {
-  // Convert current time to decimal hours in America/New_York
-  const nyDateStr = now.toLocaleString('en-US', { timeZone: 'America/New_York' });
-  const nyDate = new Date(nyDateStr);
-  const hours = nyDate.getHours();
-  const minutes = nyDate.getMinutes();
-  const currentNyHours = hours + (minutes / 60);
+  // Convert current time to UTC decimal hours matching LuxAlgo Pine Script: time(tf, session_str, "UTC")
+  const utcHours = now.getUTCHours();
+  const utcMinutes = now.getUTCMinutes();
+  const currentUtcHours = utcHours + (utcMinutes / 60);
 
   // Helper to check range across midnight
   const isTimeInRange = (current: number, start: number, end: number) => {
@@ -105,96 +114,104 @@ export function getTradingSessions(now: Date = new Date()): TradingSession[] {
     return `${h}h ${m}m remaining`;
   };
 
-  // 1. Sydney: 17:00 - 02:00 NY Time [05:00 PM - 02:00 AM NY / 03:30 AM - 12:30 PM IST]
-  const sydneyStart = 17.0;
-  const sydneyEnd = 2.0;
-  const isSydneyActive = isTimeInRange(currentNyHours, sydneyStart, sydneyEnd);
+  // --------------------------------------------------------------------------
+  // Exact LuxAlgo Sessions Settings (Pine Script: tz_incr = 0 UTC)
+  // Session A: New York  '1300-2200' UTC (#ff5d00) -> 09:00 AM - 06:00 PM NY / 06:30 PM - 03:30 AM IST
+  // Session B: London    '0700-1600' UTC (#2157f3) -> 03:00 AM - 12:00 PM NY / 12:30 PM - 09:30 PM IST
+  // Session C: Tokyo     '0000-0900' UTC (#e91e63) -> 08:00 PM - 05:00 AM NY / 05:30 AM - 02:30 PM IST
+  // Session D: Sydney    '2100-0600' UTC (#ffeb3b) -> 05:00 PM - 02:00 AM NY / 02:30 AM - 11:30 AM IST
+  // --------------------------------------------------------------------------
 
-  // 2. Tokyo / Asian: 19:00 - 04:00 NY Time [07:00 PM - 04:00 AM NY / 05:30 AM - 02:30 PM IST]
-  const tokyoStart = 19.0;
-  const tokyoEnd = 4.0;
-  const isTokyoActive = isTimeInRange(currentNyHours, tokyoStart, tokyoEnd);
+  // 1. Session B: London ('0700-1600' UTC / 03:00 AM - 12:00 PM NY / 12:30 PM - 09:30 PM IST)
+  const londonStart = 7.0;
+  const londonEnd = 16.0;
+  const isLondonActive = isTimeInRange(currentUtcHours, londonStart, londonEnd);
 
-  // 3. CBDR / London Trading Window: strictly 03:00 AM - 11:45 AM NY Time [12:30 PM - 09:15 PM IST]
-  const londonStart = 3.0;
-  const londonEnd = 11.75; // 11:45 AM NY Time
-  const isLondonActive = isTimeInRange(currentNyHours, londonStart, londonEnd);
+  // 2. Session A: New York ('1300-2200' UTC / 09:00 AM - 06:00 PM NY / 06:30 PM - 03:30 AM IST)
+  const nyStart = 13.0;
+  const nyEnd = 22.0;
+  const isNyActive = isTimeInRange(currentUtcHours, nyStart, nyEnd);
 
-  // 4. New York Session: 08:00 AM - 05:00 PM NY Time [05:30 PM - 02:30 AM IST]
-  const nyStart = 8.0;
-  const nyEnd = 17.0;
-  const isNyActive = isTimeInRange(currentNyHours, nyStart, nyEnd);
+  // 3. Session C: Tokyo / Asian ('0000-0900' UTC / 08:00 PM - 05:00 AM NY / 05:30 AM - 02:30 PM IST)
+  const tokyoStart = 0.0;
+  const tokyoEnd = 9.0;
+  const isTokyoActive = isTimeInRange(currentUtcHours, tokyoStart, tokyoEnd);
 
-  // 5. NY Open Kill Zone: 09:30 AM - 12:00 PM NY Time [07:00 PM - 09:30 PM IST]
-  const nyKZStart = 9.5;
-  const nyKZEnd = 12.0;
-  const isNyKZActive = isTimeInRange(currentNyHours, nyKZStart, nyKZEnd);
+  // 4. Session D: Sydney ('2100-0600' UTC / 05:00 PM - 02:00 AM NY / 02:30 AM - 11:30 AM IST)
+  const sydneyStart = 21.0;
+  const sydneyEnd = 6.0;
+  const isSydneyActive = isTimeInRange(currentUtcHours, sydneyStart, sydneyEnd);
+
+  // 5. Special Kill Zone: NY Open / Index Window (09:30 AM - 12:00 PM NY / 13:30 - 16:00 UTC / 07:00 PM - 09:30 PM IST)
+  const nyKZStart = 13.5;
+  const nyKZEnd = 16.0;
+  const isNyKZActive = isTimeInRange(currentUtcHours, nyKZStart, nyKZEnd);
 
   return [
     {
       key: 'LONDON',
-      name: 'CBDR / London',
-      location: 'London (CBDR Window)',
-      timeNY: '03:00 AM – 11:45 AM NY',
-      timeEST: '03:00 AM – 11:45 AM NY',
-      timeIST: '12:30 PM – 09:15 PM IST',
-      timeUTC: '12:30 PM – 09:15 PM IST',
+      name: 'London (LuxAlgo)',
+      location: 'London Session (07:00 – 16:00 UTC)',
+      timeNY: '03:00 AM – 12:00 PM NY',
+      timeEST: '03:00 AM – 12:00 PM NY',
+      timeIST: '12:30 PM – 09:30 PM IST',
+      timeUTC: '07:00 – 16:00 UTC',
       isActive: isLondonActive,
-      isUpcoming: !isLondonActive && currentNyHours < londonStart && currentNyHours >= 0,
-      progressPercent: isLondonActive ? getProgress(currentNyHours, londonStart, londonEnd) : 0,
-      timeRemaining: isLondonActive ? getTimeRemaining(currentNyHours, londonEnd) : 'Window: 03:00 AM – 11:45 AM NY'
+      isUpcoming: !isLondonActive && currentUtcHours < londonStart && currentUtcHours >= 0,
+      progressPercent: isLondonActive ? getProgress(currentUtcHours, londonStart, londonEnd) : 0,
+      timeRemaining: isLondonActive ? getTimeRemaining(currentUtcHours, londonEnd) : 'Opens at 07:00 UTC (03:00 AM NY)'
     },
     {
       key: 'NEW_YORK',
-      name: 'New York Session',
-      location: 'New York, US',
-      timeNY: '08:00 AM – 05:00 PM NY',
-      timeEST: '08:00 AM – 05:00 PM NY',
-      timeIST: '05:30 PM – 02:30 AM IST',
-      timeUTC: '05:30 PM – 02:30 AM IST',
+      name: 'New York (LuxAlgo)',
+      location: 'New York Session (13:00 – 22:00 UTC)',
+      timeNY: '09:00 AM – 06:00 PM NY',
+      timeEST: '09:00 AM – 06:00 PM NY',
+      timeIST: '06:30 PM – 03:30 AM IST',
+      timeUTC: '13:00 – 22:00 UTC',
       isActive: isNyActive,
-      isUpcoming: !isNyActive && currentNyHours < nyStart && currentNyHours >= 3,
-      progressPercent: isNyActive ? getProgress(currentNyHours, nyStart, nyEnd) : 0,
-      timeRemaining: isNyActive ? getTimeRemaining(currentNyHours, nyEnd) : 'Opens at 08:00 AM NY'
+      isUpcoming: !isNyActive && currentUtcHours < nyStart && currentUtcHours >= 7,
+      progressPercent: isNyActive ? getProgress(currentUtcHours, nyStart, nyEnd) : 0,
+      timeRemaining: isNyActive ? getTimeRemaining(currentUtcHours, nyEnd) : 'Opens at 13:00 UTC (09:00 AM NY)'
     },
     {
       key: 'NY_OPEN_KZ',
       name: 'NY Index Killzone',
-      location: 'Wall Street Open',
+      location: 'Wall Street Open (13:30 – 16:00 UTC)',
       timeNY: '09:30 AM – 12:00 PM NY',
       timeEST: '09:30 AM – 12:00 PM NY',
       timeIST: '07:00 PM – 09:30 PM IST',
-      timeUTC: '07:00 PM – 09:30 PM IST',
+      timeUTC: '13:30 – 16:00 UTC',
       isActive: isNyKZActive,
-      isUpcoming: !isNyKZActive && currentNyHours < nyKZStart && currentNyHours >= 7,
-      progressPercent: isNyKZActive ? getProgress(currentNyHours, nyKZStart, nyKZEnd) : 0,
-      timeRemaining: isNyKZActive ? getTimeRemaining(currentNyHours, nyKZEnd) : 'Opens at 09:30 AM NY'
+      isUpcoming: !isNyKZActive && currentUtcHours < nyKZStart && currentUtcHours >= 10,
+      progressPercent: isNyKZActive ? getProgress(currentUtcHours, nyKZStart, nyKZEnd) : 0,
+      timeRemaining: isNyKZActive ? getTimeRemaining(currentUtcHours, nyKZEnd) : 'Opens at 13:30 UTC (09:30 AM NY)'
     },
     {
       key: 'TOKYO',
-      name: 'Asian / Tokyo',
-      location: 'Tokyo, JP',
-      timeNY: '07:00 PM – 04:00 AM NY',
-      timeEST: '07:00 PM – 04:00 AM NY',
+      name: 'Tokyo (LuxAlgo)',
+      location: 'Tokyo Session (00:00 – 09:00 UTC)',
+      timeNY: '08:00 PM – 05:00 AM NY',
+      timeEST: '08:00 PM – 05:00 AM NY',
       timeIST: '05:30 AM – 02:30 PM IST',
-      timeUTC: '05:30 AM – 02:30 PM IST',
+      timeUTC: '00:00 – 09:00 UTC',
       isActive: isTokyoActive,
-      isUpcoming: !isTokyoActive && currentNyHours < tokyoStart && currentNyHours >= 14,
-      progressPercent: isTokyoActive ? getProgress(currentNyHours, tokyoStart, tokyoEnd) : 0,
-      timeRemaining: isTokyoActive ? getTimeRemaining(currentNyHours, tokyoEnd) : 'Opens at 07:00 PM NY'
+      isUpcoming: !isTokyoActive && currentUtcHours >= 18,
+      progressPercent: isTokyoActive ? getProgress(currentUtcHours, tokyoStart, tokyoEnd) : 0,
+      timeRemaining: isTokyoActive ? getTimeRemaining(currentUtcHours, tokyoEnd) : 'Opens at 00:00 UTC (08:00 PM NY)'
     },
     {
       key: 'SYDNEY',
-      name: 'Sydney Session',
-      location: 'Sydney, AU',
+      name: 'Sydney (LuxAlgo)',
+      location: 'Sydney Session (21:00 – 06:00 UTC)',
       timeNY: '05:00 PM – 02:00 AM NY',
       timeEST: '05:00 PM – 02:00 AM NY',
-      timeIST: '03:30 AM – 12:30 PM IST',
-      timeUTC: '03:30 AM – 12:30 PM IST',
+      timeIST: '02:30 AM – 11:30 AM IST',
+      timeUTC: '21:00 – 06:00 UTC',
       isActive: isSydneyActive,
-      isUpcoming: !isSydneyActive && currentNyHours < sydneyStart && currentNyHours >= 12,
-      progressPercent: isSydneyActive ? getProgress(currentNyHours, sydneyStart, sydneyEnd) : 0,
-      timeRemaining: isSydneyActive ? getTimeRemaining(currentNyHours, sydneyEnd) : 'Opens at 05:00 PM NY'
+      isUpcoming: !isSydneyActive && currentUtcHours < sydneyStart && currentUtcHours >= 16,
+      progressPercent: isSydneyActive ? getProgress(currentUtcHours, sydneyStart, sydneyEnd) : 0,
+      timeRemaining: isSydneyActive ? getTimeRemaining(currentUtcHours, sydneyEnd) : 'Opens at 21:00 UTC (05:00 PM NY)'
     }
   ];
 }

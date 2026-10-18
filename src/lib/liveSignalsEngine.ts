@@ -439,8 +439,8 @@ export async function syncLiveMarketSignals(): Promise<{
       const todayDayOfWeek = nyContext.dayOfWeek; // 1 = Mon, 2 = Tue, 3 = Wed
       const isTodayTradingDay = todayDayOfWeek >= 1 && todayDayOfWeek <= 3;
 
-      // Filter London session candles from valid trading days (Mon=1, Tue=2, Wed=3) strictly between 03:00 - 11:45 NY
-      const recentValidDayCandles = candles.filter(c => c.dayOfWeek >= 1 && c.dayOfWeek <= 3 && c.decimalHourNY >= 3.0 && c.decimalHourNY <= 11.75);
+      // Filter London session candles from valid trading days (Mon=1, Tue=2, Wed=3) strictly between 03:00 - 12:00 NY (07:00 - 16:00 UTC)
+      const recentValidDayCandles = candles.filter(c => c.dayOfWeek >= 1 && c.dayOfWeek <= 3 && c.decimalHourNY >= 3.0 && c.decimalHourNY <= 12.0);
       
       // If today is a valid CBDR day, the active trade session was placed TODAY!
       // Otherwise fallback to the latest valid trading session from historical candles
@@ -553,7 +553,7 @@ export async function syncLiveMarketSignals(): Promise<{
         // Synthesize authentic 1st London 15m Imbalance Setup strictly aligned with CBDR rules
         if (action === 'BUY') {
           // BUY Setup (IPDA Ratio > 1.0):
-          // 1st Bullish Imbalance formed in London (03:00 - 11:45 NY)
+          // 1st Bullish Imbalance formed in London (07:00-16:00 UTC / 03:00 - 12:00 NY)
           // Entry strictly on the 1st Bullish Imbalance retest:
           const fvgBase = Number((currentPrice - 14.0 * pipFactor).toFixed(5));
           entry = Number((fvgBase + 8.0 * pipFactor).toFixed(5)); // = currentPrice - 6.0 pips (retest entry on 1st Imbalance)
@@ -574,7 +574,7 @@ export async function syncLiveMarketSignals(): Promise<{
             : `Direct 1st Imbalance (No PDH/PDL Sweep Required)`;
         } else {
           // SELL Setup (IPDA Ratio < 1.0):
-          // 1st Bearish Imbalance formed in London (03:00 - 11:45 NY)
+          // 1st Bearish Imbalance formed in London (07:00-16:00 UTC / 03:00 - 12:00 NY)
           // Entry strictly on the 1st Bearish Imbalance retest:
           const fvgTop = Number((currentPrice + 14.0 * pipFactor).toFixed(5));
           entry = Number((fvgTop - 8.0 * pipFactor).toFixed(5)); // = currentPrice + 6.0 pips (retest entry on 1st Imbalance)
@@ -676,9 +676,9 @@ export async function syncLiveMarketSignals(): Promise<{
           summary: `[IPDA ${ipdaCheck.details?.effectiveDirection} (${ratioDesc})] [${sweepTag}] 1st London 15m Imbalance (${imbalanceZoneDesc || 'Tapped'}). Entry: ${entry} | SL: ${sl} (${isMajor ? (isBuy ? 'London Session Low' : 'London Session High') : (isBuy ? 'Below Imbalance/FVG' : 'Above Imbalance/FVG')}) | TP1: ${tp1} (1:3 RR) | 1 Trade/Day.`,
           checks: [
             { id: 'one_trade_per_day', name: 'Rule: Strictly 1 Trade Per Day (Enforced)', passed: true, message: 'First imbalance of the session only. Maximum 1 trade executed per instrument per day.', severity: 'INFO' },
-            { id: 'cbdr_sweep_rule', name: sweepRuleName, passed: true, message: isMajor ? sweepPriceDesc : 'Minor pair (without USD) enters directly on 1st session imbalance (03:00 - 11:45 NY) without requiring PDH/PDL sweep.', severity: 'INFO' },
+            { id: 'cbdr_sweep_rule', name: sweepRuleName, passed: true, message: isMajor ? sweepPriceDesc : 'Minor pair (without USD) enters directly on 1st session imbalance (07:00 - 16:00 UTC / 03:00 - 12:00 NY) without requiring PDH/PDL sweep.', severity: 'INFO' },
             { id: 'ipda_bias', name: 'IPDA Central Bank Macro Bias', passed: true, message: `IPDA Rate Ratio: ${ratioDesc} -> ${ipdaCheck.details?.effectiveDirection}`, severity: 'INFO' },
-            { id: 'cbdr_session', name: 'Session Window (LuxAlgo Sessions: 03:00 – 11:45 NY Time)', passed: true, message: `1st London Imbalance entered at ${triggerCandle.timeStrNY} NY (${triggerCandle.timeStrIST} IST) inside 03:00–11:45 NY.`, severity: 'INFO' },
+            { id: 'cbdr_session', name: 'Session Window (LuxAlgo Sessions: 07:00 – 16:00 UTC / 03:00 – 12:00 NY Time)', passed: true, message: `1st London Imbalance entered at ${triggerCandle.timeStrNY} NY (${triggerCandle.timeStrIST} IST) inside London session window.`, severity: 'INFO' },
             { id: 'fvg_15m', name: 'Entry on 1st Imbalance of Session (LuxAlgo SMC Model)', passed: true, message: `Limit entry placed strictly at ${entry} on 1st Session FVG (Zone: ${imbalanceZoneDesc}). All subsequent session imbalances are ignored.`, severity: 'INFO' },
             { 
               id: 'sl_placement', 

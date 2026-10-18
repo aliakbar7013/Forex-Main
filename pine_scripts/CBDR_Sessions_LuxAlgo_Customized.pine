@@ -25,7 +25,7 @@ string LARGE             = "Large"
 string HUGE              = "Huge"
 
 string SESSION_A_GROUP   = "Session A (New York)"
-string SESSION_B_GROUP   = "Session B (CBDR / London 03:00 - 11:45 NY)"
+string SESSION_B_GROUP   = "Session B (London 0700-1600 UTC)"
 string SESSION_C_GROUP   = "Session C (Tokyo)"
 string SESSION_D_GROUP   = "Session D (Sydney)"
 string TIMEZONE_GROUP    = "Timezone (New York Time UTC-4 / Indian Time IST)"
@@ -68,10 +68,10 @@ bool sessionAMeanInput       = input.bool(false, "Mean", group = SESSION_A_GROUP
 bool sessionAVwapInput       = input.bool(false, "VWAP", group = SESSION_A_GROUP, tooltip = sessionVwapTooltip, inline = "sessionAOverlays")
 bool sessionAMaxMinInput     = input.bool(false, "Max/Min", group = SESSION_A_GROUP, tooltip = sessionMaxMinTooltip, inline = "sessionAOverlays")
 
-// Session B: CBDR / London Trading Window (03:00 AM - 11:45 AM NY Time / 12:30 PM - 09:15 PM IST)
+// Session B: CBDR / London Trading Window (07:00 – 16:00 UTC / 03:00 AM - 12:00 PM NY Time / 12:30 PM - 09:30 PM IST)
 bool showSessionBInput       = input.bool(true, "Enable", group = SESSION_B_GROUP, tooltip = showSessionTooltip, inline = "sessionB")
-string sessionBNameInput     = input.string("CBDR London (03:00-11:45 NY)", "Name", group = SESSION_B_GROUP, tooltip = sessionNameTooltip, inline = "sessionB")
-string sessionBTimeInput     = input.session("0300-1145", "Hours", group = SESSION_B_GROUP, tooltip = sessionTimeTooltip)
+string sessionBNameInput     = input.string("London (0700-1600 UTC)", "Name", group = SESSION_B_GROUP, tooltip = sessionNameTooltip, inline = "sessionB")
+string sessionBTimeInput     = input.session("0700-1600", "Hours", group = SESSION_B_GROUP, tooltip = sessionTimeTooltip)
 bool sessionBRangeInput      = input.bool(true, "Range", group = SESSION_B_GROUP, tooltip = sessionRangeTooltip, inline = "sessionBOverlays")
 bool sessionBTrendlineInput  = input.bool(false, "Trendline", group = SESSION_B_GROUP, tooltip = sessionTrendlineTooltip, inline = "sessionBOverlays")
 bool sessionBMeanInput       = input.bool(false, "Mean", group = SESSION_B_GROUP, tooltip = sessionMeanTooltip, inline = "sessionBOverlays")

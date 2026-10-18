@@ -24,9 +24,9 @@ var string G_DISPLAY     = "5. Visual On-Chart Display"
 i_webhookSecret  = input.string("YOUR_WEBHOOK_SECRET", "Webhook Secret Token", group=G_SETTINGS, tooltip="Matches WEBHOOK_SECRET in your dashboard.")
 i_ipdaFilter     = input.string("AUTO", "IPDA Central Bank Bias Filter", options=["AUTO", "BUY_ONLY", "SELL_ONLY", "DISABLED"], group=G_SETTINGS, tooltip="Strictly filter trade signals by Central Bank interest rate ratio. E.g. EURUSD=SELL_ONLY, GBPUSD=BUY_ONLY.")
 
-// Sessions Inputs (Aligned with LuxAlgo Sessions: 03:00 - 11:45 NY / 07:00 - 15:45 UTC)
-string sessionTimeInput      = input.session("0300-1145", "Trading Session Window", group=G_SESSIONS, tooltip="Strict trading window: 03:00 - 11:45 New York Time.")
-string sessionTimezone       = input.string("America/New_York", "Timezone", group=G_SESSIONS, tooltip="Timezone for interpreting session hours.")
+// Sessions Inputs (Aligned with LuxAlgo Sessions: 0700-1600 UTC / 03:00 - 12:00 NY)
+string sessionTimeInput      = input.session("0700-1600", "Trading Session Window", group=G_SESSIONS, tooltip="Strict trading window: 07:00 - 16:00 UTC (03:00 - 12:00 New York Time).")
+string sessionTimezone       = input.string("UTC", "Timezone", group=G_SESSIONS, tooltip="Timezone for interpreting session hours (UTC matching LuxAlgo).")
 bool showSessionRangeInput   = input.bool(true, "Show London Session Range Box", group=G_SESSIONS)
 int rangeTransparencyInput   = input.int(90, "Session Box Transparency", minval=0, maxval=100, group=G_SESSIONS)
 color sessionColorInput      = input.color(#2157f3, "London Session Color", group=G_SESSIONS)
@@ -49,7 +49,7 @@ bool i_showDayDivider        = input.bool(true, "Show Daily Dividers", group=G_D
 // ==============================================================================
 // 2. PAIR CLASSIFICATION: MAJOR (USD ATTACHED) VS MINOR (NO USD ATTACHED)
 // Major Pairs: Have USD attached (EURUSD, GBPUSD, etc.) -> Require PDH/PDL Sweep + 1st Imbalance
-// Minor Pairs: Do NOT have USD attached (EURGBP, GBPJPY, etc.) -> Direct 1st Imbalance (03:00-11:45 NY), SL below/above FVG, TP 1:3
+// Minor Pairs: Do NOT have USD attached (EURGBP, GBPJPY, etc.) -> Direct 1st Imbalance (07:00-16:00 UTC / 03:00-12:00 NY), SL below/above FVG, TP 1:3
 // ==============================================================================
 string tickerClean = syminfo.ticker
 bool isMajorPair = str.contains(tickerClean, "USD")
@@ -65,7 +65,7 @@ int currentDay = dayofweek
 bool isTradingDay = (currentDay == dayofweek.monday or currentDay == dayofweek.tuesday or currentDay == dayofweek.wednesday)
 string dayStatusText = isTradingDay ? "VALID TRADING DAY (Mon-Wed)" : "NON-TRADING DAY (Thu/Fri Blocked)"
 
-// Active Session Flag (LuxAlgo Session Check: 03:00 - 11:45 NY / 07:00 - 15:45 UTC)
+// Active Session Flag (LuxAlgo Session Check: 07:00 - 16:00 UTC / 03:00 - 12:00 NY)
 timeInSession = time(timeframe.period, sessionTimeInput, sessionTimezone)
 bool sessionActive = not na(timeInSession) and isTradingDay
 bool sessionStart  = sessionActive and not sessionActive[1]

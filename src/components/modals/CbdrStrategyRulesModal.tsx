@@ -117,7 +117,7 @@ export function CbdrStrategyRulesModal({ isOpen, onClose }: CbdrStrategyRulesMod
               </div>
               <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
                 <span className="text-[10px] text-slate-500 font-bold block uppercase">Session Focus</span>
-                <span className="font-mono font-black text-sm text-emerald-700">03:00 AM – 11:45 AM NY (12:30 PM – 09:15 PM IST)</span>
+                <span className="font-mono font-black text-sm text-emerald-700">07:00 – 16:00 UTC (03:00 – 12:00 NY / 12:30 – 21:30 IST)</span>
               </div>
               <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
                 <span className="text-[10px] text-slate-500 font-bold block uppercase">Best Days</span>
@@ -220,7 +220,7 @@ export function CbdrStrategyRulesModal({ isOpen, onClose }: CbdrStrategyRulesMod
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-slate-600">
                   <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200">
                     <strong className="text-slate-900 block mb-1">Indicator Setup (Sessions &amp; SMC by LuxAlgo):</strong>
-                    <div>• <strong>Sessions:</strong> Set Timezone to <strong>UTC-4 (NY)</strong> • Hours: <span className="text-emerald-700 font-bold">0300-1145</span> (03:00 AM – 11:45 AM NY)</div>
+                    <div>• <strong>Sessions:</strong> LuxAlgo Session B (London) • Hours: <span className="text-emerald-700 font-bold">0700-1600</span> UTC (03:00 AM – 12:00 PM NY / 12:30 PM – 09:30 PM IST)</div>
                     <div>• <strong>SMC:</strong> Enable <span className="text-blue-700 font-bold">Fair Value Gaps (15m)</span> • Extend FVG: <strong>3</strong> • Enable <span className="text-purple-700 font-bold">Daily PDH/PDL</span></div>
                     <div>• <strong>Daily Dividers:</strong> Enabled (Mon–Sun vertical lines)</div>
                   </div>
@@ -272,7 +272,7 @@ export function CbdrStrategyRulesModal({ isOpen, onClose }: CbdrStrategyRulesMod
                     </p>
                     <ul className="space-y-0.5 text-[10px] text-emerald-800 list-disc list-inside">
                       <li><strong>DO NOT follow Previous Day High/Low sweep.</strong></li>
-                      <li>Enter <strong>directly on the 1st Imbalance (15m FVG)</strong> formed during London session (03:00 – 11:45 AM NY / 12:30 PM – 09:15 PM IST).</li>
+                      <li>Enter <strong>directly on the 1st Imbalance (15m FVG)</strong> formed during London session (07:00 – 16:00 UTC / 03:00 – 12:00 NY / 12:30 – 21:30 IST).</li>
                     </ul>
                   </div>
                 </div>
@@ -290,7 +290,7 @@ export function CbdrStrategyRulesModal({ isOpen, onClose }: CbdrStrategyRulesMod
                   </span>
                 </div>
                 <p className="text-[11px] text-amber-900 font-medium">
-                  <strong>Both Major and Minor pairs execute strictly on the 1st Imbalance of the London session (03:00 - 11:45 NY).</strong>
+                  <strong>Both Major and Minor pairs execute strictly on the 1st Imbalance of the London session (07:00 - 16:00 UTC / 03:00 - 12:00 NY).</strong>
                   <br />• <strong>Buy:</strong> Enter limit order at <span className="text-emerald-800 font-bold">1st Bullish 15m FVG</span> base/top.
                   <br />• <strong>Sell:</strong> Enter limit order at <span className="text-rose-800 font-bold">1st Bearish 15m FVG</span> base/top.
                 </p>
@@ -426,7 +426,7 @@ export function CbdrStrategyRulesModal({ isOpen, onClose }: CbdrStrategyRulesMod
                     <tr className="hover:bg-slate-50">
                       <td className="p-2 font-bold text-rose-700">Entry outside London session</td>
                       <td className="p-2 text-slate-600">Invalid setup / lack of institutional volume</td>
-                      <td className="p-2 font-bold text-slate-900">Enter strictly 03:00 AM – 11:45 AM NY (12:30 PM – 09:15 PM IST)</td>
+                      <td className="p-2 font-bold text-slate-900">Enter strictly 07:00 – 16:00 UTC / 03:00 AM – 12:00 PM NY (12:30 PM – 09:30 PM IST)</td>
                     </tr>
                     <tr className="hover:bg-slate-50">
                       <td className="p-2 font-bold text-rose-700">Trading Thursday or Friday</td>
@@ -436,7 +436,7 @@ export function CbdrStrategyRulesModal({ isOpen, onClose }: CbdrStrategyRulesMod
                     <tr className="hover:bg-slate-50">
                       <td className="p-2 font-bold text-rose-700">Not waiting for London open</td>
                       <td className="p-2 text-slate-600">Premature entry caught in sweep</td>
-                      <td className="p-2 font-bold text-slate-900">Wait for London Judas sweep after 03:00 AM NY (12:30 PM IST)</td>
+                      <td className="p-2 font-bold text-slate-900">Wait for London Judas sweep after 03:00 AM NY (12:30 PM IST / 07:00 UTC)</td>
                     </tr>
                     <tr className="hover:bg-slate-50">
                       <td className="p-2 font-bold text-rose-700">Using other timeframes (5m, 1m)</td>
@@ -449,9 +449,9 @@ export function CbdrStrategyRulesModal({ isOpen, onClose }: CbdrStrategyRulesMod
                       <td className="p-2 font-bold text-slate-900">Move SL to BE ONLY after TP1 hit</td>
                     </tr>
                     <tr className="hover:bg-slate-50">
-                      <td className="p-2 font-bold text-rose-700">Entry after 11:45 AM NY</td>
+                      <td className="p-2 font-bold text-rose-700">Entry after 12:00 PM NY (16:00 UTC)</td>
                       <td className="p-2 text-slate-600">Missed institutional order flow window</td>
-                      <td className="p-2 font-bold text-slate-900">Last entry strictly before 11:45 AM NY (09:15 PM IST)</td>
+                      <td className="p-2 font-bold text-slate-900">Last entry strictly before 12:00 PM NY / 16:00 UTC (09:30 PM IST)</td>
                     </tr>
                   </tbody>
                 </table>

@@ -176,7 +176,7 @@ export function LogBacktestTradeModal({ isOpen, onClose, onTradeAdded }: LogBack
               value={session}
               onChange={e => setSession(e.target.value)}
               className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white"
-              placeholder="London (03:00 - 11:45 AM NY / 12:30 - 09:15 PM IST)"
+              placeholder="London (07:00 - 16:00 UTC / 03:00 - 12:00 NY / 12:30 - 09:30 PM IST)"
             />
           </div>
         </div>

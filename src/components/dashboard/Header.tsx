@@ -106,7 +106,7 @@ export function HeaderComponent({
             </div>
           </div>
 
-          {/* CENTER: Dual Time Clocks (Crisp Apple Segmented Pill) */}
+          {/* CENTER: Clocks & LuxAlgo Sessions Pill (Crisp Apple Segmented Pill) */}
           <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200/70 shadow-xs">
             <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-white border border-slate-200/60 shadow-xs">
               <Clock className="w-3 h-3 text-slate-500 shrink-0" />
@@ -125,6 +125,26 @@ export function HeaderComponent({
                 {clocks.istTime}
               </strong>
             </div>
+
+            {clocks.utcTime && (
+              <>
+                <span className="text-slate-300 font-bold hidden md:inline">•</span>
+                <div className="hidden md:flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-white border border-slate-200/60 shadow-xs">
+                  <Clock className="w-3 h-3 text-blue-600 shrink-0" />
+                  <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wide">UTC</span>
+                  <strong className="text-slate-800 font-bold tabular-nums text-xs sm:text-sm font-mono">
+                    {clocks.utcTime}
+                  </strong>
+                </div>
+              </>
+            )}
+
+            {clocks.activeSessions && clocks.activeSessions.length > 0 && (
+              <span className="hidden lg:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-blue-50 text-blue-700 border border-blue-200/70 text-[10px] font-bold">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                {clocks.activeSessions[0]}
+              </span>
+            )}
           </div>
 
           {/* RIGHT: Live Status, Telegram & Audio Tools */}

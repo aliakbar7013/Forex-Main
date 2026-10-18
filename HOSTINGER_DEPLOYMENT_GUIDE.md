@@ -173,7 +173,7 @@ If you have Hostinger Cloud Hosting or Web Hosting with the **hPanel Node.js App
 ## ⚡ How the Terminal Operates Live After Build
 - **TradingView Real-Time Quotes**: Every 10 seconds, the server queries the live OANDA feed on TradingView across all 29 currency pairs.
 - **ICT Strategy Execution**:
-  - **Major Pairs** (with USD): Evaluates 15m 1st Imbalance during London Session (03:00 - 11:45 NY) with PDH/PDL sweep, Stop Loss at London Session Low/High, and Target at 1:3 RR.
-  - **Minor Pairs** (without USD): Evaluates 15m 1st Imbalance during London Session (03:00 - 11:45 NY) without requiring PDH/PDL sweep, Stop Loss directly above/below the imbalance, and Target at 1:3 RR.
+  - **Major Pairs** (with USD): Evaluates 15m 1st Imbalance during London Session (07:00 - 16:00 UTC / 03:00 - 12:00 NY) with PDH/PDL sweep, Stop Loss at London Session Low/High, and Target at 1:3 RR.
+  - **Minor Pairs** (without USD): Evaluates 15m 1st Imbalance during London Session (07:00 - 16:00 UTC / 03:00 - 12:00 NY) without requiring PDH/PDL sweep, Stop Loss directly above/below the imbalance, and Target at 1:3 RR.
 - **Auto Backtest Archiving**: Every completed trade (TP or SL) is permanently saved into the SQLite database with the exact date executed (`Wednesday, 2026-10-14`), outcome, PnL, and full chart breakdown.
 - **Instant Telegram Alerts**: If configured via the Telegram settings modal, buy/sell alerts and trade resolutions are dispatched instantly to your phone.

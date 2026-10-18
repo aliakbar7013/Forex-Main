@@ -46,9 +46,9 @@ export function getMarketTimeContext(timestamp: Date = new Date(), explicitDay?:
   const nyMinutes = nyDate.getMinutes();
   const nyTimeDecimal = nyHours + nyMinutes / 60;
 
-  // CBDR Trade Window: strictly 03:00 AM – 11:45 AM NY Time (03:00 - 11.75 decimal hours / 12:30 PM – 09:15 PM IST)
+  // CBDR Trade Window: strictly London Session (LuxAlgo: 07:00 – 16:00 UTC / 03:00 AM – 12:00 PM NY / 12:30 PM – 09:30 PM IST)
   // Trades are strictly permitted within this window only. If beyond this session, NO TRADE.
-  const isLondonSession = nyTimeDecimal >= 3.0 && nyTimeDecimal <= 11.75;
+  const isLondonSession = nyTimeDecimal >= 3.0 && nyTimeDecimal <= 12.0;
 
   // Asian Kill Zone: 21:00 - 01:00 NY Time (Observation only - NO TRADING)
   const isAsianKZ = nyTimeDecimal >= 21.0 || nyTimeDecimal < 1.0;
@@ -212,19 +212,19 @@ export function validateStrategySignal(
         : `CBDR Strategy strictly requires 15-minute timeframe. Received: ${timeframe || 'none'}`
     });
 
-    // 2. Session Focus Check: London Session (03:00 AM – 11:45 AM NY Time / 12:30 PM – 09:15 PM IST)
+    // 2. Session Focus Check: London Session (LuxAlgo: 07:00 – 16:00 UTC / 03:00 AM – 12:00 PM NY / 12:30 PM – 09:30 PM IST)
     const sessionExplicit = payload.session?.toLowerCase();
     const isLondonTime = Boolean(marketTime.isLondonSession || (sessionExplicit && sessionExplicit.includes('london')));
     checks.push({
       id: 'cbdr_session',
-      name: 'London Session Window (03:00 AM – 11:45 AM NY Time)',
+      name: 'London Session Window (LuxAlgo: 07:00 – 16:00 UTC / 03:00 AM – 12:00 PM NY)',
       passed: Boolean(isLondonTime),
       severity: 'ERROR',
-      expected: '03:00 AM - 11:45 AM NY (12:30 PM - 09:15 PM IST)',
+      expected: '07:00 - 16:00 UTC (03:00 AM - 12:00 PM NY / 12:30 PM - 09:30 PM IST)',
       received: sessionExplicit ? `Payload Session: ${payload.session}` : `Current NY Time: ${marketTime.nyTimeFormatted}`,
       message: isLondonTime
-        ? 'Signal received within active CBDR London Session focus window (03:00 AM - 11:45 AM NY / 12:30 PM - 09:15 PM IST).'
-        : `Signal generated outside CBDR London Session window (Current NY Time: ${marketTime.nyTimeFormatted}). Trade entries are strictly permitted only between 03:00 AM - 11:45 AM NY (12:30 PM - 09:15 PM IST). If beyond this session, NO TRADE.`
+        ? 'Signal received within active CBDR London Session focus window (07:00 – 16:00 UTC / 03:00 AM – 12:00 PM NY / 12:30 PM – 09:30 PM IST).'
+        : `Signal generated outside CBDR London Session window (Current NY Time: ${marketTime.nyTimeFormatted}). Trade entries are strictly permitted only between 07:00 – 16:00 UTC (03:00 AM - 12:00 PM NY / 12:30 PM - 09:30 PM IST). If beyond this session, NO TRADE.`
     });
 
     // 3. Trading Days: Monday, Tuesday, Wednesday only
@@ -267,24 +267,24 @@ export function validateStrategySignal(
         passed: true,
         severity: 'INFO',
         expected: 'No Previous Day High/Low Sweep Required for Minor Pairs (Without USD)',
-        received: `Minor Pair without USD (${symbol}) — Direct 1st Imbalance Entry (03:00 - 11:45 NY)`,
-        message: `Minor pair (${symbol}) has no USD attached. Executes entry strictly on the 1st imbalance of session time 03:00 - 11:45 NY timezone without requiring previous day high/low sweep.`
+        received: `Minor Pair without USD (${symbol}) — Direct 1st Imbalance Entry (07:00 - 16:00 UTC / 03:00 - 12:00 NY)`,
+        message: `Minor pair (${symbol}) has no USD attached. Executes entry strictly on the 1st imbalance of London session (07:00 - 16:00 UTC / 03:00 - 12:00 NY timezone) without requiring previous day high/low sweep.`
       });
     }
 
-    // 5. FIRST Imbalance Entry Trigger (1st FVG of London Session 03:00 - 11:45 NY)
+    // 5. FIRST Imbalance Entry Trigger (1st FVG of London Session 07:00 - 16:00 UTC / 03:00 - 12:00 NY)
     const fvgNum = payload.fvg_number !== undefined ? Number(payload.fvg_number) : 1;
     const isFirstImbalance = fvgNum === 1;
     checks.push({
       id: 'cbdr_first_imbalance',
-      name: 'Enter on 1st Imbalance Only (Session 03:00 - 11:45 NY)',
+      name: 'Enter on 1st Imbalance Only (London Session 07:00 - 16:00 UTC / 03:00 - 12:00 NY)',
       passed: Boolean(isFirstImbalance),
       severity: 'ERROR',
-      expected: action === 'BUY' ? '1st Bullish Imbalance of Session (03:00 - 11:45 NY)' : '1st Bearish Imbalance of Session (03:00 - 11:45 NY)',
+      expected: action === 'BUY' ? '1st Bullish Imbalance of London Session (07:00 - 16:00 UTC / 03:00 - 12:00 NY)' : '1st Bearish Imbalance of London Session (07:00 - 16:00 UTC / 03:00 - 12:00 NY)',
       received: `Session Imbalance #${fvgNum}`,
       message: isFirstImbalance
-        ? `Valid 1st session ${action === 'BUY' ? 'bullish' : 'bearish'} imbalance entry confirmed inside 03:00 - 11:45 NY window.`
-        : `Entry is at Imbalance #${fvgNum}. Strategy strictly requires entering ONLY the 1st imbalance of the session (03:00 - 11:45 NY).`
+        ? `Valid 1st session ${action === 'BUY' ? 'bullish' : 'bearish'} imbalance entry confirmed inside London session window (07:00 - 16:00 UTC / 03:00 - 12:00 NY).`
+        : `Entry is at Imbalance #${fvgNum}. Strategy strictly requires entering ONLY the 1st imbalance of the London session (07:00 - 16:00 UTC / 03:00 - 12:00 NY).`
     });
 
     // 6. Stop Loss Placement: Low/High of London Session for Majors, Below/Above Imbalance for Minors

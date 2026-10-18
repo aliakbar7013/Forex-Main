@@ -3,7 +3,7 @@
  * Fetches real 15m OHLCV candles from free API and runs the updated ICT CBDR algorithm.
  * 
  * Updated Strategy Rules:
- * 1. Execution Window: London session 03:00 AM – 11:45 AM NY Time (12:30 PM – 09:15 PM IST).
+ * 1. Execution Window: London session 07:00 – 16:00 UTC / 03:00 AM – 12:00 PM NY Time (12:30 PM – 09:30 PM IST).
  * 2. Trading Days: Monday, Tuesday, Wednesday.
  * 3. Major vs Minor Pairs Rule:
  *    - Major Pairs (EURUSD, GBPUSD, USDJPY, USDCHF, AUDUSD, USDCAD, NZDUSD):
@@ -96,7 +96,7 @@ export async function fetchRealCandles(
 
 /**
  * Execute 15m CBDR Strategy Engine on Real 15m Candles
- * Trigger: 1st Imbalance (FVG) in London session (03:00 AM – 11:45 AM NY Time).
+ * Trigger: 1st Imbalance (FVG) in London session (07:00 – 16:00 UTC / 03:00 AM – 12:00 PM NY Time).
  * Major Pairs: Follow Previous Day High/Low sweep.
  * Minor Pairs: Do NOT follow Previous Day High/Low sweep (direct 1st imbalance entry).
  * Stop Loss: Below imbalance base (BUY) / Above imbalance top (SELL) + 7 pips buffer.
@@ -166,8 +166,8 @@ export function backtestCbdrOnCandles(symbol: string, candles: Candle[]): RealEn
       }
     }
 
-    // London Session Window: strictly 03:00 AM – 11:45 AM NY Time (3.0 to 11.75 decimal hours / 12:30 PM – 09:15 PM IST)
-    const londonCandles = dayCandles.filter(c => c.decimalHourNY >= 3.0 && c.decimalHourNY <= 11.75);
+    // London Session Window: strictly 07:00 – 16:00 UTC / 03:00 AM – 12:00 PM NY Time (3.0 to 12.0 decimal hours / 12:30 PM – 09:30 PM IST)
+    const londonCandles = dayCandles.filter(c => c.decimalHourNY >= 3.0 && c.decimalHourNY <= 12.0);
     if (londonCandles.length < 3) continue;
 
     // Evaluate IPDA Macro Direction Filter for the current symbol
@@ -272,7 +272,7 @@ export function backtestCbdrOnCandles(symbol: string, candles: Candle[]): RealEn
               outcome,
               realized_pnl: outcome === 'WIN' ? 3000 : -1000,
               riskRewardAchieved,
-              notes: `[IPDA Approved: ${ipdaBuyCheck.details?.effectiveDirection} (${ratioDesc})] [${sweepTag}] 15m 1st London Imbalance (03:00-11:45 NY). ${slDesc}. 1:3 Target (+3.0R).`,
+              notes: `[IPDA Approved: ${ipdaBuyCheck.details?.effectiveDirection} (${ratioDesc})] [${sweepTag}] 15m 1st London Imbalance (07:00-16:00 UTC / 03:00-12:00 NY). ${slDesc}. 1:3 Target (+3.0R).`,
               isCbdrValidDay: true
             });
 
@@ -327,10 +327,10 @@ export function backtestCbdrOnCandles(symbol: string, candles: Candle[]): RealEn
               validation: {
                 isValid: true,
                 overallStatus: 'PASSED',
-                summary: `[IPDA Approved: ${ipdaBuyCheck.details?.effectiveDirection} (${ratioDesc})] [${sweepTag}] Active 1st London Imbalance setup (03:00-11:45 NY). Current: ${currentMarketPrice}.`,
+                summary: `[IPDA Approved: ${ipdaBuyCheck.details?.effectiveDirection} (${ratioDesc})] [${sweepTag}] Active 1st London Imbalance setup (07:00-16:00 UTC / 03:00-12:00 NY). Current: ${currentMarketPrice}.`,
                 checks: [
                   { id: 'cbdr_pair_rule', name: isMajor ? 'Major Pair Rule (PDL Swept)' : 'Minor Pair Rule (Direct 1st Imbalance)', passed: true, message: sweepTag, severity: 'INFO' },
-                  { id: 'cbdr_session', name: 'London Session Window (03:00 AM - 11:45 AM NY / 12:30 PM - 09:15 PM IST)', passed: true, message: `1st Imbalance triggered at ${c0.timeStrNY} NY (${c0.timeStrIST} IST)`, severity: 'INFO' },
+                  { id: 'cbdr_session', name: 'London Session Window (LuxAlgo: 07:00 – 16:00 UTC / 03:00 AM – 12:00 PM NY)', passed: true, message: `1st Imbalance triggered at ${c0.timeStrNY} NY (${c0.timeStrIST} IST)`, severity: 'INFO' },
                   { id: 'ipda_bias', name: 'IPDA Central Bank Macro Bias', passed: true, message: `IPDA Rate Ratio: ${ratioDesc} -> ${ipdaBuyCheck.details?.effectiveDirection}`, severity: 'INFO' },
                   { id: 'fvg_15m', name: '1st 15m Bullish Imbalance', passed: true, message: `Imbalance entry at ${entry}. SL (${sl}) has ${slBufferPips} pips buffer below imbalance base.`, severity: 'INFO' },
                   { id: 'target_1_3', name: '1:3.0 Risk-Reward Target', passed: true, message: `TP1 at ${tp1} (3.0R target). Current price: ${currentMarketPrice} (${pipsDiff} pips ${isProfit ? 'in profit' : 'floating'}).`, severity: 'INFO' }
@@ -339,7 +339,7 @@ export function backtestCbdrOnCandles(symbol: string, candles: Candle[]): RealEn
               },
               status: 'IN_TRADE',
               session_name: `London (${c0.timeStrNY} NY / ${c0.timeStrIST} IST)`,
-              notes: `[IPDA Approved: ${ipdaBuyCheck.details?.effectiveDirection} (${ratioDesc})] [${sweepTag}] ⚡ ACTIVE LIVE TRADE: 15m 1st Bullish Imbalance in London session (03:00-11:45 NY). SL placed ${slBufferPips} pips below imbalance. TP 1:3. Current: ${currentMarketPrice}.`,
+              notes: `[IPDA Approved: ${ipdaBuyCheck.details?.effectiveDirection} (${ratioDesc})] [${sweepTag}] ⚡ ACTIVE LIVE TRADE: 15m 1st Bullish Imbalance in London session (07:00-16:00 UTC / 03:00-12:00 NY). SL placed ${slBufferPips} pips below imbalance. TP 1:3. Current: ${currentMarketPrice}.`,
               raw_payload: {
                 strategy: 'CBDR',
                 symbol: symbol.toUpperCase(),
@@ -445,7 +445,7 @@ export function backtestCbdrOnCandles(symbol: string, candles: Candle[]): RealEn
               outcome,
               realized_pnl: outcome === 'WIN' ? 3000 : -1000,
               riskRewardAchieved,
-              notes: `[IPDA Approved: ${ipdaSellCheck.details?.effectiveDirection} (${ratioDesc})] [${sweepTag}] 15m 1st London Imbalance (03:00-11:45 NY). ${slDesc}. 1:3 Target (+3.0R).`,
+              notes: `[IPDA Approved: ${ipdaSellCheck.details?.effectiveDirection} (${ratioDesc})] [${sweepTag}] 15m 1st London Imbalance (07:00-16:00 UTC / 03:00-12:00 NY). ${slDesc}. 1:3 Target (+3.0R).`,
               isCbdrValidDay: true
             });
 
@@ -500,10 +500,10 @@ export function backtestCbdrOnCandles(symbol: string, candles: Candle[]): RealEn
               validation: {
                 isValid: true,
                 overallStatus: 'PASSED',
-                summary: `[IPDA Approved: ${ipdaSellCheck.details?.effectiveDirection} (${ratioDesc})] [${sweepTag}] Active 1st London Imbalance setup (03:00-11:45 NY). Current: ${currentMarketPrice}.`,
+                summary: `[IPDA Approved: ${ipdaSellCheck.details?.effectiveDirection} (${ratioDesc})] [${sweepTag}] Active 1st London Imbalance setup (07:00-16:00 UTC / 03:00-12:00 NY). Current: ${currentMarketPrice}.`,
                 checks: [
                   { id: 'cbdr_pair_rule', name: isMajor ? 'Major Pair Rule (PDH Swept)' : 'Minor Pair Rule (Direct 1st Imbalance)', passed: true, message: sweepTag, severity: 'INFO' },
-                  { id: 'cbdr_session', name: 'London Session Window (03:00 AM - 11:45 AM NY / 12:30 PM - 09:15 PM IST)', passed: true, message: `1st Imbalance triggered at ${c0.timeStrNY} NY (${c0.timeStrIST} IST)`, severity: 'INFO' },
+                  { id: 'cbdr_session', name: 'London Session Window (LuxAlgo: 07:00 – 16:00 UTC / 03:00 AM – 12:00 PM NY)', passed: true, message: `1st Imbalance triggered at ${c0.timeStrNY} NY (${c0.timeStrIST} IST)`, severity: 'INFO' },
                   { id: 'ipda_bias', name: 'IPDA Central Bank Macro Bias', passed: true, message: `IPDA Rate Ratio: ${ratioDesc} -> ${ipdaSellCheck.details?.effectiveDirection}`, severity: 'INFO' },
                   { id: 'fvg_15m', name: '1st 15m Bearish Imbalance', passed: true, message: `Imbalance entry at ${entry}. SL (${sl}) has ${slBufferPips} pips buffer above imbalance top.`, severity: 'INFO' },
                   { id: 'target_1_3', name: '1:3.0 Risk-Reward Target', passed: true, message: `TP1 at ${tp1} (3.0R target). Current price: ${currentMarketPrice} (${pipsDiff} pips ${isProfit ? 'in profit' : 'floating'}).`, severity: 'INFO' }
@@ -512,7 +512,7 @@ export function backtestCbdrOnCandles(symbol: string, candles: Candle[]): RealEn
               },
               status: 'IN_TRADE',
               session_name: `London (${c0.timeStrNY} NY / ${c0.timeStrIST} IST)`,
-              notes: `[IPDA Approved: ${ipdaSellCheck.details?.effectiveDirection} (${ratioDesc})] [${sweepTag}] ⚡ ACTIVE LIVE TRADE: 15m 1st Bearish Imbalance in London session (03:00-11:45 NY). SL placed ${slBufferPips} pips above imbalance. TP 1:3. Current: ${currentMarketPrice}.`,
+              notes: `[IPDA Approved: ${ipdaSellCheck.details?.effectiveDirection} (${ratioDesc})] [${sweepTag}] ⚡ ACTIVE LIVE TRADE: 15m 1st Bearish Imbalance in London session (07:00-16:00 UTC / 03:00-12:00 NY). SL placed ${slBufferPips} pips above imbalance. TP 1:3. Current: ${currentMarketPrice}.`,
               raw_payload: {
                 strategy: 'CBDR',
                 symbol: symbol.toUpperCase(),

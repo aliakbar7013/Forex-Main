@@ -263,7 +263,7 @@ export async function fetchTwelveDataCandles(
 
 /**
  * Generates realistic 15m historical candles anchored directly to current Twelve Data Forex price regimes.
- * Follows exact London/NY session volatility cycles (03:00 - 11:45 NY).
+ * Follows exact London/NY session volatility cycles (07:00 - 16:00 UTC / 03:00 - 12:00 NY).
  */
 function generateTwelveDataAlignedCandles(symbol: string, count = 120): Candle[] {
   const basePrice = TWELVE_DATA_BASELINE_PRICES[symbol] || 1.1000;
