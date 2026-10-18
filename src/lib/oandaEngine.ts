@@ -43,7 +43,7 @@ export const OANDA_SYMBOL_MAP: Record<string, string> = {
   'AUDJPY': 'AUD_JPY',
   'CADJPY': 'CAD_JPY',
   'CHFJPY': 'CHF_JPY',
-  'NZDJPY': 'NZ_JPY', // Note: OANDA uses NZD_JPY
+  'NZDJPY': 'NZD_JPY',
 
   // Commodity Crosses
   'AUDCAD': 'AUD_CAD',

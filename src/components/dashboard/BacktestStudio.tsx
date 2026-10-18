@@ -29,6 +29,7 @@ import { BacktestTradeChartModal } from '@/components/modals/BacktestTradeChartM
 import { PairFilterSelect } from '@/components/dashboard/PairFilterSelect';
 import { PairPerformancePieChart } from '@/components/dashboard/PairPerformancePieChart';
 import { isMajorPair } from '@/lib/strategyValidator';
+import { getTradingViewSymbol } from '@/components/dashboard/TradingViewRealtimeChart';
 
 function extractTradeTime(session: string): string {
   if (!session) return '03:15 NY (12:45 IST)';
@@ -1016,6 +1017,16 @@ export function BacktestStudio() {
                           <BarChart2 className="w-3.5 h-3.5 text-blue-600" />
                           <span>View Chart</span>
                         </button>
+
+                        <a
+                          href={`https://in.tradingview.com/chart/?symbol=${encodeURIComponent(getTradingViewSymbol(trade.symbol))}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                          title={`Open ${getTradingViewSymbol(trade.symbol)} on TradingView (OANDA Feed)`}
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </a>
                         
                         <button
                           onClick={() => handleDeleteTrade(trade.id)}

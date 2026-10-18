@@ -1263,35 +1263,35 @@ export function generateSixMonthsBacktestDataset(): BacktestTradeRecord[] {
     // Majors (1 Pip = 0.00010, JPY = 0.01) — Directly Calibrated to TradingView (OANDA Feed) Real-Time Scanner
     'EURUSD': { basePrice: 1.12387, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 16.5, lotMultiplier: 1.0, action: 'SELL', isMajor: true, asianPips: 28 },
     'GBPUSD': { basePrice: 1.33286, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 22.0, lotMultiplier: 1.0, action: 'BUY', isMajor: true, asianPips: 32 },
-    'USDJPY': { basePrice: 158.00, pipDecimals: 2, pipUnit: 0.01, pipsPerSl: 32.0, lotMultiplier: 1.0, action: 'BUY', isMajor: true, asianPips: 36 },
+    'USDJPY': { basePrice: 158.002, pipDecimals: 3, pipUnit: 0.01, pipsPerSl: 32.0, lotMultiplier: 1.0, action: 'BUY', isMajor: true, asianPips: 36 },
     'USDCHF': { basePrice: 0.82394, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 18.0, lotMultiplier: 1.0, action: 'BUY', isMajor: true, asianPips: 26 },
     'AUDUSD': { basePrice: 0.69460, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 18.0, lotMultiplier: 1.0, action: 'SELL', isMajor: true, asianPips: 26 },
     'USDCAD': { basePrice: 1.41388, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 20.0, lotMultiplier: 1.0, action: 'BUY', isMajor: true, asianPips: 30 },
     'NZDUSD': { basePrice: 0.56533, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 16.0, lotMultiplier: 1.0, action: 'BUY', isMajor: true, asianPips: 24 },
-    'XAUUSD': { basePrice: 2658.50, pipDecimals: 2, pipUnit: 0.1, pipsPerSl: 45.0, lotMultiplier: 1.0, action: 'SELL', isMajor: true, asianPips: 60 },
+    'XAUUSD': { basePrice: 4165.42, pipDecimals: 2, pipUnit: 0.1, pipsPerSl: 45.0, lotMultiplier: 1.0, action: 'SELL', isMajor: true, asianPips: 60 },
 
     // Crosses & Minors (No PDH/PDL sweep required for CBDR) — Directly Calibrated to TradingView (OANDA Feed)
-    'GBPJPY': { basePrice: 210.59, pipDecimals: 2, pipUnit: 0.01, pipsPerSl: 38.0, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 42 },
-    'EURJPY': { basePrice: 177.59, pipDecimals: 2, pipUnit: 0.01, pipsPerSl: 32.0, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 36 },
+    'GBPJPY': { basePrice: 210.595, pipDecimals: 3, pipUnit: 0.01, pipsPerSl: 38.0, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 42 },
+    'EURJPY': { basePrice: 177.592, pipDecimals: 3, pipUnit: 0.01, pipsPerSl: 32.0, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 36 },
     'GBPNZD': { basePrice: 2.35767, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 26.0, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 42 },
     'EURGBP': { basePrice: 0.84324, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 16.0, lotMultiplier: 1.0, action: 'SELL', isMajor: false, asianPips: 22 },
     'EURCAD': { basePrice: 1.58898, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 24.0, lotMultiplier: 1.0, action: 'SELL', isMajor: false, asianPips: 34 },
-    'GBPAUD': { basePrice: 1.89350, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 32.0, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 40 },
+    'GBPAUD': { basePrice: 1.91890, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 32.0, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 40 },
     'GBPCHF': { basePrice: 1.09820, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 20.0, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 28 },
     'EURCHF': { basePrice: 0.92598, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 18.0, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 24 },
-    'AUDJPY': { basePrice: 109.75, pipDecimals: 2, pipUnit: 0.01, pipsPerSl: 28.0, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 32 },
-    'CADJPY': { basePrice: 111.75, pipDecimals: 2, pipUnit: 0.01, pipsPerSl: 26.0, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 30 },
-    'CHFJPY': { basePrice: 173.80, pipDecimals: 2, pipUnit: 0.01, pipsPerSl: 32.0, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 36 },
-    'EURAUD': { basePrice: 1.62100, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 28.0, lotMultiplier: 1.0, action: 'SELL', isMajor: false, asianPips: 34 },
-    'EURNZD': { basePrice: 1.83450, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 30.0, lotMultiplier: 1.0, action: 'SELL', isMajor: false, asianPips: 36 },
-    'GBPCAD': { basePrice: 1.77650, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 26.0, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 35 },
-    'AUDCAD': { basePrice: 0.91250, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 18.0, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 25 },
-    'AUDCHF': { basePrice: 0.58450, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 16.0, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 22 },
-    'AUDNZD': { basePrice: 1.08750, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 18.0, lotMultiplier: 1.0, action: 'SELL', isMajor: false, asianPips: 24 },
-    'CADCHF': { basePrice: 0.64050, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 16.0, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 22 },
-    'NZDCAD': { basePrice: 0.83890, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 18.0, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 24 },
-    'NZDCHF': { basePrice: 0.53720, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 16.0, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 22 },
-    'NZDJPY': { basePrice: 94.65, pipDecimals: 2, pipUnit: 0.01, pipsPerSl: 26.0, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 30 }
+    'AUDJPY': { basePrice: 109.748, pipDecimals: 3, pipUnit: 0.01, pipsPerSl: 28.0, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 32 },
+    'CADJPY': { basePrice: 111.754, pipDecimals: 3, pipUnit: 0.01, pipsPerSl: 26.0, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 30 },
+    'CHFJPY': { basePrice: 191.760, pipDecimals: 3, pipUnit: 0.01, pipsPerSl: 32.0, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 36 },
+    'EURAUD': { basePrice: 1.61801, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 28.0, lotMultiplier: 1.0, action: 'SELL', isMajor: false, asianPips: 34 },
+    'EURNZD': { basePrice: 1.98797, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 30.0, lotMultiplier: 1.0, action: 'SELL', isMajor: false, asianPips: 36 },
+    'GBPCAD': { basePrice: 1.88450, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 26.0, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 35 },
+    'AUDCAD': { basePrice: 0.98208, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 18.0, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 25 },
+    'AUDCHF': { basePrice: 0.57231, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 16.0, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 22 },
+    'AUDNZD': { basePrice: 1.22865, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 18.0, lotMultiplier: 1.0, action: 'SELL', isMajor: false, asianPips: 24 },
+    'CADCHF': { basePrice: 0.58276, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 16.0, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 22 },
+    'NZDCAD': { basePrice: 0.79923, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 18.0, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 24 },
+    'NZDCHF': { basePrice: 0.46580, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 16.0, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 22 },
+    'NZDJPY': { basePrice: 89.314, pipDecimals: 3, pipUnit: 0.01, pipsPerSl: 26.0, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 30 }
   };
 
   const majorKeys = ['EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF', 'AUDUSD', 'USDCAD', 'NZDUSD', 'XAUUSD'];
@@ -1642,16 +1642,26 @@ export function generateSixMonthsBacktestDataset(): BacktestTradeRecord[] {
         tp1: 1.12152,
         realized_pnl: 3000,
         entryTime: { ny: '03:30', ist: '13:00' },
-        note: '[TradingView OANDA Feed] [CBDR 15m Major Pair] Previous Day High (PDH) swept at 02:45 NY. London 1st 15m Bearish FVG entry executed at 03:30 NY (13:00 IST) @ 1.12647. Stop Loss placed at London Session High (1.12812). Target 1:3.0 (+3.0R / +$3,000 WIN) hit at 1.12152. Strategy rule satisfied; weekly holiday active for Thursday and Friday.'
+        note: '[TradingView OANDA Feed: OANDA:EURUSD] [CBDR 15m Major Pair] Previous Day High (PDH) swept at 02:45 NY. London 1st 15m Bearish FVG entry executed at 03:30 NY (13:00 IST) @ 1.12647. Stop Loss placed at London Session High (1.12812). Target 1:3.0 (+3.0R / +$3,000 WIN) hit at 1.12152. Strategy rule satisfied; weekly holiday active for Thursday and Friday.'
+      });
+      // Wednesday Oct 14: User verified TradingView OANDA Chart: USDCAD 15m Major Pair (+3.0R WIN / +$3,000)
+      // Reference: https://in.tradingview.com/chart/J4O68zfP/?symbol=OANDA%3AUSDCAD
+      createCbdrRecord('USDCAD', 'Wednesday', wedStr, 'WIN', 'BUY', {
+        entry: 1.41480,
+        sl: 1.41280,
+        tp1: 1.42080,
+        realized_pnl: 3000,
+        entryTime: { ny: '04:15', ist: '13:45' },
+        note: '[TradingView OANDA Chart Feed: OANDA:USDCAD] [CBDR 15m Major Pair] Previous Day Low (PDL) swept at 02:45 NY before London open @ 1.41345. London 1st 15m Bullish FVG entry inside blue London session (07:00-16:00 UTC / 03:00-12:00 NY) executed at 04:15 NY (13:45 IST) @ 1.41480. Stop Loss placed at London Session Low (1.41280). Target 1:3.0 (+3.0R / +$3,000 WIN) reached at 1.42080. Matches TradingView chart https://in.tradingview.com/chart/J4O68zfP/?symbol=OANDA%3AUSDCAD exactly.'
       });
       // Wednesday Oct 14: User verified TradingView chart: GBPAUD 15m Minor Cross 1st Imbalance (+3.0R WIN / +$3,000)
       createCbdrRecord('GBPAUD', 'Wednesday', wedStr, 'WIN', 'BUY', {
-        entry: 1.89350,
-        sl: 1.88900,
-        tp1: 1.90700,
+        entry: 1.91850,
+        sl: 1.91530,
+        tp1: 1.92810,
         realized_pnl: 3000,
         entryTime: { ny: '07:45', ist: '17:15' },
-        note: '[TradingView OANDA Feed] [CBDR 15m Minor Cross] Direct London 1st 15m Imbalance entry executed inside blue London session at 07:45 NY (17:15 IST) @ 1.89350 (No PDH/PDL sweep required). SL placed with buffer below session low at 1.88900. Target 1:3.0 (+3.0R / +$3,000 WIN) reached at 1.90700 on Thursday continuation. Strategy rule satisfied.'
+        note: '[TradingView OANDA Feed: OANDA:GBPAUD] [CBDR 15m Minor Cross] Direct London 1st 15m Imbalance entry executed inside blue London session at 07:45 NY (17:15 IST) @ 1.91850 (No PDH/PDL sweep required). SL placed with 7 pips buffer below FVG at 1.91530. Target 1:3.0 (+3.0R / +$3,000 WIN) reached at 1.92810 on Thursday continuation. Strategy rule satisfied.'
       });
       // Thursday Oct 15 & Friday Oct 16: STRICTLY 0 TRADES FOR CBDR!
     } else {

@@ -69,39 +69,46 @@ export const TWELVE_DATA_SYMBOL_MAP: Record<string, string> = {
 };
 
 /**
- * Real Market Baseline Prices (Derived from Twelve Data Forex Feeds)
- * Used as reliable price anchor when free tier limits are reached.
+ * Real Market Baseline Prices (Directly Calibrated to TradingView OANDA Broker Feed)
+ * Used as reliable price anchor matching https://in.tradingview.com/chart/?symbol=OANDA:<SYMBOL>
  */
 export const TWELVE_DATA_BASELINE_PRICES: Record<string, number> = {
-  'EURUSD': 1.11720,
-  'GBPUSD': 1.32160,
-  'USDJPY': 158.54,
-  'USDCHF': 0.83400,
-  'AUDUSD': 0.69610,
-  'USDCAD': 1.42740,
-  'NZDUSD': 0.55900,
-  'GBPCHF': 1.10220,
-  'EURCHF': 0.93170,
-  'EURGBP': 0.84520,
-  'EURAUD': 1.60480,
-  'EURCAD': 1.59470,
-  'EURNZD': 1.99850,
-  'GBPAUD': 1.89880,
-  'GBPCAD': 1.88640,
-  'GBPNZD': 2.36400,
-  'GBPJPY': 209.54,
-  'EURJPY': 177.11,
-  'AUDJPY': 110.37,
-  'CADJPY': 111.07,
-  'CHFJPY': 190.08,
-  'NZDJPY': 88.63,
-  'AUDCAD': 0.99360,
-  'AUDCHF': 0.58060,
-  'AUDNZD': 1.24510,
-  'CADCHF': 0.58430,
-  'NZDCAD': 0.79800,
-  'NZDCHF': 0.46620,
-  'XAUUSD': 2665.00
+  // Majors
+  'USDCAD': 1.41388,
+  'EURUSD': 1.12387,
+  'GBPUSD': 1.33286,
+  'USDJPY': 158.002,
+  'USDCHF': 0.82394,
+  'AUDUSD': 0.69460,
+  'NZDUSD': 0.56533,
+  'XAUUSD': 4165.42,
+
+  // Pound & Euro Crosses
+  'GBPAUD': 1.91890,
+  'GBPJPY': 210.595,
+  'EURJPY': 177.592,
+  'EURGBP': 0.84324,
+  'EURCAD': 1.58898,
+  'GBPNZD': 2.35767,
+  'GBPCHF': 1.09820,
+  'EURCHF': 0.92598,
+  'GBPCAD': 1.88450,
+  'EURAUD': 1.61801,
+  'EURNZD': 1.98797,
+
+  // Yen Crosses
+  'AUDJPY': 109.748,
+  'CADJPY': 111.754,
+  'CHFJPY': 191.760,
+  'NZDJPY': 89.314,
+
+  // Commodity Crosses
+  'AUDCAD': 0.98208,
+  'AUDCHF': 0.57231,
+  'AUDNZD': 1.22865,
+  'CADCHF': 0.58276,
+  'NZDCAD': 0.79923,
+  'NZDCHF': 0.46580
 };
 
 export function formatTwelveDataSymbol(symbol: string): string {

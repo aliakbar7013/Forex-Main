@@ -225,6 +225,18 @@ export function TradingViewRealtimeChartComponent({
             <span className="sm:hidden">Sync</span>
           </button>
 
+          {/* External Link to Open on TradingView OANDA Feed */}
+          <a
+            href={`https://in.tradingview.com/chart/?symbol=${encodeURIComponent(getTradingViewSymbol(currentSymbol))}`}
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs border border-slate-200 transition-all shadow-xs"
+            title={`Open ${getTradingViewSymbol(currentSymbol)} directly on TradingView`}
+          >
+            <ExternalLink className="w-3.5 h-3.5 text-blue-600" />
+            <span className="hidden md:inline">Open on TradingView</span>
+          </a>
+
           {/* Fullscreen Toggle */}
           <button
             type="button"

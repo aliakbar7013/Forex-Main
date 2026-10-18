@@ -189,6 +189,19 @@ export function BacktestTradeChartModal({
               </div>
             )}
 
+            {/* Direct External Link to TradingView OANDA Chart */}
+            <a
+              href={`https://in.tradingview.com/chart/?symbol=${encodeURIComponent(getTradingViewSymbol(trade.symbol))}`}
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-bold text-xs shadow-xs transition-colors"
+              title={`Open ${getTradingViewSymbol(trade.symbol)} on TradingView with OANDA broker`}
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Open {getTradingViewSymbol(trade.symbol)} on TradingView</span>
+              <span className="sm:hidden">TradingView</span>
+            </a>
+
             <button
               type="button"
               onClick={() => setIsFullscreen(!isFullscreen)}
@@ -504,7 +517,17 @@ export function BacktestTradeChartModal({
             <span>💡 <strong>Note:</strong> Volume indicator has been removed from charts for clear price-action and FVG imbalance focus.</span>
           </div>
           <div className="flex items-center gap-2 font-mono text-[10px]">
-            <span>Broker Chart Feed: <strong className="text-blue-700">{getTradingViewSymbol(trade.symbol)}</strong> (OANDA)</span>
+            <span>Broker Chart Feed:</span>
+            <a
+              href={`https://in.tradingview.com/chart/?symbol=${encodeURIComponent(getTradingViewSymbol(trade.symbol))}`}
+              target="_blank"
+              rel="noreferrer"
+              className="text-blue-700 hover:text-blue-900 font-bold underline flex items-center gap-1"
+              title="Open on TradingView"
+            >
+              <span>{getTradingViewSymbol(trade.symbol)} (OANDA Broker)</span>
+              <ExternalLink className="w-2.5 h-2.5" />
+            </a>
           </div>
         </div>
 

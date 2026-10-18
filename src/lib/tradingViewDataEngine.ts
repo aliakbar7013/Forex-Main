@@ -15,6 +15,10 @@ export interface TradingViewLiveQuote {
   ask: number;
   change: number;
   changePercent: number;
+  open15?: number;
+  high15?: number;
+  low15?: number;
+  close15?: number;
   source: string;
   lastUpdated: string;
 }
@@ -46,7 +50,7 @@ export async function fetchAllTradingViewLiveQuotes(): Promise<Record<string, Tr
   const result: Record<string, TradingViewLiveQuote> = { ...cachedQuotes };
   const timestamp = new Date().toISOString();
 
-  // 1. Fetch all 28 Forex pairs from TradingView Forex Scanner
+  // 1. Fetch all 28 Forex pairs from TradingView Forex Scanner (OANDA Feed)
   try {
     const fxTickers = ALL_FOREX_SYMBOLS
       .filter(s => s !== 'XAUUSD')
@@ -60,7 +64,7 @@ export async function fetchAllTradingViewLiveQuotes(): Promise<Record<string, Tr
       },
       body: JSON.stringify({
         symbols: { tickers: fxTickers },
-        columns: ['close', 'open', 'high', 'low', 'change', 'bid', 'ask', 'change_abs']
+        columns: ['close', 'open', 'high', 'low', 'change', 'bid', 'ask', 'change_abs', 'open|15', 'high|15', 'low|15', 'close|15']
       }),
       cache: 'no-store'
     });
@@ -84,6 +88,10 @@ export async function fetchAllTradingViewLiveQuotes(): Promise<Record<string, Tr
               bid: Number(d[5]) || price,
               ask: Number(d[6]) || price,
               change: Number(d[7]) || 0,
+              open15: d[8] !== null && d[8] !== undefined ? Number(d[8]) : undefined,
+              high15: d[9] !== null && d[9] !== undefined ? Number(d[9]) : undefined,
+              low15: d[10] !== null && d[10] !== undefined ? Number(d[10]) : undefined,
+              close15: d[11] !== null && d[11] !== undefined ? Number(d[11]) : undefined,
               source: 'TradingView (OANDA Feed)',
               lastUpdated: timestamp
             };
@@ -95,7 +103,7 @@ export async function fetchAllTradingViewLiveQuotes(): Promise<Record<string, Tr
     console.warn('TradingView Forex scanner request error:', err);
   }
 
-  // 2. Fetch Gold (XAUUSD) from TradingView CFD Scanner
+  // 2. Fetch Gold (XAUUSD) from TradingView CFD Scanner (OANDA Feed)
   try {
     const goldTickers = ['OANDA:XAUUSD', 'TVC:GOLD', 'CAPITALCOM:GOLD'];
     const goldRes = await fetch('https://scanner.tradingview.com/cfd/scan', {
@@ -106,7 +114,7 @@ export async function fetchAllTradingViewLiveQuotes(): Promise<Record<string, Tr
       },
       body: JSON.stringify({
         symbols: { tickers: goldTickers },
-        columns: ['close', 'open', 'high', 'low', 'change', 'bid', 'ask', 'change_abs']
+        columns: ['close', 'open', 'high', 'low', 'change', 'bid', 'ask', 'change_abs', 'open|15', 'high|15', 'low|15', 'close|15']
       }),
       cache: 'no-store'
     });
@@ -128,6 +136,10 @@ export async function fetchAllTradingViewLiveQuotes(): Promise<Record<string, Tr
             bid: Number(d[5]) || price,
             ask: Number(d[6]) || price,
             change: Number(d[7]) || 0,
+            open15: d[8] !== null && d[8] !== undefined ? Number(d[8]) : undefined,
+            high15: d[9] !== null && d[9] !== undefined ? Number(d[9]) : undefined,
+            low15: d[10] !== null && d[10] !== undefined ? Number(d[10]) : undefined,
+            close15: d[11] !== null && d[11] !== undefined ? Number(d[11]) : undefined,
             source: 'TradingView (OANDA Gold Feed)',
             lastUpdated: timestamp
           };
