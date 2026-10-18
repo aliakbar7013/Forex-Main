@@ -186,12 +186,23 @@ export function SignalCardComponent({
                 </span>
               </div>
 
-              <div className="flex items-center gap-1.5 mt-1">
-                <span className="text-[11px] font-medium text-slate-500">
+              <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                <span className="text-[10px] font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
                   {isCBDR ? 'CBDR 15m' : isStopHunt ? 'Stop Hunt 5m' : signal.strategy}
                 </span>
+
+                {isCBDR && (
+                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md border ${
+                    isMajorPair(signal.symbol)
+                      ? 'bg-blue-50 text-blue-700 border-blue-200'
+                      : 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                  }`}>
+                    {isMajorPair(signal.symbol) ? 'Major • PDH/PDL Sweep' : '🎯 Minor • 1st London Imbalance/FVG'}
+                  </span>
+                )}
+
                 <span className="text-slate-300">•</span>
-                <span className="text-[11px] text-slate-400">
+                <span className="text-[11px] text-slate-500 font-medium">
                   {dayName}
                 </span>
               </div>
@@ -291,8 +302,12 @@ export function SignalCardComponent({
             <div className="text-sm sm:text-base font-bold text-slate-800 font-mono">
               {signal.entry.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 5 })}
             </div>
-            <div className="text-[10px] text-slate-400 font-medium mt-0.5">
-              1st 15m FVG
+            <div className="text-[10px] text-slate-500 font-medium mt-0.5">
+              {isCBDR && !isMajorPair(signal.symbol) 
+                ? '1st London Imbalance' 
+                : isCBDR 
+                  ? '1st FVG (Post-Sweep)' 
+                  : '5m Imbalance/FVG'}
             </div>
           </div>
 

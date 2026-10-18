@@ -75,9 +75,9 @@ export function SignalsTableComponent({
                         <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold border ${
                           isMajorPair(s.symbol)
                             ? 'bg-blue-50 text-blue-700 border-blue-200'
-                            : 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                            : 'bg-emerald-50 text-emerald-800 border-emerald-200'
                         }`}>
-                          {isMajorPair(s.symbol) ? 'Major' : 'Minor'}
+                          {isMajorPair(s.symbol) ? 'Major (Sweep)' : '🎯 Minor (1st Imbalance)'}
                         </span>
                       )}
                       <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200/60">
@@ -134,7 +134,9 @@ export function SignalsTableComponent({
                   {/* Limit Entry */}
                   <td className="py-3 px-4 font-bold text-slate-800 whitespace-nowrap">
                     <div>{s.entry.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 5 })}</div>
-                    <span className="text-[10px] text-slate-400 font-medium font-sans">1st FVG</span>
+                    <span className="text-[10px] text-slate-500 font-medium font-sans">
+                      {s.strategy === 'CBDR' && !isMajorPair(s.symbol) ? '1st London Imbalance' : '1st FVG'}
+                    </span>
                   </td>
 
                   {/* SL */}
