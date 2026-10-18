@@ -21,8 +21,8 @@ export async function GET(req: NextRequest) {
     const db = getDb();
     let trades = getAllBacktestTrades(2000);
 
-    // Auto-seed full 6-month dataset if empty or legacy small set
-    if (trades.length < 50) {
+    // Auto-seed full 6-month dataset if empty or needs full 28-pair update
+    if (trades.length < 180) {
       db.prepare('DELETE FROM backtest_trades').run();
       seedInitialBacktestTrades(db);
       trades = getAllBacktestTrades(2000);

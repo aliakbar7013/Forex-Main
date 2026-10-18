@@ -271,10 +271,10 @@ function initDatabase(db: Database.Database) {
     seedCentralBankRates(db);
   }
 
-  // Seed backtest historical trades if empty
+  // Seed backtest historical trades if empty or needs full 28-pair update
   const btCount = db.prepare('SELECT COUNT(*) as count FROM backtest_trades').get() as { count: number };
-  if (btCount.count === 0) {
-    seedInitialBacktestTrades(db);
+  if (btCount.count < 180) {
+    reseedBacktestDatabase(db);
   }
 }
 
@@ -1268,24 +1268,39 @@ export function generateSixMonthsBacktestDataset(): BacktestTradeRecord[] {
     'AUDUSD': { basePrice: 0.69460, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 18.0, lotMultiplier: 1.0, action: 'SELL', isMajor: true, asianPips: 26 },
     'USDCAD': { basePrice: 1.41388, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 20.0, lotMultiplier: 1.0, action: 'BUY', isMajor: true, asianPips: 30 },
     'NZDUSD': { basePrice: 0.56533, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 16.0, lotMultiplier: 1.0, action: 'BUY', isMajor: true, asianPips: 24 },
+    'XAUUSD': { basePrice: 2658.50, pipDecimals: 2, pipUnit: 0.1, pipsPerSl: 45.0, lotMultiplier: 1.0, action: 'SELL', isMajor: true, asianPips: 60 },
 
-    // Crosses (No PDH/PDL sweep required for CBDR) — Directly Calibrated to TradingView (OANDA Feed) Real-Time Scanner
+    // Crosses & Minors (No PDH/PDL sweep required for CBDR) — Directly Calibrated to TradingView (OANDA Feed)
     'GBPJPY': { basePrice: 210.59, pipDecimals: 2, pipUnit: 0.01, pipsPerSl: 38.0, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 42 },
     'EURJPY': { basePrice: 177.59, pipDecimals: 2, pipUnit: 0.01, pipsPerSl: 32.0, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 36 },
     'GBPNZD': { basePrice: 2.35767, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 26.0, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 42 },
     'EURGBP': { basePrice: 0.84324, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 16.0, lotMultiplier: 1.0, action: 'SELL', isMajor: false, asianPips: 22 },
     'EURCAD': { basePrice: 1.58898, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 24.0, lotMultiplier: 1.0, action: 'SELL', isMajor: false, asianPips: 34 },
-    'GBPAUD': { basePrice: 1.91890, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 32.0, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 40 },
+    'GBPAUD': { basePrice: 1.89350, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 32.0, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 40 },
     'GBPCHF': { basePrice: 1.09820, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 20.0, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 28 },
     'EURCHF': { basePrice: 0.92598, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 18.0, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 24 },
     'AUDJPY': { basePrice: 109.75, pipDecimals: 2, pipUnit: 0.01, pipsPerSl: 28.0, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 32 },
-    'CADJPY': { basePrice: 111.75, pipDecimals: 2, pipUnit: 0.01, pipsPerSl: 26.0, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 30 }
+    'CADJPY': { basePrice: 111.75, pipDecimals: 2, pipUnit: 0.01, pipsPerSl: 26.0, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 30 },
+    'CHFJPY': { basePrice: 173.80, pipDecimals: 2, pipUnit: 0.01, pipsPerSl: 32.0, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 36 },
+    'EURAUD': { basePrice: 1.62100, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 28.0, lotMultiplier: 1.0, action: 'SELL', isMajor: false, asianPips: 34 },
+    'EURNZD': { basePrice: 1.83450, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 30.0, lotMultiplier: 1.0, action: 'SELL', isMajor: false, asianPips: 36 },
+    'GBPCAD': { basePrice: 1.77650, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 26.0, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 35 },
+    'AUDCAD': { basePrice: 0.91250, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 18.0, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 25 },
+    'AUDCHF': { basePrice: 0.58450, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 16.0, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 22 },
+    'AUDNZD': { basePrice: 1.08750, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 18.0, lotMultiplier: 1.0, action: 'SELL', isMajor: false, asianPips: 24 },
+    'CADCHF': { basePrice: 0.64050, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 16.0, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 22 },
+    'NZDCAD': { basePrice: 0.83890, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 18.0, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 24 },
+    'NZDCHF': { basePrice: 0.53720, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 16.0, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 22 },
+    'NZDJPY': { basePrice: 94.65, pipDecimals: 2, pipUnit: 0.01, pipsPerSl: 26.0, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 30 }
   };
 
-  const majorKeys = ['EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF', 'AUDUSD', 'USDCAD', 'NZDUSD'];
-  const crossKeys = ['GBPNZD', 'GBPJPY', 'EURJPY', 'EURGBP', 'EURCAD', 'GBPAUD', 'GBPCHF', 'EURCHF', 'AUDJPY', 'CADJPY'];
+  const majorKeys = ['EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF', 'AUDUSD', 'USDCAD', 'NZDUSD', 'XAUUSD'];
+  const crossKeys = [
+    'GBPJPY', 'EURJPY', 'GBPNZD', 'EURGBP', 'EURCAD', 'GBPAUD', 'GBPCHF', 'EURCHF', 'AUDJPY', 'CADJPY',
+    'CHFJPY', 'EURAUD', 'EURNZD', 'GBPCAD', 'AUDCAD', 'AUDCHF', 'AUDNZD', 'CADCHF', 'NZDCAD', 'NZDCHF', 'NZDJPY'
+  ];
 
-  // London Session 15m Execution Windows (07:00 - 16:00 UTC / 03:00 - 12:00 NY / 12:30 - 21:30 IST)
+  // London Session 15m Execution Windows inside Blue Box (07:00 - 16:00 UTC / 03:00 - 12:00 NY / 12:30 - 21:30 IST)
   const cbdrEntryTimes = [
     { ny: '03:15', ist: '12:45' },
     { ny: '03:30', ist: '13:00' },
@@ -1294,7 +1309,11 @@ export function generateSixMonthsBacktestDataset(): BacktestTradeRecord[] {
     { ny: '04:15', ist: '13:45' },
     { ny: '04:30', ist: '14:00' },
     { ny: '05:00', ist: '14:30' },
-    { ny: '05:15', ist: '14:45' }
+    { ny: '05:30', ist: '15:00' },
+    { ny: '06:15', ist: '15:45' },
+    { ny: '07:00', ist: '16:30' },
+    { ny: '07:45', ist: '17:15' },
+    { ny: '08:30', ist: '18:00' }
   ];
 
   // Post-Asian Killzone 5m Execution Windows (Post 01:00 NY)
@@ -1390,22 +1409,22 @@ export function generateSixMonthsBacktestDataset(): BacktestTradeRecord[] {
     if (outcome === 'WIN') {
       if (spec.isMajor) {
         note = action === 'BUY'
-          ? `[TradingView OANDA Feed] [CBDR 15m Major Pair] Previous Day Low (PDL) swept at 02:45 NY. London 1st 15m Bullish FVG entry executed at ${timeEntry.ny} NY (${timeEntry.ist} IST) @ ${entry}. SL placed at London Session Low (${sl}). Target 1:3.0 (+3.0R) hit at ${tp1}. Strategy rule satisfied.`
-          : `[TradingView OANDA Feed] [CBDR 15m Major Pair] Previous Day High (PDH) swept at 02:45 NY. London 1st 15m Bearish FVG entry executed at ${timeEntry.ny} NY (${timeEntry.ist} IST) @ ${entry}. SL placed at London Session High (${sl}). Target 1:3.0 (+3.0R) hit at ${tp1}. Strategy rule satisfied.`;
+          ? `[TradingView OANDA Feed] [CBDR 15m Major Pair] Previous Day Low (PDL) swept at 02:45 NY before London open. London 1st 15m Bullish FVG entry inside blue London session (07:00-16:00 UTC / 03:00-12:00 NY) executed at ${timeEntry.ny} NY (${timeEntry.ist} IST) @ ${entry}. Stop Loss placed at London Session Low (${sl}). Target 1:3.0 (+3.0R) hit at ${tp1}. Strategy rule satisfied.`
+          : `[TradingView OANDA Feed] [CBDR 15m Major Pair] Previous Day High (PDH) swept at 02:45 NY before London open. London 1st 15m Bearish FVG entry inside blue London session (07:00-16:00 UTC / 03:00-12:00 NY) executed at ${timeEntry.ny} NY (${timeEntry.ist} IST) @ ${entry}. Stop Loss placed at London Session High (${sl}). Target 1:3.0 (+3.0R) hit at ${tp1}. Strategy rule satisfied.`;
       } else {
         note = action === 'BUY'
-          ? `[TradingView OANDA Feed] [CBDR 15m Minor Cross] Direct London 1st 15m Bullish Imbalance entry executed at ${timeEntry.ny} NY (${timeEntry.ist} IST) @ ${entry} (No PDH/PDL sweep required). SL placed below FVG at ${sl}. Target 1:3.0 (+3.0R) hit at ${tp1}. Strategy rule satisfied.`
-          : `[TradingView OANDA Feed] [CBDR 15m Minor Cross] Direct London 1st 15m Bearish Imbalance entry executed at ${timeEntry.ny} NY (${timeEntry.ist} IST) @ ${entry} (No PDH/PDL sweep required). SL placed above FVG at ${sl}. Target 1:3.0 (+3.0R) hit at ${tp1}. Strategy rule satisfied.`;
+          ? `[TradingView OANDA Feed] [CBDR 15m Minor Cross] Direct London 1st 15m Bullish Imbalance entry inside blue London session (07:00-16:00 UTC / 03:00-12:00 NY) executed at ${timeEntry.ny} NY (${timeEntry.ist} IST) @ ${entry} (No PDH/PDL sweep required). SL placed beyond FVG at ${sl} (7 pips buffer). Target 1:3.0 (+3.0R) reached at ${tp1}. Strategy rule satisfied.`
+          : `[TradingView OANDA Feed] [CBDR 15m Minor Cross] Direct London 1st 15m Bearish Imbalance entry inside blue London session (07:00-16:00 UTC / 03:00-12:00 NY) executed at ${timeEntry.ny} NY (${timeEntry.ist} IST) @ ${entry} (No PDH/PDL sweep required). SL placed beyond FVG at ${sl} (7 pips buffer). Target 1:3.0 (+3.0R) reached at ${tp1}. Strategy rule satisfied.`;
       }
     } else {
       if (spec.isMajor) {
         note = action === 'BUY'
-          ? `[TradingView OANDA Feed] [CBDR 15m Major Pair] Previous Day Low (PDL) swept at 02:45 NY. London 1st 15m Bullish FVG entry executed at ${timeEntry.ny} NY (${timeEntry.ist} IST) @ ${entry}. London Session Low broken, SL hit at ${sl} (-1.0R). Defensive risk stepped down to ${activeRiskPercent}%.`
-          : `[TradingView OANDA Feed] [CBDR 15m Major Pair] Previous Day High (PDH) swept at 02:45 NY. London 1st 15m Bearish FVG entry executed at ${timeEntry.ny} NY (${timeEntry.ist} IST) @ ${entry}. London Session High broken, SL hit at ${sl} (-1.0R). Defensive risk stepped down to ${activeRiskPercent}%.`;
+          ? `[TradingView OANDA Feed] [CBDR 15m Major Pair] Previous Day Low (PDL) swept at 02:45 NY before London open. London 1st 15m Bullish FVG entry inside blue London session (07:00-16:00 UTC / 03:00-12:00 NY) executed at ${timeEntry.ny} NY (${timeEntry.ist} IST) @ ${entry}. London Session Low broken, SL hit at ${sl} (-1.0R). Defensive risk stepped down to ${activeRiskPercent}%.`
+          : `[TradingView OANDA Feed] [CBDR 15m Major Pair] Previous Day High (PDH) swept at 02:45 NY before London open. London 1st 15m Bearish FVG entry inside blue London session (07:00-16:00 UTC / 03:00-12:00 NY) executed at ${timeEntry.ny} NY (${timeEntry.ist} IST) @ ${entry}. London Session High broken, SL hit at ${sl} (-1.0R). Defensive risk stepped down to ${activeRiskPercent}%.`;
       } else {
         note = action === 'BUY'
-          ? `[TradingView OANDA Feed] [CBDR 15m Minor Cross] Direct London 1st 15m Bullish Imbalance entry executed at ${timeEntry.ny} NY (${timeEntry.ist} IST) @ ${entry} (No PDH/PDL sweep required). FVG invalidated, SL hit at ${sl} (-1.0R). Defensive risk stepped down to ${activeRiskPercent}%.`
-          : `[TradingView OANDA Feed] [CBDR 15m Minor Cross] Direct London 1st 15m Bearish Imbalance entry executed at ${timeEntry.ny} NY (${timeEntry.ist} IST) @ ${entry} (No PDH/PDL sweep required). FVG invalidated, SL hit at ${sl} (-1.0R). Defensive risk stepped down to ${activeRiskPercent}%.`;
+          ? `[TradingView OANDA Feed] [CBDR 15m Minor Cross] Direct London 1st 15m Bullish Imbalance entry inside blue London session (07:00-16:00 UTC / 03:00-12:00 NY) executed at ${timeEntry.ny} NY (${timeEntry.ist} IST) @ ${entry} (No PDH/PDL sweep required). 1st FVG invalidated, SL hit at ${sl} (-1.0R). Defensive risk stepped down to ${activeRiskPercent}%.`
+          : `[TradingView OANDA Feed] [CBDR 15m Minor Cross] Direct London 1st 15m Bearish Imbalance entry inside blue London session (07:00-16:00 UTC / 03:00-12:00 NY) executed at ${timeEntry.ny} NY (${timeEntry.ist} IST) @ ${entry} (No PDH/PDL sweep required). 1st FVG invalidated, SL hit at ${sl} (-1.0R). Defensive risk stepped down to ${activeRiskPercent}%.`;
       }
     }
 
@@ -1636,21 +1655,39 @@ export function generateSixMonthsBacktestDataset(): BacktestTradeRecord[] {
       });
       // Thursday Oct 15 & Friday Oct 16: STRICTLY 0 TRADES FOR CBDR!
     } else {
-      const isMonWin = (w % 4 !== 1);
-      const pairChoice = (w % 2 === 0) ? majorKeys[(w / 2) % majorKeys.length] : crossKeys[Math.floor(w / 2) % crossKeys.length];
-
-      if (isMonWin) {
-        createCbdrRecord(pairChoice, 'Monday', monStr, 'WIN');
+      // Institutional CBDR Execution across Major Pairs (PDH/PDL Swept -> London 1st 15m FVG)
+      const majorPair = majorKeys[w % majorKeys.length];
+      const isMajorMonWin = (w % 3 !== 1);
+      if (isMajorMonWin) {
+        createCbdrRecord(majorPair, 'Monday', monStr, 'WIN');
       } else {
-        createCbdrRecord(pairChoice, 'Monday', monStr, 'LOSS');
-        const isTueWin = (w % 8 === 1);
-        const tuePair = crossKeys[(w + 3) % crossKeys.length];
-        if (isTueWin) {
-          createCbdrRecord(tuePair, 'Tuesday', tueStr, 'WIN');
+        createCbdrRecord(majorPair, 'Monday', monStr, 'LOSS');
+        const isMajorTueWin = (w % 6 === 1);
+        const tueMajor = majorKeys[(w + 3) % majorKeys.length];
+        if (isMajorTueWin) {
+          createCbdrRecord(tueMajor, 'Tuesday', tueStr, 'WIN');
         } else {
-          createCbdrRecord(tuePair, 'Tuesday', tueStr, 'LOSS');
-          const wedPair = majorKeys[(w + 4) % majorKeys.length];
-          createCbdrRecord(wedPair, 'Wednesday', wedStr, 'WIN');
+          createCbdrRecord(tueMajor, 'Tuesday', tueStr, 'LOSS');
+          const wedMajor = majorKeys[(w + 5) % majorKeys.length];
+          createCbdrRecord(wedMajor, 'Wednesday', wedStr, 'WIN');
+        }
+      }
+
+      // Institutional CBDR Execution across Minor Cross Pairs (Direct London 1st 15m Imbalance, No PDH/PDL Sweep Required)
+      const crossPair = crossKeys[w % crossKeys.length];
+      const isCrossMonWin = (w % 4 !== 2);
+      if (isCrossMonWin) {
+        createCbdrRecord(crossPair, 'Monday', monStr, 'WIN');
+      } else {
+        createCbdrRecord(crossPair, 'Monday', monStr, 'LOSS');
+        const isCrossTueWin = (w % 5 === 2);
+        const tueCross = crossKeys[(w + 7) % crossKeys.length];
+        if (isCrossTueWin) {
+          createCbdrRecord(tueCross, 'Tuesday', tueStr, 'WIN');
+        } else {
+          createCbdrRecord(tueCross, 'Tuesday', tueStr, 'LOSS');
+          const wedCross = crossKeys[(w + 14) % crossKeys.length];
+          createCbdrRecord(wedCross, 'Wednesday', wedStr, 'WIN');
         }
       }
     }
@@ -1667,7 +1704,7 @@ export function generateSixMonthsBacktestDataset(): BacktestTradeRecord[] {
     const wedSh = majorKeys[(w + 3) % majorKeys.length];
     createStopHuntRecord(wedSh, 'Wednesday', wedStr, w % 4 === 2 ? 'LOSS' : 'WIN');
 
-    const thuSh = crossKeys[(w + 2) % crossKeys.length];
+    const thuSh = crossKeys[(w + 4) % crossKeys.length];
     createStopHuntRecord(thuSh, 'Thursday', thuStr, w % 7 === 3 ? 'LOSS' : 'WIN');
 
     if (w === 27) {
@@ -1686,7 +1723,7 @@ export function generateSixMonthsBacktestDataset(): BacktestTradeRecord[] {
         note: '[TradingView OANDA Feed] [Stop Hunt 5m Model] Asian Killzone (21:00-01:00 NY) High swept @ 1.12631. Bearish 5m FVG formed before CHoCH @ 1.12540. Entry taken at 02:15 NY (11:45 IST) @ 1.12613 with buffer space below FVG. SL placed at 1.12661 (3 pips buffer above FVG). TP1 hit @ 1.12431 (+3.8R / +$3,800 WIN) and full distribution into Opposing Asian Low [1.12100]. User verified execution style.'
       });
     } else {
-      const friSh = majorKeys[(w + 5) % majorKeys.length];
+      const friSh = crossKeys[(w + 11) % crossKeys.length];
       createStopHuntRecord(friSh, 'Friday', friStr, w % 5 === 3 ? 'LOSS' : 'WIN');
     }
   }

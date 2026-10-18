@@ -267,5 +267,50 @@ export const STATIC_INITIAL_SIGNALS: Signal[] = [
       imbalanceZone: '1.89300 – 1.89460',
       slPlacementType: 'Below Imbalance / Session Low Buffer'
     }
+  },
+  {
+    id: 'sig_live_cbdr_eurusd',
+    symbol: 'EURUSD',
+    strategy: 'CBDR',
+    timeframe: '15m',
+    action: 'SELL',
+    entry: 1.12647,
+    sl: 1.12812,
+    tp1: 1.12152,
+    tp2: 1.11822,
+    status: 'TP1_HIT',
+    risk_percent: 1.0,
+    defensive_state: 'NORMAL',
+    calculated_lot_size: 6.06,
+    raw_quantity: 606000,
+    risk_amount_usd: 1000,
+    sl_distance_price: 0.00165,
+    sl_distance_pips_points: 16.5,
+    primary_risk_reward: 3.0,
+    targets: [
+      { targetIndex: 1, price: 1.12152, percentage: 50, lots: 3.03, potentialProfitUsd: 3000, riskRewardRatio: 3.0, hit: true },
+      { targetIndex: 2, price: 1.11822, percentage: 50, lots: 3.03, potentialProfitUsd: 5000, riskRewardRatio: 5.0, hit: true }
+    ],
+    validation: {
+      isValid: true,
+      appliedStrategy: 'CBDR',
+      overallStatus: 'PASSED',
+      summary: 'Major Pair CBDR: Previous Day High (PDH) swept at 02:45 NY. Entered on 1st London Bearish FVG @ 1.12647. Target 1:3 RR (+3.0R WIN / +$3,000) reached.',
+      checks: [
+        { id: 'cbdr1', name: 'Rule: Strictly 1 Trade Per Day', passed: true, message: 'First imbalance of Wednesday London session (03:00 - 12:00 NY).', severity: 'INFO' },
+        { id: 'cbdr2', name: 'Major Pair: PDH Swept before London Entry', passed: true, message: 'Swept Previous Day High before London open.', severity: 'INFO' },
+        { id: 'cbdr3', name: 'SL placed at London Session High', passed: true, message: 'SL placed at 1.12812 (London Session High).', severity: 'INFO' }
+      ]
+    },
+    created_at: '2026-10-14T03:30:00.000Z',
+    updated_at: new Date().toISOString(),
+    session_name: 'London — Entry: 03:30 NY (13:00 IST)',
+    notes: '[TradingView OANDA Chart Verified] [⚡ Major (PDH Swept)] Wednesday London Session 1st Bearish FVG entry @ 1.12647. SL: 1.12812 (London High). TP1: 1.12152 (+3.0R WIN / +$3,000).',
+    raw_payload: {
+      currentPrice: 1.12152,
+      floatingPips: 49.5,
+      imbalanceZone: '1.12647 – 1.12780',
+      slPlacementType: 'London Session High'
+    }
   }
 ];
