@@ -73,6 +73,12 @@ export function getDecimals(symbol: string): number {
   return 5;
 }
 
+export const MAJOR_SYMBOLS = ['EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF', 'USDCAD', 'AUDUSD', 'NZDUSD', 'XAUUSD'];
+
+export function isMajorPair(symbol: string): boolean {
+  return MAJOR_SYMBOLS.includes(symbol.toUpperCase());
+}
+
 /**
  * Fetch authentic 15m candles directly from TradingView WebSocket (OANDA Feed)
  */
@@ -211,73 +217,79 @@ export async function analyzePairSweepAndFvg(
   const pdh = Number(Math.max(...priorBars.map(b => b.high)).toFixed(decimals));
   const pdl = Number(Math.min(...priorBars.map(b => b.low)).toFixed(decimals));
 
-  // Today's London session bars (07:00 to 16:00 UTC / 03:00 to 12:00 NY)
+  // Today's London session bars (07:00 to 16:00 UTC / 03:00 to 12:00 NY) - LuxAlgo Sessions Indicator
   const londonBars = todayBars.filter(b => b.utcHour >= 7 && b.utcHour <= 16);
 
-  // -------------------------------------------------------------------------
-  // RULE 1: THE FIRST CONDITION
-  // - BUY setup: Price MUST sweep Previous Day Low (PDL) before or during London open.
-  // - SELL setup: Price MUST sweep Previous Day High (PDH) before or during London open.
-  // -------------------------------------------------------------------------
+  const isMajor = isMajorPair(symbol);
   const isBuy = macroDirection === 'BUY';
   let sweptPrice: number | undefined;
   let rule1Passed = false;
 
-  if (isBuy) {
-    // For BUY: price must go strictly BELOW Previous Day Low (PDL)
-    const sweepBar = sweepCandidateBars.find(b => b.low < pdl);
-    if (sweepBar) {
-      rule1Passed = true;
-      sweptPrice = Math.min(...sweepCandidateBars.filter(b => b.low < pdl).map(b => b.low));
+  // -------------------------------------------------------------------------
+  // RULE 1:
+  // - Major Pairs: MUST break/cross Previous Day Low (PDL) for BUY, or Previous Day High (PDH) for SELL.
+  // - Minor Pairs: Do NOT require Previous Day High/Low sweep.
+  // -------------------------------------------------------------------------
+  if (isMajor) {
+    if (isBuy) {
+      // For BUY on Major Pair: price must go strictly BELOW Previous Day Low (PDL)
+      const sweepBar = sweepCandidateBars.find(b => b.low < pdl);
+      if (sweepBar) {
+        rule1Passed = true;
+        sweptPrice = Math.min(...sweepCandidateBars.filter(b => b.low < pdl).map(b => b.low));
+      } else {
+        const minLondonPrice = sweepCandidateBars.length > 0 
+          ? Math.min(...sweepCandidateBars.map(b => b.low)) 
+          : (todayBars.length > 0 ? Math.min(...todayBars.map(b => b.low)) : 0);
+        return {
+          isValid: false,
+          symbol,
+          action: 'BUY',
+          pdh,
+          pdl,
+          failureReason: `Rule 1 NOT MET: For Major pair BUY, price MUST sweep Previous Day Low (${pdl}). Lowest price was ${minLondonPrice}, which did not sweep PDL.`,
+          ruleChecks: {
+            pdlPdhSwept: false,
+            fvgFound: false,
+            sessionValid: true,
+            ipdaAligned: true
+          }
+        };
+      }
     } else {
-      const minLondonPrice = sweepCandidateBars.length > 0 
-        ? Math.min(...sweepCandidateBars.map(b => b.low)) 
-        : (todayBars.length > 0 ? Math.min(...todayBars.map(b => b.low)) : 0);
-      return {
-        isValid: false,
-        symbol,
-        action: 'BUY',
-        pdh,
-        pdl,
-        failureReason: `Rule 1 (First Condition) NOT MET: For a BUY setup, price MUST sweep Previous Day Low (${pdl}). Lowest price leading into/during London was ${minLondonPrice}, which did not sweep PDL.`,
-        ruleChecks: {
-          pdlPdhSwept: false,
-          fvgFound: false,
-          sessionValid: true,
-          ipdaAligned: true
-        }
-      };
+      // For SELL on Major Pair: price must go strictly ABOVE Previous Day High (PDH)
+      const sweepBar = sweepCandidateBars.find(b => b.high > pdh);
+      if (sweepBar) {
+        rule1Passed = true;
+        sweptPrice = Math.max(...sweepCandidateBars.filter(b => b.high > pdh).map(b => b.high));
+      } else {
+        const maxLondonPrice = sweepCandidateBars.length > 0 
+          ? Math.max(...sweepCandidateBars.map(b => b.high)) 
+          : (todayBars.length > 0 ? Math.max(...todayBars.map(b => b.high)) : 0);
+        return {
+          isValid: false,
+          symbol,
+          action: 'SELL',
+          pdh,
+          pdl,
+          failureReason: `Rule 1 NOT MET: For Major pair SELL, price MUST sweep Previous Day High (${pdh}). Highest price was ${maxLondonPrice}, which did not sweep PDH.`,
+          ruleChecks: {
+            pdlPdhSwept: false,
+            fvgFound: false,
+            sessionValid: true,
+            ipdaAligned: true
+          }
+        };
+      }
     }
   } else {
-    // For SELL: price must go strictly ABOVE Previous Day High (PDH)
-    const sweepBar = sweepCandidateBars.find(b => b.high > pdh);
-    if (sweepBar) {
-      rule1Passed = true;
-      sweptPrice = Math.max(...sweepCandidateBars.filter(b => b.high > pdh).map(b => b.high));
-    } else {
-      const maxLondonPrice = sweepCandidateBars.length > 0 
-        ? Math.max(...sweepCandidateBars.map(b => b.high)) 
-        : (todayBars.length > 0 ? Math.max(...todayBars.map(b => b.high)) : 0);
-      return {
-        isValid: false,
-        symbol,
-        action: 'SELL',
-        pdh,
-        pdl,
-        failureReason: `Rule 1 (First Condition) NOT MET: For a SELL setup, price MUST sweep Previous Day High (${pdh}). Highest price leading into/during London was ${maxLondonPrice}, which did not sweep PDH.`,
-        ruleChecks: {
-          pdlPdhSwept: false,
-          fvgFound: false,
-          sessionValid: true,
-          ipdaAligned: true
-        }
-      };
-    }
+    // Minor Pair: Does NOT require Previous Day High/Low sweep.
+    rule1Passed = true;
   }
 
   // -------------------------------------------------------------------------
   // RULE 2: FIRST 15m FAIR VALUE GAP (FVG) FORMED IN LONDON SESSION
-  // Inside the London session box (07:00–16:00 UTC / 03:00–12:00 NY)
+  // Inside the London session box (07:00–16:00 UTC / 03:00–12:00 NY) - LuxAlgo SMC
   // -------------------------------------------------------------------------
   if (londonBars.length < 3) {
     return {
@@ -304,7 +316,7 @@ export async function analyzePairSweepAndFvg(
     const c2 = londonBars[i - 2]; // Candle 1
 
     if (isBuy && c0.low > c2.high && c1.close > c2.high) {
-      // Bullish FVG gap between c2.high and c0.low
+      // Bullish FVG (Green Imbalance): gap between c2.high and c0.low
       firstFvg = {
         entry: Number(c0.low.toFixed(decimals)),
         boundary: Number(c2.high.toFixed(decimals)),
@@ -313,7 +325,7 @@ export async function analyzePairSweepAndFvg(
       };
       break;
     } else if (!isBuy && c0.high < c2.low && c1.close < c2.low) {
-      // Bearish FVG gap between c2.low and c0.high
+      // Bearish FVG (Red Imbalance): gap between c2.low and c0.high
       firstFvg = {
         entry: Number(c0.high.toFixed(decimals)),
         boundary: Number(c2.low.toFixed(decimals)),
@@ -342,7 +354,9 @@ export async function analyzePairSweepAndFvg(
   }
 
   // -------------------------------------------------------------------------
-  // RULE 3 & 4: ENTRY & STOP LOSS
+  // RULE 3 & 4: ENTRY & STOP LOSS PLACEMENT
+  // "sl to be place below green fvg/ bullish imbalance" (for BUY)
+  // "sl to be place above red fvg/ bearish imbalance" (for SELL)
   // -------------------------------------------------------------------------
   const entry = firstFvg.entry;
   const sessionCandlesPrior = londonBars.slice(0, firstFvg.idx + 1);
@@ -351,25 +365,25 @@ export async function analyzePairSweepAndFvg(
 
   let sl: number;
   if (isBuy) {
-    // SL placed at London Session Low (swept level)
-    sl = Math.min(sessionLow, Number((firstFvg.boundary - 7 * pipUnit).toFixed(decimals)));
+    // SL placed below green FVG / bullish imbalance
+    sl = Number((firstFvg.boundary - 2 * pipUnit).toFixed(decimals));
   } else {
-    // SL placed at London Session High (swept level)
-    sl = Math.max(sessionHigh, Number((firstFvg.boundary + 7 * pipUnit).toFixed(decimals)));
+    // SL placed above red FVG / bearish imbalance
+    sl = Number((firstFvg.boundary + 2 * pipUnit).toFixed(decimals));
   }
 
   const riskDist = Math.abs(entry - sl);
-  if (riskDist <= 0 || (riskDist / pipUnit) < 4) {
+  if (riskDist <= 0 || (riskDist / pipUnit) < 3) {
     return {
       isValid: false,
       symbol,
       action: macroDirection,
-      failureReason: 'Calculated risk distance is zero or less than 4 pips.'
+      failureReason: 'Calculated risk distance is zero or less than 3 pips.'
     };
   }
 
   // -------------------------------------------------------------------------
-  // RULE 5: TARGET 1:3.0 RISK-TO-REWARD RATIO
+  // RULE 5: TARGET STRICTLY 1:3.0 RISK-TO-REWARD RATIO
   // -------------------------------------------------------------------------
   const tp1 = isBuy
     ? Number((entry + riskDist * 3.0).toFixed(decimals))

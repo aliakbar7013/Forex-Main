@@ -448,9 +448,11 @@ export async function syncLiveMarketSignals(): Promise<{
       const tp1 = sweepAnalysis.tp1;
       const tp2 = sweepAnalysis.tp2 || Number((action === 'BUY' ? entry + (entry - sl) * 5.0 : entry - (sl - entry) * 5.0).toFixed(5));
       const imbalanceZoneDesc = sweepAnalysis.fvgZone || '';
-      const sweepPriceDesc = action === 'BUY'
-        ? `Previous Day Low (${sweepAnalysis.pdl}) swept to ${sweepAnalysis.sweptPrice} before 1st Imbalance`
-        : `Previous Day High (${sweepAnalysis.pdh}) swept to ${sweepAnalysis.sweptPrice} before 1st Imbalance`;
+      const sweepPriceDesc = isMajor
+        ? (action === 'BUY'
+          ? `Previous Day Low (${sweepAnalysis.pdl}) swept to ${sweepAnalysis.sweptPrice || sweepAnalysis.entry} before 1st Imbalance`
+          : `Previous Day High (${sweepAnalysis.pdh}) swept to ${sweepAnalysis.sweptPrice || sweepAnalysis.entry} before 1st Imbalance`)
+        : `Minor Pair: Direct 1st Imbalance (No PDH/PDL Sweep Required)`;
       const triggerTimeIso = sweepAnalysis.fvgTime || new Date().toISOString();
       const triggerDate = new Date(triggerTimeIso);
       const triggerHourNY = (triggerDate.getUTCHours() - 4 + 24) % 24;

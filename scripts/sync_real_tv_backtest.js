@@ -264,87 +264,104 @@ async function run() {
         }
 
         // RULE 1: THE FIRST CONDITION
-        // BUY: Price MUST sweep Previous Day Low (PDL) before/during London session.
-        // SELL: Price MUST sweep Previous Day High (PDH) before/during London session.
+        // For Major pairs:
+        // - BUY setup: Price MUST break/cross Previous Day Low (PDL) before/during London session (c.low < pdl).
+        // - SELL setup: Price MUST break/cross Previous Day High (PDH) before/during London session (c.high > pdh).
+        // For Minor pairs:
+        // - Does NOT require Previous Day High/Low sweep. Direct entry on 1st imbalance of London open.
         const sweepCandidateBars = (m15ByDate.get(day.dateStr) || []).filter(c => c.utcHour >= 6 && c.utcHour <= 16);
         let sweptPdl = false;
         let sweptPdh = false;
-        let sweptPrice = 0;
 
         for (const c of sweepCandidateBars) {
-          if (c.low < pdl) {
-            sweptPdl = true;
-            sweptPrice = c.low;
-          }
-          if (c.high > pdh) {
-            sweptPdh = true;
-            sweptPrice = c.high;
-          }
+          if (c.low < pdl) sweptPdl = true;
+          if (c.high > pdh) sweptPdh = true;
         }
 
-        // If neither PDL nor PDH was swept, Rule 1 is NOT MET -> STRICTLY SKIP THIS DAY!
-        if (!sweptPdl && !sweptPdh) {
-          continue;
+        if (isMajor && !sweptPdl && !sweptPdh) {
+          continue; // Major pairs strictly require PDL or PDH break/cross
         }
 
-        // RULE 2: Search for authentic 1st 15m Fair Value Gap (FVG) formed inside London Session
+        // RULE 2: Search for 1st 15m Fair Value Gap (FVG) formed inside London Session (07:00-16:00 UTC) - LuxAlgo SMC
         let firstFvg = null;
         for (let i = 2; i < london15m.length; i++) {
-          const b1 = london15m[i - 2];
-          const b2 = london15m[i - 1];
-          const b3 = london15m[i];
+          const b1 = london15m[i - 2]; // Candle 1
+          const b2 = london15m[i - 1]; // Candle 2 (displacement)
+          const b3 = london15m[i];     // Candle 3
 
-          // Bullish FVG (Strictly requires sweptPdl!)
-          if (sweptPdl && b3.low > b1.high && b2.close > b1.high) {
-            firstFvg = {
-              type: 'BUY',
-              bar: b3,
-              fvgHigh: b3.low,
-              fvgLow: b1.high,
-              idx: i
-            };
-            break;
-          }
-          // Bearish FVG (Strictly requires sweptPdh!)
-          if (sweptPdh && b3.high < b1.low && b2.close < b1.low) {
-            firstFvg = {
-              type: 'SELL',
-              bar: b3,
-              fvgHigh: b1.low,
-              fvgLow: b3.high,
-              idx: i
-            };
-            break;
+          const isBullFvg = b3.low > b1.high && b2.close > b1.high;
+          const isBearFvg = b3.high < b1.low && b2.close < b1.low;
+
+          if (isMajor) {
+            // For Major Pairs: Bullish FVG requires sweptPdl; Bearish FVG requires sweptPdh
+            if (sweptPdl && isBullFvg) {
+              firstFvg = {
+                type: 'BUY',
+                bar: b3,
+                fvgHigh: b3.low,
+                fvgLow: b1.high,
+                idx: i
+              };
+              break;
+            }
+            if (sweptPdh && isBearFvg) {
+              firstFvg = {
+                type: 'SELL',
+                bar: b3,
+                fvgHigh: b1.low,
+                fvgLow: b3.high,
+                idx: i
+              };
+              break;
+            }
+          } else {
+            // For Minor Pairs: No PDH/PDL sweep required! First 15m imbalance of London open triggers the trade
+            if (isBullFvg) {
+              firstFvg = {
+                type: 'BUY',
+                bar: b3,
+                fvgHigh: b3.low,
+                fvgLow: b1.high,
+                idx: i
+              };
+              break;
+            }
+            if (isBearFvg) {
+              firstFvg = {
+                type: 'SELL',
+                bar: b3,
+                fvgHigh: b1.low,
+                fvgLow: b3.high,
+                idx: i
+              };
+              break;
+            }
           }
         }
 
-        // If no authentic 15m FVG was formed after the sweep, STRICTLY NO TRADE! Zero fabrication!
+        // If no authentic 15m FVG formed inside London session, skip
         if (!firstFvg) {
           continue;
         }
 
         const isBuy = firstFvg.type === 'BUY';
         let entry = isBuy ? Number(firstFvg.fvgHigh.toFixed(decimals)) : Number(firstFvg.fvgLow.toFixed(decimals));
-        let sl, tp1;
-
-        const sessionCandlesPrior = london15m.slice(0, firstFvg.idx + 1);
-        const sessionLow = Math.min(...sessionCandlesPrior.map(b => b.low));
-        const sessionHigh = Math.max(...sessionCandlesPrior.map(b => b.high));
-
-        if (isBuy) {
-          sl = Math.min(sessionLow, Number((firstFvg.fvgLow - 7 * pipUnit).toFixed(decimals)));
-        } else {
-          sl = Math.max(sessionHigh, Number((firstFvg.fvgHigh + 7 * pipUnit).toFixed(decimals)));
-        }
+        
+        // RULE 3: Stop Loss placed below green FVG (for BUY), above red FVG (for SELL)
+        let sl = isBuy
+          ? Number((firstFvg.fvgLow - 2 * pipUnit).toFixed(decimals))
+          : Number((firstFvg.fvgHigh + 2 * pipUnit).toFixed(decimals));
 
         let riskDist = isBuy ? (entry - sl) : (sl - entry);
-        if (riskDist <= 0 || (riskDist / pipUnit) < 4) {
+        if (riskDist <= 0 || (riskDist / pipUnit) < 3) {
           continue; // Invalid risk distance
         }
 
+        // RULE 4: Target strictly 1:3.0 Risk-to-Reward Ratio
         const tpDist = Number((riskDist * 3.0).toFixed(decimals));
-        tp1 = isBuy ? Number((entry + tpDist).toFixed(decimals)) : Number((entry - tpDist).toFixed(decimals));
+        let tp1 = isBuy ? Number((entry + tpDist).toFixed(decimals)) : Number((entry - tpDist).toFixed(decimals));
 
+        // Evaluate order fill and outcome against authentic 15m London bars
         let outcome = 'WIN';
         let filled = false;
         let exitPrice = tp1;
@@ -352,7 +369,8 @@ async function run() {
         for (let j = firstFvg.idx + 1; j < london15m.length; j++) {
           const fb = london15m[j];
           if (!filled) {
-            if (fb.low <= entry && fb.high >= entry) filled = true;
+            if (isBuy && fb.low <= entry) filled = true;
+            if (!isBuy && fb.high >= entry) filled = true;
           } else {
             if (isBuy) {
               if (fb.low <= sl) { outcome = 'LOSS'; exitPrice = sl; break; }
@@ -362,6 +380,11 @@ async function run() {
               if (fb.low <= tp1) { outcome = 'WIN'; exitPrice = tp1; break; }
             }
           }
+        }
+
+        // If limit order never got filled by session bars, skip
+        if (!filled) {
+          continue;
         }
 
         if (outcome === 'WIN') {
@@ -382,15 +405,15 @@ async function run() {
         let note = '';
         if (outcome === 'WIN') {
           if (isMajor) {
-            note = `[Broker: OANDA (TradingView Feed: OANDA:${symbol})] [CBDR 15m Major Pair] Previous Day ${isBuy ? 'Low (PDL)' : 'High (PDH)'} swept before London open. London 1st 15m ${firstFvg.type} FVG entry inside London session executed at ${nyTime} NY (${istTime} IST) @ ${entry}. SL placed at London Session ${isBuy ? 'Low' : 'High'} (${sl}). Target 1:3.0 (+3.0R) reached at ${tp1}. Exit Price: ${exitPrice}. Weekly holiday active for remaining days. Chart: ${tvChartUrl}`;
+            note = `[Broker: OANDA (TradingView Feed: OANDA:${symbol})] [CBDR 15m Major Pair] Previous Day ${isBuy ? 'Low (PDL)' : 'High (PDH)'} swept before London open. London 1st 15m ${firstFvg.type === 'BUY' ? 'Green Imbalance' : 'Red Imbalance'} entry executed at ${nyTime} NY (${istTime} IST) @ ${entry}. SL placed ${isBuy ? 'below green FVG' : 'above red FVG'} at ${sl}. Target 1:3.0 (+3.0R) hit at ${tp1}. Exit Price: ${exitPrice}. Weekly single trade rule satisfied. Chart: ${tvChartUrl}`;
           } else {
-            note = `[Broker: OANDA (TradingView Feed: OANDA:${symbol})] [CBDR 15m Minor Cross] 1st 15m Fair Value Gap (FVG) formed at London session open (07:00-16:00 UTC / 03:00-12:00 NY / 12:30-21:30 IST). Direct London 1st 15m Imbalance entry executed at ${nyTime} NY (${istTime} IST) @ ${entry} (No PDH/PDL sweep required for minor pairs). SL placed 7 pips beyond FVG at ${sl}. Target 1:3.0 (+3.0R) hit at ${tp1}. Exit Price: ${exitPrice}. Strategy rule satisfied; weekly holiday active for remaining days. Chart: ${tvChartUrl}`;
+            note = `[Broker: OANDA (TradingView Feed: OANDA:${symbol})] [CBDR 15m Minor Cross] 1st 15m Fair Value Gap formed inside London session (07:00-16:00 UTC / LuxAlgo Sessions). Direct 1st 15m ${firstFvg.type === 'BUY' ? 'Green Imbalance (Bullish FVG)' : 'Red Imbalance (Bearish FVG)'} entry executed at ${nyTime} NY (${istTime} IST) @ ${entry} (No PDH/PDL sweep required for minor pairs). SL placed ${isBuy ? 'below green FVG' : 'above red FVG'} at ${sl}. Target 1:3.0 (+3.0R) hit at ${tp1}. Exit Price: ${exitPrice}. Weekly single trade rule satisfied. Chart: ${tvChartUrl}`;
           }
         } else {
           if (isMajor) {
-            note = `[Broker: OANDA (TradingView Feed: OANDA:${symbol})] [CBDR 15m Major Pair] Previous Day ${isBuy ? 'Low (PDL)' : 'High (PDH)'} swept before London open. London 1st 15m ${firstFvg.type} FVG entry executed at ${nyTime} NY (${istTime} IST) @ ${entry}. London Session ${isBuy ? 'Low' : 'High'} broken, SL hit at ${sl} (-1.0R). Exit Price: ${exitPrice}. Defensive risk stepped down to ${currentRiskPercent}%. Chart: ${tvChartUrl}`;
+            note = `[Broker: OANDA (TradingView Feed: OANDA:${symbol})] [CBDR 15m Major Pair] Previous Day ${isBuy ? 'Low (PDL)' : 'High (PDH)'} swept before London open. London 1st 15m ${firstFvg.type === 'BUY' ? 'Green Imbalance' : 'Red Imbalance'} entry executed at ${nyTime} NY (${istTime} IST) @ ${entry}. SL hit ${isBuy ? 'below green FVG' : 'above red FVG'} at ${sl} (-1.0R). Exit Price: ${exitPrice}. Defensive risk stepped down to ${currentRiskPercent}%. Chart: ${tvChartUrl}`;
           } else {
-            note = `[Broker: OANDA (TradingView Feed: OANDA:${symbol})] [CBDR 15m Minor Cross] 1st 15m Fair Value Gap (FVG) formed at London session open (07:00-16:00 UTC / 03:00-12:00 NY / 12:30-21:30 IST). Direct London 1st 15m Imbalance entry executed at ${nyTime} NY (${istTime} IST) @ ${entry} (No PDH/PDL sweep required for minor pairs). 1st FVG invalidated, SL hit at ${sl} (-1.0R). Exit Price: ${exitPrice}. Defensive risk stepped down to ${currentRiskPercent}%. Chart: ${tvChartUrl}`;
+            note = `[Broker: OANDA (TradingView Feed: OANDA:${symbol})] [CBDR 15m Minor Cross] 1st 15m Fair Value Gap formed inside London session (07:00-16:00 UTC / LuxAlgo Sessions). Direct 1st 15m ${firstFvg.type === 'BUY' ? 'Green Imbalance (Bullish FVG)' : 'Red Imbalance (Bearish FVG)'} entry executed at ${nyTime} NY (${istTime} IST) @ ${entry} (No PDH/PDL sweep required for minor pairs). SL hit ${isBuy ? 'below green FVG' : 'above red FVG'} at ${sl} (-1.0R). Exit Price: ${exitPrice}. Defensive risk stepped down to ${currentRiskPercent}%. Chart: ${tvChartUrl}`;
           }
         }
 
