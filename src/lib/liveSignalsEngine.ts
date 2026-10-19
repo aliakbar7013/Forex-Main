@@ -24,6 +24,7 @@ import { applyTradeOutcomeToRiskSettings } from './riskEngine';
 import { broadcastSSE } from './eventBroadcaster';
 import { getSignalTradingDay, isMajorPair, getMarketTimeContext } from './strategyValidator';
 import { sendTelegramResolutionAlert } from './telegramEngine';
+import { analyzePairSweepAndFvg } from './tvCandles';
 
 export const ACTIVE_SYMBOLS = ALL_FOREX_SYMBOLS;
 
@@ -389,8 +390,28 @@ export async function syncLiveMarketSignals(): Promise<{
           ? (expectedAction === 'BUY' ? 'London Session Low' : 'London Session High') 
           : (expectedAction === 'BUY' ? 'Below Imbalance/FVG' : 'Above Imbalance/FVG');
 
+      // Check IPDA Macro Direction
+      const ipdaBuyCheck = checkSignalIpdaPermitted(symbol, 'BUY', DEFAULT_CENTRAL_BANK_RATES);
+      const ipdaSellCheck = checkSignalIpdaPermitted(symbol, 'SELL', DEFAULT_CENTRAL_BANK_RATES);
+      const isIpdaBuyPermitted = ipdaBuyCheck.permitted;
+      const action: 'BUY' | 'SELL' = isIpdaBuyPermitted ? 'BUY' : 'SELL';
+      const ipdaCheck = isIpdaBuyPermitted ? ipdaBuyCheck : ipdaSellCheck;
+      const ratioDesc = ipdaCheck.details?.ratioFormula || `Ratio: ${ipdaCheck.details?.ratio}`;
+
+      // -------------------------------------------------------------------------
+      // RULE 1 (FIRST CONDITION) & RULE 2 (1st LONDON 15m FVG)
+      // Strictly analyzed from authentic TradingView OANDA 15m candles!
+      // If price did NOT sweep PDL (for BUY) or PDH (for SELL) -> STRICTLY NO TRADE!
+      // -------------------------------------------------------------------------
+      const sweepAnalysis = await analyzePairSweepAndFvg(symbol, action);
+      if (!sweepAnalysis.isValid || !sweepAnalysis.entry || !sweepAnalysis.sl || !sweepAnalysis.tp1) {
+        // Failed Rule 1 or Rule 2: Purge any invalid signal for this symbol from DB!
+        db.prepare("DELETE FROM signals WHERE symbol = ?").run(symbol.toUpperCase());
+        continue;
+      }
+
       if (cbdrSignalMap.has(symbol)) {
-        // Symbol already has an active live signal being monitored by tickLiveTradeEvaluator
+        // Symbol already has an active, validated live signal being monitored
         continue;
       }
 
@@ -403,14 +424,10 @@ export async function syncLiveMarketSignals(): Promise<{
         continue;
       }
       const tvQuote = quotesMap[symbol];
-      let candles: Candle[] = [];
-
       const currentPrice = tvQuote ? tvQuote.price : 0;
       if (currentPrice === 0) continue;
 
       const pipFactor = getPipSize(symbol);
-      const slBufferPips = 7.0; // 5-10 pips buffer
-      const slBufferPrice = slBufferPips * pipFactor;
 
       if (!quotesMap[symbol]) {
         quotesMap[symbol] = {
@@ -426,170 +443,35 @@ export async function syncLiveMarketSignals(): Promise<{
         };
       }
 
-      // Check IPDA Macro Direction
-      const ipdaBuyCheck = checkSignalIpdaPermitted(symbol, 'BUY', DEFAULT_CENTRAL_BANK_RATES);
-      const ipdaSellCheck = checkSignalIpdaPermitted(symbol, 'SELL', DEFAULT_CENTRAL_BANK_RATES);
-      const isIpdaBuyPermitted = ipdaBuyCheck.permitted;
-      const action: 'BUY' | 'SELL' = isIpdaBuyPermitted ? 'BUY' : 'SELL';
-      const ipdaCheck = isIpdaBuyPermitted ? ipdaBuyCheck : ipdaSellCheck;
-      const ratioDesc = ipdaCheck.details?.ratioFormula || `Ratio: ${ipdaCheck.details?.ratio}`;
+      const entry = sweepAnalysis.entry;
+      const sl = sweepAnalysis.sl;
+      const tp1 = sweepAnalysis.tp1;
+      const tp2 = sweepAnalysis.tp2 || Number((action === 'BUY' ? entry + (entry - sl) * 5.0 : entry - (sl - entry) * 5.0).toFixed(5));
+      const imbalanceZoneDesc = sweepAnalysis.fvgZone || '';
+      const sweepPriceDesc = action === 'BUY'
+        ? `Previous Day Low (${sweepAnalysis.pdl}) swept to ${sweepAnalysis.sweptPrice} before 1st Imbalance`
+        : `Previous Day High (${sweepAnalysis.pdh}) swept to ${sweepAnalysis.sweptPrice} before 1st Imbalance`;
+      const triggerTimeIso = sweepAnalysis.fvgTime || new Date().toISOString();
+      const triggerDate = new Date(triggerTimeIso);
+      const triggerHourNY = (triggerDate.getUTCHours() - 4 + 24) % 24;
+      const triggerMinNY = triggerDate.getUTCMinutes();
+      const triggerTimeStrNY = `${String(triggerHourNY).padStart(2, '0')}:${String(triggerMinNY).padStart(2, '0')}`;
 
-      // Filter London session candles from valid trading days (Mon=1, Tue=2, Wed=3) strictly between 03:00 - 12:00 NY (07:00 - 16:00 UTC)
-      const recentValidDayCandles = candles.filter(c => c.dayOfWeek >= 1 && c.dayOfWeek <= 3 && c.decimalHourNY >= 3.0 && c.decimalHourNY <= 12.0);
-      
-      // If today is a valid CBDR day, the active trade session was placed TODAY!
-      // Otherwise fallback to the latest valid trading session from historical candles
-      const lastSessionDate = isTodayTradingDay 
-        ? todayDateStr 
-        : (recentValidDayCandles.length > 0 ? recentValidDayCandles[recentValidDayCandles.length - 1].dateStr : todayDateStr);
-
-      const sessionDayName = isTodayTradingDay 
-        ? nyContext.dayName 
-        : (recentValidDayCandles.length > 0 ? recentValidDayCandles[recentValidDayCandles.length - 1].dayName : nyContext.dayName);
-
-      const sessionDayOfWeek = isTodayTradingDay 
-        ? todayDayOfWeek 
-        : (recentValidDayCandles.length > 0 ? recentValidDayCandles[recentValidDayCandles.length - 1].dayOfWeek : todayDayOfWeek);
-
-      const sessionCandles = recentValidDayCandles.filter(c => c.dateStr === lastSessionDate);
-
-      let foundEntry = false;
-      let entry = currentPrice;
-      let sl = currentPrice;
-      let tp1 = currentPrice;
-      let tp2 = currentPrice;
       let triggerCandle: Candle = {
-        timestamp: now.getTime(),
-        open: tvQuote?.open || currentPrice,
-        high: tvQuote?.high || currentPrice,
-        low: tvQuote?.low || currentPrice,
-        close: currentPrice,
-        dateStr: lastSessionDate,
-        dayName: sessionDayName,
-        timeStrNY: nyContext.isLondonSession ? nyContext.nyTimeFormatted : '08:00 AM',
+        timestamp: triggerDate.getTime(),
+        open: entry,
+        high: Math.max(entry, sl),
+        low: Math.min(entry, sl),
+        close: entry,
+        dateStr: todayDateStr,
+        dayName: nyContext.dayName,
+        timeStrNY: `${triggerTimeStrNY} NY`,
         timeStrIST: '05:30 PM',
-        hourNY: Math.floor(nyContext.nyTimeDecimal),
-        minuteNY: Math.floor((nyContext.nyTimeDecimal % 1) * 60),
-        decimalHourNY: nyContext.nyTimeDecimal,
-        dayOfWeek: sessionDayOfWeek
+        hourNY: triggerHourNY,
+        minuteNY: triggerMinNY,
+        decimalHourNY: triggerHourNY + triggerMinNY / 60,
+        dayOfWeek: todayDayOfWeek
       };
-
-      let imbalanceZoneDesc = '';
-      let sweepPriceDesc = '';
-
-      // Calculate London Session High and Low extremes
-      const sessionHighPrice = sessionCandles.length > 0 
-        ? Math.max(...sessionCandles.map(c => c.high)) 
-        : currentPrice;
-      const sessionLowPrice = sessionCandles.length > 0 
-        ? Math.min(...sessionCandles.map(c => c.low)) 
-        : currentPrice;
-
-      if (sessionCandles.length >= 3) {
-        // Scan for 1st Imbalance in session
-        for (let i = 2; i < sessionCandles.length; i++) {
-          const c0 = sessionCandles[i];
-          const c1 = sessionCandles[i - 1];
-          const c2 = sessionCandles[i - 2];
-
-          if (action === 'BUY' && c0.low > c2.high && c1.close > c2.high) {
-            const candEntry = c0.low;
-            const base = Math.min(c2.high, c1.low);
-            // Major: Stop Loss strictly at low price of London session
-            // Minor: Stop Loss below imbalance base with 7 pips breathing space
-            const candSl = isMajor 
-              ? Number(sessionLowPrice.toFixed(5))
-              : Number((base - slBufferPrice).toFixed(5));
-            const risk = Number((candEntry - candSl).toFixed(5));
-            const candTp1 = Number((candEntry + risk * 3.0).toFixed(5));
-            // Ensure this candle signal is still active and within reasonable distance of currentPrice
-            if (risk > 0 && currentPrice < candTp1 && currentPrice > candSl) {
-              entry = candEntry;
-              sl = candSl;
-              tp1 = candTp1;
-              tp2 = Number((candEntry + risk * 5.0).toFixed(5));
-              triggerCandle = c0;
-              imbalanceZoneDesc = `${base} – ${entry}`;
-              sweepPriceDesc = isMajor 
-                ? `PDL swept to London Session Low (${sessionLowPrice}) before 1st Imbalance` 
-                : `Direct 1st Imbalance (No PDH/PDL Sweep Required)`;
-              foundEntry = true;
-              break;
-            }
-          } else if (action === 'SELL' && c0.high < c2.low && c1.close < c2.low) {
-            const candEntry = c0.high;
-            const top = Math.max(c2.low, c1.high);
-            // Major: Stop Loss strictly at high price of London session
-            // Minor: Stop Loss above imbalance top with 7 pips breathing space
-            const candSl = isMajor 
-              ? Number(sessionHighPrice.toFixed(5))
-              : Number((top + slBufferPrice).toFixed(5));
-            const risk = Number((candSl - candEntry).toFixed(5));
-            const candTp1 = Number((candEntry - risk * 3.0).toFixed(5));
-            // Ensure this candle signal is still active and within reasonable distance of currentPrice
-            if (risk > 0 && currentPrice > candTp1 && currentPrice < candSl) {
-              entry = candEntry;
-              sl = candSl;
-              tp1 = candTp1;
-              tp2 = Number((candEntry - risk * 5.0).toFixed(5));
-              triggerCandle = c0;
-              imbalanceZoneDesc = `${entry} – ${top}`;
-              sweepPriceDesc = isMajor 
-                ? `PDH swept to London Session High (${sessionHighPrice}) before 1st Imbalance` 
-                : `Direct 1st Imbalance (No PDH/PDL Sweep Required)`;
-              foundEntry = true;
-              break;
-            }
-          }
-        }
-      }
-
-      if (!foundEntry) {
-        // Synthesize authentic 1st London 15m Imbalance Setup strictly aligned with CBDR rules
-        if (action === 'BUY') {
-          // BUY Setup (IPDA Ratio > 1.0):
-          // 1st Bullish Imbalance formed in London (07:00-16:00 UTC / 03:00 - 12:00 NY)
-          // Entry strictly on the 1st Bullish Imbalance retest:
-          const fvgBase = Number((currentPrice - 14.0 * pipFactor).toFixed(5));
-          entry = Number((fvgBase + 8.0 * pipFactor).toFixed(5)); // = currentPrice - 6.0 pips (retest entry on 1st Imbalance)
-          const pdlPrice = Number((fvgBase - 4.5 * pipFactor).toFixed(5));
-          const sessionLow = Number((pdlPrice - 4.0 * pipFactor).toFixed(5)); // London Session Low (swept PDL)
-          
-          // SL rule:
-          // Major pairs: low price of the London session (sessionLow)
-          // Minor pairs: below imbalance base with 7 pips breathing space
-          sl = isMajor ? sessionLow : Number((fvgBase - slBufferPrice).toFixed(5));
-          const risk = Number((entry - sl).toFixed(5));
-          tp1 = Number((entry + risk * 3.0).toFixed(5)); // Target strictly 1:3 RR (= entry + 3 * risk)
-          tp2 = Number((entry + risk * 5.0).toFixed(5));
-          imbalanceZoneDesc = `${fvgBase} – ${entry}`;
-
-          sweepPriceDesc = isMajor 
-            ? `PDL (${pdlPrice}) swept to London Session Low (${sessionLow}) at 03:15 NY`
-            : `Direct 1st Imbalance (No PDH/PDL Sweep Required)`;
-        } else {
-          // SELL Setup (IPDA Ratio < 1.0):
-          // 1st Bearish Imbalance formed in London (07:00-16:00 UTC / 03:00 - 12:00 NY)
-          // Entry strictly on the 1st Bearish Imbalance retest:
-          const fvgTop = Number((currentPrice + 14.0 * pipFactor).toFixed(5));
-          entry = Number((fvgTop - 8.0 * pipFactor).toFixed(5)); // = currentPrice + 6.0 pips (retest entry on 1st Imbalance)
-          const pdhPrice = Number((fvgTop + 4.5 * pipFactor).toFixed(5));
-          const sessionHigh = Number((pdhPrice + 4.0 * pipFactor).toFixed(5)); // London Session High (swept PDH)
-          
-          // SL rule:
-          // Major pairs: high price of the London session (sessionHigh)
-          // Minor pairs: above imbalance top with 7 pips breathing space
-          sl = isMajor ? sessionHigh : Number((fvgTop + slBufferPrice).toFixed(5));
-          const risk = Number((sl - entry).toFixed(5));
-          tp1 = Number((entry - risk * 3.0).toFixed(5)); // Target strictly 1:3 RR (= entry - 3 * risk)
-          tp2 = Number((entry - risk * 5.0).toFixed(5));
-          imbalanceZoneDesc = `${entry} – ${fvgTop}`;
-
-          sweepPriceDesc = isMajor 
-            ? `PDH (${pdhPrice}) swept to London Session High (${sessionHigh}) at 03:15 NY`
-            : `Direct 1st Imbalance (No PDH/PDL Sweep Required)`;
-        }
-      }
 
       const riskDist = Math.abs(entry - sl);
       const slPips = Number((riskDist / pipFactor).toFixed(1));
@@ -621,10 +503,10 @@ export async function syncLiveMarketSignals(): Promise<{
         initialExitPrice = sl;
       }
 
-      const sweepRuleName = isMajor 
-        ? (action === 'BUY' ? 'Major Pair: Previous Day Low (PDL) Swept' : 'Major Pair: Previous Day High (PDH) Swept')
-        : 'Minor Pair: Direct 1st Imbalance (No PDH/PDL Sweep Required)';
-      const sweepTag = isMajor ? '⚡ Major (PDH/PDL Swept)' : '🎯 Minor (1st Imbalance)';
+      const sweepRuleName = action === 'BUY' 
+        ? 'Rule 1 (First Condition): Previous Day Low (PDL) Swept' 
+        : 'Rule 1 (First Condition): Previous Day High (PDH) Swept';
+      const sweepTag = action === 'BUY' ? '⚡ PDL Swept' : '⚡ PDH Swept';
 
       const sigId = `sig_live_${symbol.toLowerCase()}`;
       const signal: Signal = {
@@ -668,20 +550,18 @@ export async function syncLiveMarketSignals(): Promise<{
         validation: {
           isValid: true,
           overallStatus: 'PASSED',
-          summary: `[IPDA ${ipdaCheck.details?.effectiveDirection} (${ratioDesc})] [${sweepTag}] 1st London 15m Imbalance (${imbalanceZoneDesc || 'Tapped'}). Entry: ${entry} | SL: ${sl} (${isMajor ? (isBuy ? 'London Session Low' : 'London Session High') : (isBuy ? 'Below Imbalance/FVG' : 'Above Imbalance/FVG')}) | TP1: ${tp1} (1:3 RR) | 1 Trade/Day.`,
+          summary: `[IPDA ${ipdaCheck.details?.effectiveDirection} (${ratioDesc})] [${sweepTag}] 1st London 15m Imbalance (${imbalanceZoneDesc}). Entry: ${entry} | SL: ${sl} | TP1: ${tp1} (1:3 RR) | 1 Trade/Day.`,
           checks: [
             { id: 'one_trade_per_day', name: 'Rule: Strictly 1 Trade Per Day (Enforced)', passed: true, message: 'First imbalance of the session only. Maximum 1 trade executed per instrument per day.', severity: 'INFO' },
-            { id: 'cbdr_sweep_rule', name: sweepRuleName, passed: true, message: isMajor ? sweepPriceDesc : 'Minor pair (without USD) enters directly on 1st session imbalance (07:00 - 16:00 UTC / 03:00 - 12:00 NY) without requiring PDH/PDL sweep.', severity: 'INFO' },
+            { id: 'cbdr_sweep_rule', name: sweepRuleName, passed: true, message: sweepPriceDesc, severity: 'INFO' },
             { id: 'ipda_bias', name: 'IPDA Central Bank Macro Bias', passed: true, message: `IPDA Rate Ratio: ${ratioDesc} -> ${ipdaCheck.details?.effectiveDirection}`, severity: 'INFO' },
-            { id: 'cbdr_session', name: 'Session Window (LuxAlgo Sessions: 07:00 – 16:00 UTC / 03:00 – 12:00 NY Time)', passed: true, message: `1st London Imbalance entered at ${triggerCandle.timeStrNY} NY (${triggerCandle.timeStrIST} IST) inside London session window.`, severity: 'INFO' },
+            { id: 'cbdr_session', name: 'Session Window (London: 07:00 – 16:00 UTC / 03:00 – 12:00 NY Time)', passed: true, message: `1st London Imbalance entered at ${triggerCandle.timeStrNY} NY (${triggerCandle.timeStrIST} IST) inside London session window.`, severity: 'INFO' },
             { id: 'fvg_15m', name: 'Entry on 1st Imbalance of Session (LuxAlgo SMC Model)', passed: true, message: `Limit entry placed strictly at ${entry} on 1st Session FVG (Zone: ${imbalanceZoneDesc}). All subsequent session imbalances are ignored.`, severity: 'INFO' },
             { 
               id: 'sl_placement', 
-              name: isMajor ? `Major Pair: Stop Loss at London Session ${isBuy ? 'Low' : 'High'}` : `Minor Pair: Stop Loss ${isBuy ? 'Below' : 'Above'} Imbalance/FVG`, 
+              name: `Stop Loss Placement (London Session ${isBuy ? 'Low' : 'High'})`, 
               passed: true, 
-              message: isMajor 
-                ? `Major Pair (USD Attached): Stop Loss strictly placed at London Session ${isBuy ? 'Low' : 'High'} (${sl}).` 
-                : `Minor Pair (Without USD): Stop Loss placed strictly ${isBuy ? 'below' : 'above'} 1st imbalance/FVG (${sl}).`, 
+              message: `Stop Loss strictly placed at London Session ${isBuy ? 'Low' : 'High'} (${sl}).`, 
               severity: 'INFO' 
             },
             { id: 'target_1_3', name: 'Target: Strictly 1:3 Risk-to-Reward Ratio', passed: true, message: `Target: ${tp1} (Strictly 1:3.0 RR). Risk: ${slPips} pips, Reward: ${(slPips * 3).toFixed(1)} pips.`, severity: 'INFO' }
@@ -719,8 +599,8 @@ export async function syncLiveMarketSignals(): Promise<{
           timeIST: triggerCandle.timeStrIST,
           liveStatus: 'LIVE_MARKET_FEED'
         },
-        date_of_entry: lastSessionDate,
-        created_at: `${lastSessionDate}T${String(triggerCandle.hourNY).padStart(2, '0')}:${String(triggerCandle.minuteNY).padStart(2, '0')}:00.000Z`,
+        date_of_entry: todayDateStr,
+        created_at: `${todayDateStr}T${String(triggerCandle.hourNY).padStart(2, '0')}:${String(triggerCandle.minuteNY).padStart(2, '0')}:00.000Z`,
         updated_at: new Date().toISOString()
       };
 
@@ -789,8 +669,16 @@ export async function syncLiveMarketSignals(): Promise<{
 
   for (const shSpec of STOP_HUNT_SPECS) {
     try {
+      // Enforce Rule 1 (First Condition): BUY setup MUST sweep PDL, SELL setup MUST sweep PDH!
+      // If Rule 1 is not met, strictly purge any signal for this symbol and never trade it!
+      const sweepCheck = await analyzePairSweepAndFvg(shSpec.symbol, shSpec.action);
+      if (!sweepCheck.ruleChecks?.pdlPdhSwept) {
+        db.prepare("DELETE FROM signals WHERE symbol = ? AND strategy = 'STOP_HUNT'").run(shSpec.symbol.toUpperCase());
+        continue;
+      }
+
       if (stopHuntSignalMap.has(shSpec.symbol)) {
-        // Already active in-trade Stop Hunt signal tracked by tickLiveTradeEvaluator
+        // Validated signal is already actively tracked
         continue;
       }
 
@@ -941,6 +829,10 @@ export async function syncLiveMarketSignals(): Promise<{
       console.error(`Error constructing Stop Hunt signal for ${shSpec.symbol}`, err);
     }
   }
+
+  // Prevent duplicate trades on the same instrument ("no double double"):
+  // If an instrument has a Stop Hunt setup, do not run CBDR on that same symbol!
+  db.prepare("DELETE FROM signals WHERE strategy = 'CBDR' AND symbol IN (SELECT symbol FROM signals WHERE strategy = 'STOP_HUNT')").run();
 
   const allUpdatedSignals = getAllSignals(50);
 

@@ -201,173 +201,6 @@ async function run() {
       const tueStr = tueDate.toISOString().split('T')[0];
       const wedStr = wedDate.toISOString().split('T')[0];
 
-      // Week 27 live verified executions
-      if (w === 27) {
-        if (symbol === 'GBPUSD') {
-          allGeneratedTrades.push({
-            id: `bt_cbdr_${String(tradeCounter++).padStart(4, '0')}`,
-            symbol: 'GBPUSD',
-            strategy: 'CBDR',
-            action: 'BUY',
-            timeframe: '15m',
-            entry: 1.33280,
-            sl: 1.33060,
-            tp1: 1.33940,
-            exit_price: 1.33060,
-            risk_percent: 1.0,
-            defensive_state: 'NORMAL',
-            calculated_lot_size: 1.0,
-            risk_amount_usd: 1000,
-            outcome: 'LOSS',
-            realized_pnl: -1000,
-            risk_reward_achieved: -1.0,
-            trading_day: 'Monday',
-            is_cbdr_valid_day: 1,
-            session: 'London — Entry: 03:15 NY (12:45 IST)',
-            date_executed: monStr,
-            notes: `[Broker: OANDA (TradingView Feed: OANDA:GBPUSD)] [CBDR 15m Major Pair] Previous Day Low (PDL) swept at 02:45 NY before London open. London 1st 15m Bullish FVG entry inside blue London session (07:00-16:00 UTC / 03:00-12:00 NY) executed at 03:15 NY (12:45 IST) @ 1.33280. London Session Low broken, SL hit at 1.33060 (-1.0R). Exit Price: 1.33060. Defensive risk stepped down to 0.5%. Chart: ${tvChartUrl}`,
-            created_at: `${monStr}T03:15:00.000Z`
-          });
-          applyRiskOutcome('LOSS');
-          continue;
-        } else if (symbol === 'GBPJPY') {
-          allGeneratedTrades.push({
-            id: `bt_cbdr_${String(tradeCounter++).padStart(4, '0')}`,
-            symbol: 'GBPJPY',
-            strategy: 'CBDR',
-            action: 'BUY',
-            timeframe: '15m',
-            entry: 210.590,
-            sl: 210.190,
-            tp1: 211.790,
-            exit_price: 210.190,
-            risk_percent: 0.5,
-            defensive_state: 'DEFENSIVE_50',
-            calculated_lot_size: 0.5,
-            risk_amount_usd: 500,
-            outcome: 'LOSS',
-            realized_pnl: -500,
-            risk_reward_achieved: -1.0,
-            trading_day: 'Tuesday',
-            is_cbdr_valid_day: 1,
-            session: 'London — Entry: 03:45 NY (13:15 IST)',
-            date_executed: tueStr,
-            notes: `[Broker: OANDA (TradingView Feed: OANDA:GBPJPY)] [CBDR 15m Minor Cross] 1st 15m Fair Value Gap (FVG) formed at London session open. Direct London 1st 15m Bullish Imbalance entry executed at 03:45 NY (13:15 IST) @ 210.590 (No PDH/PDL sweep required for minor pairs). FVG invalidated, SL hit at 210.190 (-1.0R). Exit Price: 210.190. Defensive risk stepped down to 0.25%. Chart: ${tvChartUrl}`,
-            created_at: `${tueStr}T03:45:00.000Z`
-          });
-          applyRiskOutcome('LOSS');
-          continue;
-        } else if (symbol === 'EURUSD') {
-          allGeneratedTrades.push({
-            id: `bt_cbdr_${String(tradeCounter++).padStart(4, '0')}`,
-            symbol: 'EURUSD',
-            strategy: 'CBDR',
-            action: 'SELL',
-            timeframe: '15m',
-            entry: 1.12647,
-            sl: 1.12812,
-            tp1: 1.12152,
-            exit_price: 1.12152,
-            risk_percent: 0.25,
-            defensive_state: 'DEFENSIVE_25',
-            calculated_lot_size: 0.25,
-            risk_amount_usd: 250,
-            outcome: 'WIN',
-            realized_pnl: 3000,
-            risk_reward_achieved: 3.0,
-            trading_day: 'Wednesday',
-            is_cbdr_valid_day: 1,
-            session: 'London — Entry: 03:30 NY (13:00 IST)',
-            date_executed: wedStr,
-            notes: `[Broker: OANDA (TradingView Feed: OANDA:EURUSD)] [CBDR 15m Major Pair] Previous Day High (PDH) swept at 02:45 NY. London 1st 15m Bearish FVG entry executed at 03:30 NY (13:00 IST) @ 1.12647. Stop Loss placed at London Session High (1.12812). Target 1:3.0 (+3.0R / +$3,000 WIN) hit at 1.12152. Exit Price: 1.12152. Strategy rule satisfied; weekly holiday active for Thursday and Friday. Chart: ${tvChartUrl}`,
-            created_at: `${wedStr}T03:30:00.000Z`
-          });
-          applyRiskOutcome('WIN');
-          continue;
-        } else if (symbol === 'USDCAD') {
-          allGeneratedTrades.push({
-            id: `bt_cbdr_${String(tradeCounter++).padStart(4, '0')}`,
-            symbol: 'USDCAD',
-            strategy: 'CBDR',
-            action: 'BUY',
-            timeframe: '15m',
-            entry: 1.41480,
-            sl: 1.41280,
-            tp1: 1.42080,
-            exit_price: 1.42080,
-            risk_percent: 1.0,
-            defensive_state: 'NORMAL',
-            calculated_lot_size: 1.0,
-            risk_amount_usd: 1000,
-            outcome: 'WIN',
-            realized_pnl: 3000,
-            risk_reward_achieved: 3.0,
-            trading_day: 'Wednesday',
-            is_cbdr_valid_day: 1,
-            session: 'London — Entry: 04:15 NY (13:45 IST)',
-            date_executed: wedStr,
-            notes: `[Broker: OANDA (TradingView Feed: OANDA:USDCAD)] [CBDR 15m Major Pair] Previous Day Low (PDL) swept at 02:45 NY before London open @ 1.41345. London 1st 15m Bullish FVG entry inside blue London session (07:00-16:00 UTC / 03:00-12:00 NY) executed at 04:15 NY (13:45 IST) @ 1.41480. Stop Loss placed at London Session Low (1.41280). Target 1:3.0 (+3.0R / +$3,000 WIN) reached at 1.42080. Exit Price: 1.42080. Matches TradingView OANDA chart https://in.tradingview.com/chart/J4O68zfP/?symbol=OANDA%3AUSDCAD exactly.`,
-            created_at: `${wedStr}T04:15:00.000Z`
-          });
-          applyRiskOutcome('WIN');
-          continue;
-        } else if (symbol === 'GBPAUD') {
-          allGeneratedTrades.push({
-            id: `bt_cbdr_${String(tradeCounter++).padStart(4, '0')}`,
-            symbol: 'GBPAUD',
-            strategy: 'CBDR',
-            action: 'BUY',
-            timeframe: '15m',
-            entry: 1.91850,
-            sl: 1.91530,
-            tp1: 1.92810,
-            exit_price: 1.92810,
-            risk_percent: 1.0,
-            defensive_state: 'NORMAL',
-            calculated_lot_size: 1.0,
-            risk_amount_usd: 1000,
-            outcome: 'WIN',
-            realized_pnl: 3000,
-            risk_reward_achieved: 3.0,
-            trading_day: 'Wednesday',
-            is_cbdr_valid_day: 1,
-            session: 'London — Entry: 07:45 NY (17:15 IST)',
-            date_executed: wedStr,
-            notes: `[Broker: OANDA (TradingView Feed: OANDA:GBPAUD)] [CBDR 15m Minor Cross] 1st 15m Fair Value Gap (FVG) formed at London session open. Direct London 1st 15m Imbalance entry executed inside blue London session at 07:45 NY (17:15 IST) @ 1.91850 (No PDH/PDL sweep required for minor pairs). SL placed with 7 pips buffer below FVG at 1.91530. Target 1:3.0 (+3.0R / +$3,000 WIN) reached at 1.92810. Exit Price: 1.92810. Strategy rule satisfied. Chart: ${tvChartUrl}`,
-            created_at: `${wedStr}T07:45:00.000Z`
-          });
-          applyRiskOutcome('WIN');
-          continue;
-        } else if (symbol === 'EURNZD') {
-          allGeneratedTrades.push({
-            id: `bt_cbdr_${String(tradeCounter++).padStart(4, '0')}`,
-            symbol: 'EURNZD',
-            strategy: 'CBDR',
-            action: 'SELL',
-            timeframe: '15m',
-            entry: 1.99844,
-            sl: 1.99927,
-            tp1: 1.99595,
-            exit_price: 1.99595,
-            risk_percent: 1.0,
-            defensive_state: 'NORMAL',
-            calculated_lot_size: 1.0,
-            risk_amount_usd: 1000,
-            outcome: 'WIN',
-            realized_pnl: 3000,
-            risk_reward_achieved: 3.0,
-            trading_day: 'Monday',
-            is_cbdr_valid_day: 1,
-            session: 'London — Entry: 04:15 NY (13:45 IST)',
-            date_executed: monStr,
-            notes: `[Broker: OANDA (TradingView Feed: OANDA:EURNZD)] [CBDR 15m Minor Cross] 1st 15m Fair Value Gap (FVG) formed at London session open. Direct London 1st 15m Imbalance entry executed at 04:15 NY (13:45 IST) @ 1.99844 (No PDH/PDL sweep required for minor pairs). SL placed 7 pips beyond FVG at 1.99927. Target 1:3.0 (+3.0R / +$3,000 WIN) reached at 1.99595. Exit Price: 1.99595. Strategy rule satisfied; weekly holiday active for Tuesday to Friday. Chart: ${tvChartUrl}`,
-            created_at: `${monStr}T04:15:00.000Z`
-          });
-          applyRiskOutcome('WIN');
-          continue;
-        }
-      }
-
       // Check Monday -> Tuesday -> Wednesday
       const daysToTest = [
         { dateStr: monStr, dayName: 'Monday', prevDateStr: sunStr },
@@ -411,7 +244,7 @@ async function run() {
 
         if (london15m.length < 3) continue;
 
-        // Calculate PDH & PDL for Majors
+        // Calculate true Previous Day High (PDH) and Low (PDL)
         let pdh = 0, pdl = Infinity;
         const prev15m = m15ByDate.get(day.prevDateStr) || [];
         const prev60m = h60ByDate.get(day.prevDateStr) || [];
@@ -425,88 +258,88 @@ async function run() {
             if (c.high > pdh) pdh = c.high;
             if (c.low < pdl) pdl = c.low;
           }
-        } else {
-          pdh = Number((london15m[0].open + 0.0040).toFixed(decimals));
-          pdl = Number((london15m[0].open - 0.0040).toFixed(decimals));
+        }
+        if (pdh === 0 || pdl === Infinity) {
+          continue; // No prior day data, cannot establish PDH/PDL
         }
 
-        let sweepType = null;
-        if (isMajor) {
-          const early = london15m.slice(0, 4);
-          for (const ec of early) {
-            if (ec.low < pdl) { sweepType = 'PDL_SWEPT'; break; }
-            if (ec.high > pdh) { sweepType = 'PDH_SWEPT'; break; }
+        // RULE 1: THE FIRST CONDITION
+        // BUY: Price MUST sweep Previous Day Low (PDL) before/during London session.
+        // SELL: Price MUST sweep Previous Day High (PDH) before/during London session.
+        const sweepCandidateBars = (m15ByDate.get(day.dateStr) || []).filter(c => c.utcHour >= 6 && c.utcHour <= 16);
+        let sweptPdl = false;
+        let sweptPdh = false;
+        let sweptPrice = 0;
+
+        for (const c of sweepCandidateBars) {
+          if (c.low < pdl) {
+            sweptPdl = true;
+            sweptPrice = c.low;
           }
-          if (!sweepType) {
-            if (london15m[0].low <= pdl + 5 * pipUnit) sweepType = 'PDL_SWEPT';
-            else if (london15m[0].high >= pdh - 5 * pipUnit) sweepType = 'PDH_SWEPT';
+          if (c.high > pdh) {
+            sweptPdh = true;
+            sweptPrice = c.high;
           }
         }
 
-        // Find 1st 15m FVG
+        // If neither PDL nor PDH was swept, Rule 1 is NOT MET -> STRICTLY SKIP THIS DAY!
+        if (!sweptPdl && !sweptPdh) {
+          continue;
+        }
+
+        // RULE 2: Search for authentic 1st 15m Fair Value Gap (FVG) formed inside London Session
         let firstFvg = null;
         for (let i = 2; i < london15m.length; i++) {
           const b1 = london15m[i - 2];
           const b2 = london15m[i - 1];
           const b3 = london15m[i];
 
-          // Bullish FVG
-          if (b3.low > b1.high) {
-            if (!isMajor || sweepType === 'PDL_SWEPT' || !sweepType) {
-              firstFvg = {
-                type: 'BUY',
-                bar: b3,
-                fvgHigh: b3.low,
-                fvgLow: b1.high,
-                idx: i
-              };
-              break;
-            }
+          // Bullish FVG (Strictly requires sweptPdl!)
+          if (sweptPdl && b3.low > b1.high && b2.close > b1.high) {
+            firstFvg = {
+              type: 'BUY',
+              bar: b3,
+              fvgHigh: b3.low,
+              fvgLow: b1.high,
+              idx: i
+            };
+            break;
           }
-          // Bearish FVG
-          if (b3.high < b1.low) {
-            if (!isMajor || sweepType === 'PDH_SWEPT' || !sweepType) {
-              firstFvg = {
-                type: 'SELL',
-                bar: b3,
-                fvgHigh: b1.low,
-                fvgLow: b3.high,
-                idx: i
-              };
-              break;
-            }
+          // Bearish FVG (Strictly requires sweptPdh!)
+          if (sweptPdh && b3.high < b1.low && b2.close < b1.low) {
+            firstFvg = {
+              type: 'SELL',
+              bar: b3,
+              fvgHigh: b1.low,
+              fvgLow: b3.high,
+              idx: i
+            };
+            break;
           }
         }
 
+        // If no authentic 15m FVG was formed after the sweep, STRICTLY NO TRADE! Zero fabrication!
         if (!firstFvg) {
-          const b1 = london15m[0];
-          const b2 = london15m[1];
-          const isUp = b2.close >= b1.open;
-          firstFvg = {
-            type: isUp ? 'BUY' : 'SELL',
-            bar: b2,
-            fvgHigh: Number((isUp ? b2.close : b1.open).toFixed(decimals)),
-            fvgLow: Number((isUp ? b1.open : b2.close).toFixed(decimals)),
-            idx: 1
-          };
+          continue;
         }
 
         const isBuy = firstFvg.type === 'BUY';
         let entry = isBuy ? Number(firstFvg.fvgHigh.toFixed(decimals)) : Number(firstFvg.fvgLow.toFixed(decimals));
         let sl, tp1;
 
-        if (isMajor) {
-          const sessionLow = Math.min(...london15m.slice(0, firstFvg.idx + 1).map(b => b.low));
-          const sessionHigh = Math.max(...london15m.slice(0, firstFvg.idx + 1).map(b => b.high));
-          sl = isBuy ? Number((sessionLow - 2 * pipUnit).toFixed(decimals)) : Number((sessionHigh + 2 * pipUnit).toFixed(decimals));
+        const sessionCandlesPrior = london15m.slice(0, firstFvg.idx + 1);
+        const sessionLow = Math.min(...sessionCandlesPrior.map(b => b.low));
+        const sessionHigh = Math.max(...sessionCandlesPrior.map(b => b.high));
+
+        if (isBuy) {
+          sl = Math.min(sessionLow, Number((firstFvg.fvgLow - 7 * pipUnit).toFixed(decimals)));
         } else {
-          sl = isBuy ? Number((firstFvg.fvgLow - 7 * pipUnit).toFixed(decimals)) : Number((firstFvg.fvgHigh + 7 * pipUnit).toFixed(decimals));
+          sl = Math.max(sessionHigh, Number((firstFvg.fvgHigh + 7 * pipUnit).toFixed(decimals)));
         }
 
         let riskDist = isBuy ? (entry - sl) : (sl - entry);
-        if (riskDist <= 0 || riskDist < 4 * pipUnit) {
-          riskDist = Number((15 * pipUnit).toFixed(decimals));
-          sl = isBuy ? Number((entry - riskDist).toFixed(decimals)) : Number((entry + riskDist).toFixed(decimals));
+        if (riskDist <= 0 || (riskDist / pipUnit) < 4) {
+          continue; // Invalid risk distance
         }
 
         const tpDist = Number((riskDist * 3.0).toFixed(decimals));
