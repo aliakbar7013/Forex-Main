@@ -36,7 +36,6 @@ import { TradingViewRealtimeChart } from '@/components/dashboard/TradingViewReal
 import { StrategyStudio } from '@/components/dashboard/StrategyStudio';
 import { getSignalTradingDay } from '@/lib/strategyValidator';
 import { Sparkles, BarChart3, Zap, Scale, BarChart2, CheckCircle2, AlertTriangle, X, Radio, BookOpen, Clock } from 'lucide-react';
-import confetti from 'canvas-confetti';
 import { 
   STATIC_INITIAL_SIGNALS, 
   STATIC_DEFAULT_RISK, 
@@ -415,26 +414,8 @@ export default function TradingDashboard() {
         try {
           const parsed = JSON.parse(e.data);
           const { id, symbol, outcome, exitPrice } = parsed.data;
-          if (outcome === 'WIN') {
-            confetti({ particleCount: 90, spread: 70, origin: { y: 0.6 } });
-            soundEngine.playWinSound();
-            setTradeToast({
-              id: `${id}_${Date.now()}`,
-              symbol,
-              outcome: 'WIN',
-              message: `🎉 TARGET HIT (1:3 TP at ${exitPrice})! Achieved +3.0R • Moved to Backtest Archive`,
-              pnl: 0
-            });
-          } else {
-            soundEngine.playLossSound();
-            setTradeToast({
-              id: `${id}_${Date.now()}`,
-              symbol,
-              outcome: 'LOSS',
-              message: `⚠️ STOP LOSS HIT (at ${exitPrice})! -1.0R • Moved to Backtest Archive`,
-              pnl: 0
-            });
-          }
+          // Quietly remove from active list without popping explosive confetti
+          setSignals(prev => prev.filter(s => s.id !== id));
         } catch (err) {
           console.error('Error handling TRADE_RESOLVED SSE event', err);
         }
@@ -500,7 +481,7 @@ export default function TradingDashboard() {
           if (!isBusy) {
             isBusy = true;
             setIsBackgroundSyncing(true);
-            fetch('/api/signals/live-sync', { method: 'POST' })
+            fetch('/api/signals?limit=50')
               .then(res => res.json())
               .then(data => {
                 if (data.signals) {

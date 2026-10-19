@@ -80,15 +80,15 @@ export async function tickLiveTradeEvaluator(): Promise<{
     const pipFactor = getPipSize(signal.symbol);
     const isBuy = signal.action === 'BUY';
 
-    // A trade has hit Stop Loss if either current price or the day's high/low breached SL
+    // A live trade has hit Stop Loss strictly if the live real-time market price touches/crosses SL
     const isLoss = isBuy 
-      ? (currentPrice <= signal.sl || (dayLow > 0 && dayLow <= signal.sl))
-      : (currentPrice >= signal.sl || (dayHigh > 0 && dayHigh >= signal.sl));
+      ? (currentPrice <= signal.sl)
+      : (currentPrice >= signal.sl);
 
-    // A trade has hit TP1 if current price or day's range reached TP1 (and it didn't hit SL first)
+    // A live trade has hit TP1 strictly if the live real-time market price reaches/crosses TP1
     const isWin = !isLoss && (isBuy 
-      ? (currentPrice >= signal.tp1 || (dayHigh > 0 && dayHigh >= signal.tp1))
-      : (currentPrice <= signal.tp1 || (dayLow > 0 && dayLow <= signal.tp1)));
+      ? (currentPrice >= signal.tp1)
+      : (currentPrice <= signal.tp1));
 
     if (isWin) {
       // -------------------------------------------------------------
@@ -374,7 +374,10 @@ export async function syncLiveMarketSignals(): Promise<{
   // On Thursday, Friday, Saturday, and Sunday: STRICT NON-TRADING DAYS. NO CBDR ENTRIES TAKEN!
   const now = new Date();
   const nyContext = getMarketTimeContext(now);
-  const isTodayCbdrTradingDay = nyContext.dayOfWeek >= 1 && nyContext.dayOfWeek <= 3;
+  const todayDateStr = nyContext.nyDate.toISOString().split('T')[0];
+  const todayDayOfWeek = nyContext.dayOfWeek; // 1 = Mon, 2 = Tue, 3 = Wed
+  const isTodayTradingDay = todayDayOfWeek >= 1 && todayDayOfWeek <= 3;
+  const isTodayCbdrTradingDay = isTodayTradingDay;
 
   if (isTodayCbdrTradingDay) {
     for (const symbol of ACTIVE_SYMBOLS) {
@@ -387,15 +390,17 @@ export async function syncLiveMarketSignals(): Promise<{
           : (expectedAction === 'BUY' ? 'Below Imbalance/FVG' : 'Above Imbalance/FVG');
 
       if (cbdrSignalMap.has(symbol)) {
-        const existing = cbdrSignalMap.get(symbol);
-        // Only keep existing signal if it is an authentic 1st Imbalance signal and matches the latest SL placement rule
-        const isOldSpotEntry = existing && existing.raw_payload?.currentPrice !== undefined && Math.abs(existing.entry - Number(existing.raw_payload.currentPrice)) < 0.00005;
-        const hasImbalanceZone = existing && Boolean(existing.raw_payload?.imbalanceZone);
-        const hasCorrectSlType = existing?.raw_payload?.slPlacementType === expectedSlType;
-        if (existing && hasImbalanceZone && !isOldSpotEntry && hasCorrectSlType) {
-          // Symbol already has its single authentic 1st imbalance signal tracked and updated by tickLiveTradeEvaluator
-          continue;
-        }
+        // Symbol already has an active live signal being monitored by tickLiveTradeEvaluator
+        continue;
+      }
+
+      // Respect CBDR Single Trade Rule: If this symbol already traded on today's session, DO NOT re-create
+      const alreadyTradedToday = db.prepare(`
+        SELECT id FROM backtest_trades 
+        WHERE symbol = ? AND strategy = 'CBDR' AND date_executed = ?
+      `).get(symbol.toUpperCase(), todayDateStr);
+      if (alreadyTradedToday) {
+        continue;
       }
       const tvQuote = quotesMap[symbol];
       let candles: Candle[] = [];
@@ -428,13 +433,6 @@ export async function syncLiveMarketSignals(): Promise<{
       const action: 'BUY' | 'SELL' = isIpdaBuyPermitted ? 'BUY' : 'SELL';
       const ipdaCheck = isIpdaBuyPermitted ? ipdaBuyCheck : ipdaSellCheck;
       const ratioDesc = ipdaCheck.details?.ratioFormula || `Ratio: ${ipdaCheck.details?.ratio}`;
-
-      // Determine accurate current New York market context
-      const now = new Date();
-      const nyContext = getMarketTimeContext(now);
-      const todayDateStr = nyContext.nyDate.toISOString().split('T')[0];
-      const todayDayOfWeek = nyContext.dayOfWeek; // 1 = Mon, 2 = Tue, 3 = Wed
-      const isTodayTradingDay = todayDayOfWeek >= 1 && todayDayOfWeek <= 3;
 
       // Filter London session candles from valid trading days (Mon=1, Tue=2, Wed=3) strictly between 03:00 - 12:00 NY (07:00 - 16:00 UTC)
       const recentValidDayCandles = candles.filter(c => c.dayOfWeek >= 1 && c.dayOfWeek <= 3 && c.decimalHourNY >= 3.0 && c.decimalHourNY <= 12.0);
@@ -845,12 +843,12 @@ export async function syncLiveMarketSignals(): Promise<{
       const dayLow = tvQuote?.low || currentPrice;
 
       const isLoss = isBuy 
-        ? (currentPrice <= sl || (dayLow > 0 && dayLow <= sl))
-        : (currentPrice >= sl || (dayHigh > 0 && dayHigh >= sl));
+        ? (currentPrice <= sl)
+        : (currentPrice >= sl);
 
       const isWin = !isLoss && (isBuy 
-        ? (currentPrice >= tp1 || (dayHigh > 0 && dayHigh >= tp1))
-        : (currentPrice <= tp1 || (dayLow > 0 && dayLow <= tp1)));
+        ? (currentPrice >= tp1)
+        : (currentPrice <= tp1));
 
       if (isWin || isLoss) continue; // skip resolved
 
