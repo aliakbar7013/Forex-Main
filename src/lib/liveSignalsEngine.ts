@@ -399,11 +399,8 @@ export async function syncLiveMarketSignals(): Promise<{
       }
       const tvQuote = quotesMap[symbol];
       let candles: Candle[] = [];
-      try {
-        candles = await fetchTwelveDataCandles(symbol);
-      } catch {}
 
-      const currentPrice = tvQuote ? tvQuote.price : (candles[candles.length - 1]?.close || 0);
+      const currentPrice = tvQuote ? tvQuote.price : 0;
       if (currentPrice === 0) continue;
 
       const pipFactor = getPipSize(symbol);
