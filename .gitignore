@@ -48,5 +48,6 @@ data/*.db-journal
 forex.db
 forex_signals.db
 data/signals.db
+ACTIVE_TUNNEL.txt
 scratch/
 
