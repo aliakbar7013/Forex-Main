@@ -820,15 +820,15 @@ export function BacktestStudio() {
               <option value="MINOR">🎯 Minor Pairs (Direct 1st FVG)</option>
             </select>
           </div>
-        </div>
 
-        {/* Pair / Instrument Combobox Selector with Internal Search */}
-        <div className="shrink-0">
-          <PairFilterSelect 
-            value={pairFilter} 
-            onChange={setPairFilter} 
-            buttonLabelPrefix="Filter Pair:" 
-          />
+          {/* Pair / Instrument Combobox Selector with Internal Search */}
+          <div className="shrink-0">
+            <PairFilterSelect 
+              value={pairFilter} 
+              onChange={setPairFilter} 
+              buttonLabelPrefix="Filter Pair:" 
+            />
+          </div>
         </div>
       </div>
 
