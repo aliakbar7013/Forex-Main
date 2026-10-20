@@ -224,7 +224,7 @@ function initDatabase(db: Database.Database) {
       chat_id TEXT NOT NULL DEFAULT '',
       enabled INTEGER NOT NULL DEFAULT 0,
       notify_new_signals INTEGER NOT NULL DEFAULT 1,
-      notify_trade_resolutions INTEGER NOT NULL DEFAULT 1,
+      notify_trade_resolutions INTEGER NOT NULL DEFAULT 0,
       updated_at TEXT NOT NULL
     );
   `);
@@ -265,7 +265,7 @@ function initDatabase(db: Database.Database) {
     db.prepare(`
       INSERT INTO telegram_settings (id, bot_token, chat_id, enabled, notify_new_signals, notify_trade_resolutions, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run('default', '', '', 0, 1, 1, new Date().toISOString());
+    `).run('default', '', '', 0, 1, 0, new Date().toISOString());
   }
 
   // 12. Users Table for Email & Password Auth and Strategy Access Management
@@ -606,13 +606,13 @@ export function getTelegramSettings(): TelegramSettings {
       chat_id: process.env.TELEGRAM_CHAT_ID || '',
       enabled: Boolean(process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID),
       notify_new_signals: true,
-      notify_trade_resolutions: true,
+      notify_trade_resolutions: false,
       updated_at: new Date().toISOString()
     };
     db.prepare(`
       INSERT OR REPLACE INTO telegram_settings (id, bot_token, chat_id, enabled, notify_new_signals, notify_trade_resolutions, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run('default', defaultSettings.bot_token, defaultSettings.chat_id, defaultSettings.enabled ? 1 : 0, 1, 1, defaultSettings.updated_at);
+    `).run('default', defaultSettings.bot_token, defaultSettings.chat_id, defaultSettings.enabled ? 1 : 0, 1, 0, defaultSettings.updated_at);
     return defaultSettings;
   }
 
@@ -635,7 +635,7 @@ export function saveTelegramSettings(settings: Partial<TelegramSettings>): Teleg
       chat_id TEXT NOT NULL DEFAULT '',
       enabled INTEGER NOT NULL DEFAULT 0,
       notify_new_signals INTEGER NOT NULL DEFAULT 1,
-      notify_trade_resolutions INTEGER NOT NULL DEFAULT 1,
+      notify_trade_resolutions INTEGER NOT NULL DEFAULT 0,
       updated_at TEXT NOT NULL
     );
   `);

@@ -298,13 +298,13 @@ export function TelegramSettingsModal({ isOpen, onClose }: TelegramSettingsModal
               {/* Notification Filter Toggles */}
               <div className="space-y-2 pt-2 border-t border-slate-200">
                 <span className="text-xs font-bold text-slate-900 block uppercase tracking-wider">
-                  Notification Triggers
+                  Notification Dispatch Mode
                 </span>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   
                   {/* New Signals */}
-                  <label className="flex items-center gap-3 p-3 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors">
+                  <label className="flex items-center gap-3 p-3 rounded-xl border-2 border-blue-500 bg-blue-50/50 cursor-pointer transition-colors">
                     <input
                       type="checkbox"
                       checked={settings.notify_new_signals}
@@ -312,32 +312,34 @@ export function TelegramSettingsModal({ isOpen, onClose }: TelegramSettingsModal
                       className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4"
                     />
                     <div>
-                      <span className="text-xs font-bold text-slate-900 block">
-                        New Trade Signals
+                      <span className="text-xs font-bold text-slate-900 block flex items-center gap-1.5">
+                        <span>New Trade Signals</span>
+                        <span className="text-[9px] uppercase tracking-wider bg-blue-100 text-blue-700 font-extrabold px-1.5 py-0.5 rounded">Active</span>
                       </span>
-                      <span className="text-[10px] text-slate-500 font-medium">
-                        Entry, SL, TP1, Lots &amp; Day
+                      <span className="text-[10px] text-slate-600 font-medium">
+                        Instant Entry, SL, TP &amp; 1:3 RR Matrix
                       </span>
                     </div>
                   </label>
 
-                  {/* Trade Outcomes */}
-                  <label className="flex items-center gap-3 p-3 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors">
+                  {/* Trade Outcomes - Disabled per user request */}
+                  <div className="flex items-center gap-3 p-3 rounded-xl border border-slate-200 bg-slate-100/70 opacity-60 cursor-not-allowed">
                     <input
                       type="checkbox"
-                      checked={settings.notify_trade_resolutions}
-                      onChange={(e) => setSettings(p => ({ ...p, notify_trade_resolutions: e.target.checked }))}
-                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4"
+                      checked={false}
+                      disabled
+                      className="rounded border-slate-300 text-slate-400 w-4 h-4 cursor-not-allowed"
                     />
                     <div>
-                      <span className="text-xs font-bold text-slate-900 block">
-                        Trade Resolution (TP/SL)
+                      <span className="text-xs font-bold text-slate-600 block flex items-center gap-1.5">
+                        <span>TP / SL Resolution Hits</span>
+                        <span className="text-[9px] uppercase tracking-wider bg-slate-200 text-slate-600 font-bold px-1.5 py-0.5 rounded">Muted</span>
                       </span>
                       <span className="text-[10px] text-slate-500 font-medium">
-                        Target Hit (Win) or Stop Loss Hit
+                        TP/SL notifications muted (Clean Signal Alerts only)
                       </span>
                     </div>
-                  </label>
+                  </div>
 
                 </div>
               </div>

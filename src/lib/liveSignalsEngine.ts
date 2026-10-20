@@ -23,7 +23,7 @@ import {
 import { applyTradeOutcomeToRiskSettings } from './riskEngine';
 import { broadcastSSE } from './eventBroadcaster';
 import { getSignalTradingDay, isMajorPair, getMarketTimeContext } from './strategyValidator';
-import { sendTelegramResolutionAlert } from './telegramEngine';
+import { sendTelegramResolutionAlert, sendTelegramSignalAlert } from './telegramEngine';
 import { analyzePairSweepAndFvg } from './tvCandles';
 
 export const ACTIVE_SYMBOLS = ALL_FOREX_SYMBOLS;
@@ -639,6 +639,7 @@ export async function syncLiveMarketSignals(): Promise<{
         // Only active in-trade signals are added to the live feed
         insertSignal(signal);
         broadcastSSE('NEW_SIGNAL', signal);
+        sendTelegramSignalAlert(signal).catch(err => console.warn('Telegram live signal alert error:', err));
       }
     } catch (err) {
       console.error(`Error constructing live signal for ${symbol}`, err);
@@ -827,6 +828,7 @@ export async function syncLiveMarketSignals(): Promise<{
 
       insertSignal(shSignal);
       broadcastSSE('NEW_SIGNAL', shSignal);
+      sendTelegramSignalAlert(shSignal).catch(err => console.warn('Telegram live Stop Hunt alert error:', err));
     } catch (err) {
       console.error(`Error constructing Stop Hunt signal for ${shSpec.symbol}`, err);
     }

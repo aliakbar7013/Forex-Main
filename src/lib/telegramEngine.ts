@@ -1,16 +1,27 @@
 import { Signal } from '@/types';
 import { getTelegramSettings } from './db';
 import { getSignalTradingDay } from './strategyValidator';
+import { getPipSize } from './cbdrRealDataEngine';
 
 /**
  * Telegram Notification Engine
- * Sends instant real-time trade signals and TP/SL execution notifications to Telegram.
+ * Sends instant real-time trade signals to Telegram.
+ * Trade resolution (TP/SL hits) notifications are disabled per user requirements
+ * so the channel stays completely clean with actionable entries only.
  */
 
 export interface TelegramSendMessageOptions {
   bot_token?: string;
   chat_id?: string;
   parse_mode?: 'HTML' | 'Markdown' | 'MarkdownV2';
+}
+
+function escapeTelegramHtml(text: string): string {
+  if (!text) return '';
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
 }
 
 /**
@@ -75,15 +86,17 @@ export async function sendTelegramRawMessage(
 }
 
 /**
- * Formats a Signal into a clean, professional HTML Telegram message
+ * Formats a Signal into an institutional, high-clarity HTML Telegram message
+ * with Entry, Stop Loss, Take Profit, and strict Risk/Reward ratio.
  */
 export function formatSignalTelegramHtml(signal: Signal): string {
   const isBuy = signal.action === 'BUY';
+  const orderType = isBuy ? 'BUY LIMIT' : 'SELL LIMIT';
   const actionEmoji = isBuy ? '🟢 <b>BUY (LONG)</b>' : '🔴 <b>SELL (SHORT)</b>';
   const directionIcon = isBuy ? '📈' : '📉';
   const { dayName, dateFormatted, isCbdrValid } = getSignalTradingDay(signal);
 
-  const createdDate = new Date(signal.created_at);
+  const createdDate = new Date(signal.created_at || Date.now());
   const nyTime = createdDate.toLocaleTimeString('en-US', { 
     timeZone: 'America/New_York', 
     hour: '2-digit', 
@@ -97,26 +110,37 @@ export function formatSignalTelegramHtml(signal: Signal): string {
     hour12: true 
   });
 
+  const pipFactor = getPipSize(signal.symbol);
+  const slPips = signal.sl_distance_pips_points 
+    ? Number(signal.sl_distance_pips_points).toFixed(1)
+    : (Math.abs(signal.entry - signal.sl) / pipFactor).toFixed(1);
+
+  const tpPips = (Math.abs(signal.tp1 - signal.entry) / pipFactor).toFixed(1);
+  const rrRatio = signal.primary_risk_reward ? `1:${signal.primary_risk_reward}` : '1:3.0';
+
+  const cleanNotes = signal.notes ? escapeTelegramHtml(signal.notes) : '';
+
   const lines = [
-    `⚡ <b>APEX QUANT SIGNAL ALERT</b> ⚡`,
+    `⚡ <b>NEW ICT TRADE SIGNAL</b> ⚡`,
     ``,
     `📊 <b>Pair:</b> <code>#${signal.symbol}</code> ${directionIcon}`,
-    `🎯 <b>Action:</b> ${actionEmoji}`,
-    `🧩 <b>Strategy:</b> <code>${signal.strategy}</code> (${signal.timeframe})`,
+    `🎯 <b>Order Type:</b> <b>${orderType}</b> (${actionEmoji})`,
+    `🧩 <b>Strategy:</b> <code>${signal.strategy}</code> (${signal.timeframe || '15m'})`,
     ``,
-    `📍 <b>Limit Entry:</b> <code>${signal.entry}</code>`,
-    `🛑 <b>Stop Loss (Exit):</b> <code>${signal.sl}</code> (<i>${signal.sl_distance_pips_points} pips</i>)`,
-    `🎯 <b>Target (TP1 1:3):</b> <code>${signal.tp1}</code> (<i>1:${signal.primary_risk_reward || 3.0} RR</i>)`,
-    signal.tp2 ? `🎯 <b>Target (TP2):</b> <code>${signal.tp2}</code> (<i>1:${((signal.primary_risk_reward || 2.0) * 1.5).toFixed(1)} RR</i>)` : '',
-    signal.tp3 ? `🎯 <b>Target (TP3 Runner):</b> <code>${signal.tp3}</code> (<i>1:${((signal.primary_risk_reward || 2.0) * 2.5).toFixed(1)} RR</i>)` : '',
+    `📍 <b>Entry Price:</b> <code>${signal.entry}</code>`,
+    `🛑 <b>Stop Loss (SL):</b> <code>${signal.sl}</code> (<b>-${slPips} pips</b>)`,
+    `🎯 <b>Take Profit (TP):</b> <code>${signal.tp1}</code> (<b>+${tpPips} pips</b>)`,
+    `⚖️ <b>Risk to Reward:</b> <b>${rrRatio} Strict RR</b>`,
+    signal.tp2 ? `🎯 <b>Take Profit 2 (Runner):</b> <code>${signal.tp2}</code>` : '',
+    signal.tp3 ? `🎯 <b>Take Profit 3 (Runner):</b> <code>${signal.tp3}</code>` : '',
     ``,
-    `📦 <b>Recommended Lots:</b> <code>${signal.calculated_lot_size} Lots</code> (<i>${signal.risk_percent}% Risk</i>)`,
-    `🛡️ <b>Defensive Tier:</b> <code>${signal.defensive_state}</code>`,
-    `⏰ <b>Session Window:</b> ${signal.session_name || 'Active Session'} (<i>${nyTime} NY • ${istTime} IST</i>)`,
+    `📦 <b>Recommended Lot:</b> <code>${signal.calculated_lot_size || 0.1} Lots</code> (<i>${signal.risk_percent || 1}% Risk</i>)`,
+    `🛡️ <b>Risk Tier:</b> <code>${signal.defensive_state || 'NORMAL'}</code>`,
+    `⏰ <b>Session:</b> ${escapeTelegramHtml(signal.session_name || 'London / NY Open')} (<i>${nyTime} NY • ${istTime} IST</i>)`,
     `📅 <b>Trading Day:</b> ${dayName} (${dateFormatted}) ${signal.strategy === 'CBDR' ? (isCbdrValid ? '✅ Valid CBDR Day' : '⚠️ Carry-over Position') : ''}`,
+    cleanNotes ? `💡 <b>Confluence / Notes:</b> <i>${cleanNotes}</i>` : '',
     ``,
-    `🌐 <b>IPDA Macro Bias:</b> <code>${signal.validation?.overallStatus || 'APPROVED'}</code>`,
-    `<i>Apex ICT Quantitative Engine • Auto-Synced</i>`
+    `<i>Apex ICT Quantitative Engine • High-Probability Execution</i>`
   ];
 
   return lines.filter(line => line !== '').join('\n');
@@ -124,6 +148,7 @@ export function formatSignalTelegramHtml(signal: Signal): string {
 
 /**
  * Formats a Trade Resolution (Win / Loss / BE) into a Telegram message
+ * Kept for archiving / optional reference
  */
 export function formatResolutionTelegramHtml(params: {
   symbol: string;
@@ -150,7 +175,7 @@ export function formatResolutionTelegramHtml(params: {
     params.strategy ? `🧩 <b>Strategy:</b> <code>${params.strategy}</code>` : '',
     `🏆 <b>Outcome:</b> <b>${params.outcome} (${rrStr})</b>`,
     `📍 <b>Exit Price:</b> <code>${params.exitPrice}</code>`,
-    params.notes ? `📝 <b>Details:</b> <i>${params.notes}</i>` : '',
+    params.notes ? `📝 <b>Details:</b> <i>${escapeTelegramHtml(params.notes)}</i>` : '',
     ``,
     `📁 <i>Record has been permanently archived in the Backtest Database.</i>`
   ];
@@ -182,9 +207,11 @@ export async function sendTelegramSignalAlert(signal: Signal): Promise<boolean> 
 }
 
 /**
- * Sends a trade resolution alert to Telegram if enabled
+ * Sends a trade resolution alert to Telegram.
+ * NOTE: User explicitly disabled TP hit and SL hit notifications for Telegram.
+ * Telegram is strictly reserved for new trade signal dispatches with Entry, SL, TP, and RR.
  */
-export async function sendTelegramResolutionAlert(params: {
+export async function sendTelegramResolutionAlert(_params: {
   symbol: string;
   strategy?: string;
   action?: string;
@@ -194,23 +221,8 @@ export async function sendTelegramResolutionAlert(params: {
   rrAchieved?: number;
   notes?: string;
 }): Promise<boolean> {
-  try {
-    const settings = getTelegramSettings();
-    if (!settings.enabled || !settings.notify_trade_resolutions) {
-      return false;
-    }
-
-    const html = formatResolutionTelegramHtml(params);
-    const res = await sendTelegramRawMessage(html, {
-      bot_token: settings.bot_token,
-      chat_id: settings.chat_id
-    });
-
-    return res.success;
-  } catch (err) {
-    console.error('Error sending Telegram resolution alert:', err);
-    return false;
-  }
+  // Always return false: TP and SL hit alerts are permanently disabled for Telegram per user specification.
+  return false;
 }
 
 /**
@@ -227,7 +239,15 @@ export async function testTelegramConnection(
     `🕒 <b>Timestamp:</b> <code>${new Date().toISOString()}</code>`,
     ``,
     `Your Telegram Bot is now connected to the <b>Apex ICT Quantitative Trading Dashboard</b>.`,
-    `You will receive instant alerts for every new signal, limit entry, stop loss, and target hit!`
+    `You will receive instant alerts whenever a new trade signal is generated, complete with:`,
+    `• Pair & Order Type (Buy/Sell Limit)`,
+    `• Limit Entry Price`,
+    `• Stop Loss (SL) with exact pip distance`,
+    `• Take Profit (TP) with exact pip gain`,
+    `• Strict 1:3 Risk/Reward (RR) calculation`,
+    `• Calculated Lot Size based on your Risk %`,
+    ``,
+    `<i>Note: TP/SL hit resolution notifications are disabled to keep your Telegram channel clean.</i>`
   ].join('\n');
 
   return sendTelegramRawMessage(testHtml, {
