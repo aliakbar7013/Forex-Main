@@ -29,13 +29,15 @@ interface SignalCardProps {
   onDeleteSignal: (id: string) => void;
   onViewPayload: (signal: Signal) => void;
   onOpenChart?: (symbol: string, signal?: Signal) => void;
+  liveQuote?: { price: number; bid?: number; ask?: number; change?: number; changePercent?: number };
 }
 
 export function SignalCardComponent({
   signal,
   onUpdateStatus,
   onDeleteSignal,
-  onOpenChart
+  onOpenChart,
+  liveQuote
 }: SignalCardProps) {
   const [copied, setCopied] = useState(false);
   const [showValidationDetails, setShowValidationDetails] = useState(false);
@@ -44,6 +46,74 @@ export function SignalCardComponent({
   const isBuy = signal.action === 'BUY';
   const isCBDR = signal.strategy === 'CBDR';
   const isStopHunt = signal.strategy === 'STOP_HUNT';
+
+  // Currency & Precision Detection
+  const sym = signal.symbol.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const isJpy = sym.includes('JPY');
+  const isGold = sym.includes('XAU') || sym.includes('GOLD');
+  const pipFactor = isGold ? 0.1 : (isJpy ? 0.01 : 0.0001);
+
+  const formatLivePrice = (p: number | undefined | null) => {
+    if (p === undefined || p === null || isNaN(p)) return '—';
+    if (isJpy) return p.toLocaleString(undefined, { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+    if (isGold) return p.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return p.toLocaleString(undefined, { minimumFractionDigits: 5, maximumFractionDigits: 5 });
+  };
+
+  // Extract Live Running Price
+  const rawCurrentPrice = typeof liveQuote?.price === 'number'
+    ? liveQuote.price
+    : (typeof signal.raw_payload?.currentPrice === 'number'
+        ? signal.raw_payload.currentPrice
+        : (typeof signal.raw_payload?.price === 'number' ? signal.raw_payload.price : undefined));
+
+  // If trade is in progress and currentPrice is missing, calculate from entry + floatingPips or default to entry
+  const currentPrice = rawCurrentPrice !== undefined
+    ? rawCurrentPrice
+    : (signal.status === 'IN_TRADE'
+        ? (signal.raw_payload?.floatingPips !== undefined
+            ? (isBuy ? signal.entry + (Number(signal.raw_payload.floatingPips) * pipFactor) : signal.entry - (Number(signal.raw_payload.floatingPips) * pipFactor))
+            : signal.entry)
+        : undefined);
+
+  // Dynamic floating pips calculation
+  const floatingPips = currentPrice !== undefined
+    ? Math.round((isBuy ? (currentPrice - signal.entry) / pipFactor : (signal.entry - currentPrice) / pipFactor) * 10) / 10
+    : (signal.raw_payload?.floatingPips !== undefined ? Number(signal.raw_payload.floatingPips) : 0);
+
+  const inProfit = floatingPips >= 0;
+
+  // Flash animation on live tick update
+  const prevPriceRef = React.useRef<number | undefined>(currentPrice);
+  const [priceFlash, setPriceFlash] = useState<'UP' | 'DOWN' | null>(null);
+
+  React.useEffect(() => {
+    if (currentPrice !== undefined && prevPriceRef.current !== undefined && prevPriceRef.current !== currentPrice) {
+      if (currentPrice > prevPriceRef.current) {
+        setPriceFlash('UP');
+      } else if (currentPrice < prevPriceRef.current) {
+        setPriceFlash('DOWN');
+      }
+      const timer = setTimeout(() => setPriceFlash(null), 900);
+      prevPriceRef.current = currentPrice;
+      return () => clearTimeout(timer);
+    }
+    prevPriceRef.current = currentPrice;
+  }, [currentPrice]);
+
+  // Target 1:3 Progress calculation
+  const totalTargetDistance = Math.abs(signal.tp1 - signal.entry);
+  const currentDistanceToTarget = isBuy
+    ? (signal.tp1 - (currentPrice ?? signal.entry))
+    : ((currentPrice ?? signal.entry) - signal.tp1);
+  const remainingPipsToTarget = Math.max(0, Math.round((currentDistanceToTarget / pipFactor) * 10) / 10);
+
+  const distanceCovered = isBuy
+    ? ((currentPrice ?? signal.entry) - signal.entry)
+    : (signal.entry - (currentPrice ?? signal.entry));
+  const progressPercent = totalTargetDistance > 0
+    ? Math.min(100, Math.max(0, Math.round((distanceCovered / totalTargetDistance) * 100)))
+    : 0;
 
   // Copy lot size to clipboard
   const handleCopyLots = () => {
@@ -229,17 +299,37 @@ export function SignalCardComponent({
             </div>
           </div>
 
-          <div className="flex flex-col items-end gap-1.5">
-            {getStatusBadge()}
+          <div className="flex flex-col items-end gap-1.5 shrink-0">
+            <div className="flex items-center gap-1.5">
+              {currentPrice !== undefined && (
+                <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md font-mono text-[11px] font-bold border transition-all ${
+                  inProfit
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-300 shadow-xs'
+                    : 'bg-rose-50 text-rose-700 border-rose-300 shadow-xs'
+                }`}>
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                      inProfit ? 'bg-emerald-400' : 'bg-rose-400'
+                    }`} />
+                    <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${
+                      inProfit ? 'bg-emerald-600' : 'bg-rose-600'
+                    }`} />
+                  </span>
+                  <span className="text-[9px] uppercase font-sans text-slate-400 font-semibold">Live</span>
+                  <span>{formatLivePrice(currentPrice)}</span>
+                </span>
+              )}
+              {getStatusBadge()}
+            </div>
             
             {/* Live Floating Pips Pill */}
-            {signal.raw_payload?.floatingPips !== undefined && (
+            {floatingPips !== undefined && (
               <span className={`px-2 py-0.5 rounded-full font-mono text-[11px] font-semibold border ${
-                Number(signal.raw_payload.floatingPips) >= 0
+                inProfit
                   ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                   : 'bg-rose-50 text-rose-700 border-rose-200'
               }`}>
-                {Number(signal.raw_payload.floatingPips) >= 0 ? '+' : ''}{String(signal.raw_payload.floatingPips)} pips
+                {inProfit ? '+' : ''}{floatingPips} pips
               </span>
             )}
           </div>
@@ -315,54 +405,124 @@ export function SignalCardComponent({
           </div>
         )}
 
-        {/* Core 3-Box Price Matrix (Stripe Minimalist Style) */}
-        <div className="grid grid-cols-3 gap-2 mb-3">
+        {/* Core 4-Box Price Matrix: Entry | Live Running Price | Stop Loss | Target 1:3 */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
           
-          {/* Limit Entry */}
-          <div className="p-2.5 rounded-xl bg-blue-50/50 border border-blue-100 text-center">
-            <div className="text-[10px] uppercase font-semibold text-blue-600 tracking-wide mb-1 flex items-center justify-center gap-1">
-              <Calendar className="w-2.5 h-2.5 text-blue-500" />
-              <span>Entry ({entryIsoDate})</span>
+          {/* Box 1: Limit Entry */}
+          <div className="p-2.5 rounded-xl bg-blue-50/50 border border-blue-100 text-center flex flex-col justify-between">
+            <div>
+              <div className="text-[10px] uppercase font-semibold text-blue-600 tracking-wide mb-1 flex items-center justify-center gap-1">
+                <Calendar className="w-2.5 h-2.5 text-blue-500" />
+                <span>Entry</span>
+              </div>
+              <div className="text-sm font-bold text-slate-900 font-mono">
+                {formatLivePrice(signal.entry)}
+              </div>
             </div>
-            <div className="text-sm sm:text-base font-bold text-slate-900 font-mono">
-              {signal.entry.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 5 })}
-            </div>
-            <div className="text-[10px] text-slate-500 font-medium mt-0.5">
+            <div className="text-[10px] text-slate-500 font-medium mt-1 truncate">
               {isCBDR && !isMajorPair(signal.symbol) 
-                ? '1st London Imbalance' 
+                ? '1st London FVG' 
                 : isCBDR 
-                  ? '1st FVG (Post-Sweep)' 
-                  : '5m Imbalance/FVG'}
+                  ? 'Post-Sweep FVG' 
+                  : '5m Imbalance'}
             </div>
           </div>
 
-          {/* Stop Loss */}
-          <div className="p-2.5 rounded-xl bg-rose-50/40 border border-rose-100 text-center">
-            <div className="text-[10px] uppercase font-semibold text-rose-500 tracking-wide mb-1">
-              Stop Loss
+          {/* Box 2: Live Current Price (Prominently Running) */}
+          <div className={`p-2.5 rounded-xl border text-center transition-all duration-300 flex flex-col justify-between ${
+            priceFlash === 'UP'
+              ? 'bg-emerald-100/90 border-emerald-400 ring-2 ring-emerald-300 shadow-sm'
+              : priceFlash === 'DOWN'
+                ? 'bg-rose-100/90 border-rose-400 ring-2 ring-rose-300 shadow-sm'
+                : inProfit
+                  ? 'bg-emerald-50/90 border-emerald-300'
+                  : 'bg-rose-50/90 border-rose-300'
+          }`}>
+            <div>
+              <div className="text-[10px] uppercase font-extrabold tracking-wider mb-1 flex items-center justify-center gap-1">
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                    inProfit ? 'bg-emerald-400' : 'bg-rose-400'
+                  }`}></span>
+                  <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${
+                    inProfit ? 'bg-emerald-600' : 'bg-rose-600'
+                  }`}></span>
+                </span>
+                <span className={inProfit ? 'text-emerald-700' : 'text-rose-700'}>
+                  Live Price
+                </span>
+              </div>
+              <div className={`text-sm font-black font-mono tracking-tight ${
+                inProfit ? 'text-emerald-800' : 'text-rose-800'
+              }`}>
+                {currentPrice !== undefined ? formatLivePrice(currentPrice) : 'Syncing...'}
+              </div>
             </div>
-            <div className="text-sm sm:text-base font-bold text-rose-700 font-mono">
-              {signal.sl.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 5 })}
+            <div className={`text-[10px] font-bold font-mono mt-1 ${
+              inProfit ? 'text-emerald-600' : 'text-rose-600'
+            }`}>
+              {inProfit ? '+' : ''}{floatingPips} pips
             </div>
-            <div className="text-[10px] text-rose-600 font-medium mt-0.5">
+          </div>
+
+          {/* Box 3: Stop Loss */}
+          <div className="p-2.5 rounded-xl bg-rose-50/40 border border-rose-100 text-center flex flex-col justify-between">
+            <div>
+              <div className="text-[10px] uppercase font-semibold text-rose-500 tracking-wide mb-1">
+                Stop Loss
+              </div>
+              <div className="text-sm font-bold text-rose-700 font-mono">
+                {formatLivePrice(signal.sl)}
+              </div>
+            </div>
+            <div className="text-[10px] text-rose-600 font-medium mt-1">
               -{signal.sl_distance_pips_points} pips
             </div>
           </div>
 
-          {/* Take Profit (1:3 RR) */}
-          <div className="p-2.5 rounded-xl bg-emerald-50/40 border border-emerald-100 text-center">
-            <div className="text-[10px] uppercase font-semibold text-emerald-600 tracking-wide mb-1">
-              Target (1:3)
+          {/* Box 4: Take Profit (1:3 RR) */}
+          <div className="p-2.5 rounded-xl bg-emerald-50/40 border border-emerald-100 text-center flex flex-col justify-between">
+            <div>
+              <div className="text-[10px] uppercase font-semibold text-emerald-600 tracking-wide mb-1">
+                Target (1:3)
+              </div>
+              <div className="text-sm font-bold text-emerald-700 font-mono">
+                {formatLivePrice(signal.tp1)}
+              </div>
             </div>
-            <div className="text-sm sm:text-base font-bold text-emerald-700 font-mono">
-              {signal.tp1.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 5 })}
-            </div>
-            <div className="text-[10px] text-emerald-600 font-medium mt-0.5">
+            <div className="text-[10px] text-emerald-600 font-medium mt-1">
               +{Math.round(signal.sl_distance_pips_points * 3)} pips
             </div>
           </div>
 
         </div>
+
+        {/* Dynamic 1:3 Target Progress Bar */}
+        {signal.status === 'IN_TRADE' && currentPrice !== undefined && (
+          <div className="mb-3 px-3 py-2 bg-slate-50 border border-slate-100 rounded-xl">
+            <div className="flex items-center justify-between text-[10px] font-semibold text-slate-600 mb-1">
+              <span className="flex items-center gap-1">
+                <span className={`w-1.5 h-1.5 rounded-full ${inProfit ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+                <span>1:3 Target Progress: <strong className="font-mono text-slate-900">{progressPercent}%</strong></span>
+              </span>
+              <span className="font-mono text-slate-500">
+                {remainingPipsToTarget > 0 ? `${remainingPipsToTarget} pips to TP1` : 'Target Level Reached'}
+              </span>
+            </div>
+            <div className="w-full bg-slate-200/80 rounded-full h-1.5 overflow-hidden">
+              <div 
+                className={`h-full transition-all duration-500 rounded-full ${
+                  progressPercent >= 80 
+                    ? 'bg-emerald-500 shadow-sm' 
+                    : progressPercent >= 40 
+                      ? 'bg-emerald-400' 
+                      : 'bg-blue-500'
+                }`}
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
+          </div>
+        )}
 
         {/* Lot Sizing Pill */}
         <div className="py-2 px-3 rounded-xl bg-slate-50/80 border border-slate-100 flex items-center justify-between text-xs">

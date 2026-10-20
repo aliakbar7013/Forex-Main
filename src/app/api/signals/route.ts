@@ -18,14 +18,17 @@ export async function GET(req: NextRequest) {
     const status = searchParams.get('status');
     const refresh = searchParams.get('refresh') === 'true';
 
+    let quotes = undefined;
     if (refresh) {
-      await syncLiveMarketSignals();
+      const syncResult = await syncLiveMarketSignals();
+      quotes = syncResult.quotes;
     }
 
     let signals = getAllSignals(limit);
 
     if (signals.length === 0) {
-      await syncLiveMarketSignals();
+      const syncResult = await syncLiveMarketSignals();
+      quotes = syncResult.quotes;
       signals = getAllSignals(limit);
     }
 
@@ -37,7 +40,7 @@ export async function GET(req: NextRequest) {
       signals = signals.filter(s => s.status.toUpperCase() === status.toUpperCase());
     }
 
-    return NextResponse.json({ signals });
+    return NextResponse.json({ signals, quotes });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }

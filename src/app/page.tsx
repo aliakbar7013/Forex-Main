@@ -238,6 +238,7 @@ export default function TradingDashboard() {
   const [autoSync5s, setAutoSync5s] = useState<boolean>(true);
   const [countdown, setCountdown] = useState<number>(5);
   const [tradeToast, setTradeToast] = useState<{ id: string; symbol: string; outcome: 'WIN' | 'LOSS'; message: string; pnl: number } | null>(null);
+  const [liveQuotes, setLiveQuotes] = useState<Record<string, { price: number; bid?: number; ask?: number; change?: number; changePercent?: number }>>({});
 
   // Active Main View Tab
   const [activeTab, setActiveTab] = useState<'signals' | 'strategy' | 'chart' | 'backtest' | 'matrix'>('signals');
@@ -454,6 +455,35 @@ export default function TradingDashboard() {
         }
       });
 
+      eventSource.addEventListener('LIVE_PRICE_TICK', (e) => {
+        try {
+          const parsed = JSON.parse(e.data);
+          if (parsed.data?.quotes || parsed.quotes) {
+            const incomingQuotes = parsed.data?.quotes || parsed.quotes;
+            setLiveQuotes(prev => ({ ...prev, ...incomingQuotes }));
+            setSignals(prevSignals => prevSignals.map(sig => {
+              const quote = incomingQuotes[sig.symbol];
+              if (!quote || typeof quote.price !== 'number') return sig;
+              const sym = sig.symbol.toUpperCase().replace(/[^A-Z0-9]/g, '');
+              const pipFactor = sym.includes('XAU') ? 0.1 : (sym.includes('JPY') ? 0.01 : 0.0001);
+              const isBuy = sig.action === 'BUY';
+              const pips = isBuy ? (quote.price - sig.entry) / pipFactor : (sig.entry - quote.price) / pipFactor;
+              return {
+                ...sig,
+                raw_payload: {
+                  ...(sig.raw_payload || {}),
+                  currentPrice: quote.price,
+                  floatingPips: Math.round(pips * 10) / 10,
+                  lastTickAt: new Date().toISOString()
+                }
+              };
+            }));
+          }
+        } catch (err) {
+          console.error('Error handling LIVE_PRICE_TICK SSE event', err);
+        }
+      });
+
       eventSource.onerror = () => {
         setIsConnected(false);
         eventSource?.close();
@@ -481,11 +511,14 @@ export default function TradingDashboard() {
           if (!isBusy) {
             isBusy = true;
             setIsBackgroundSyncing(true);
-            fetch('/api/signals?limit=50')
+            fetch('/api/signals?refresh=true&limit=50')
               .then(res => res.json())
               .then(data => {
                 if (data.signals) {
                   setSignals(prevSignals => mergeSignalsSmoothly(prevSignals, data.signals));
+                }
+                if (data.quotes) {
+                  setLiveQuotes(prev => ({ ...prev, ...data.quotes }));
                 }
               })
               .catch(() => {
@@ -1113,6 +1146,7 @@ export default function TradingDashboard() {
                 <SignalCard
                   key={signal.id}
                   signal={signal}
+                  liveQuote={liveQuotes[signal.symbol]}
                   onUpdateStatus={handleUpdateSignalStatus}
                   onDeleteSignal={handleDeleteSignal}
                   onViewPayload={handleViewPayload}
