@@ -325,6 +325,34 @@ export interface TelegramTestResponse {
   details?: any;
 }
 
+export type UserDurationType = '7_DAYS' | '30_DAYS' | '6_MONTHS' | '1_YEAR' | 'LIFETIME';
+
+export interface AppUser {
+  id: string;
+  email: string;
+  name: string;
+  role: 'ADMIN' | 'USER';
+  strategy_access: string[]; // e.g. ['ALL'] or ['CBDR', 'STOP_HUNT']
+  duration_type: UserDurationType;
+  expires_at: string | null;
+  is_active: number;
+  created_at: string;
+  last_login_at?: string | null;
+}
+
+export interface AuthSession {
+  authenticated: boolean;
+  userId?: string;
+  email?: string;
+  name?: string;
+  role?: 'ADMIN' | 'USER';
+  strategy_access?: string[];
+  expires_at?: string | null;
+  duration_type?: UserDurationType | string;
+  pin?: string;
+  label?: string;
+}
+
 export interface AuthPin {
   pin: string;
   role: 'ADMIN' | 'USER';
@@ -332,13 +360,6 @@ export interface AuthPin {
   is_active: number;
   created_at: string;
   last_used_at?: string;
-}
-
-export interface AuthSession {
-  authenticated: boolean;
-  pin?: string;
-  role?: 'ADMIN' | 'USER';
-  label?: string;
 }
 
 

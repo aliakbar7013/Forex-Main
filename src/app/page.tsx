@@ -29,8 +29,8 @@ import { PayloadViewerModal } from '@/components/modals/PayloadViewerModal';
 import { CreateSignalModal } from '@/components/modals/CreateSignalModal';
 import { CbdrStrategyRulesModal } from '@/components/modals/CbdrStrategyRulesModal';
 import { TelegramSettingsModal } from '@/components/modals/TelegramSettingsModal';
-import { PinLoginScreen } from '@/components/auth/PinLoginScreen';
-import { PinManagerModal } from '@/components/modals/PinManagerModal';
+import { EmailLoginScreen } from '@/components/auth/EmailLoginScreen';
+import { UserManagerModal } from '@/components/modals/UserManagerModal';
 import { BacktestStudio } from '@/components/dashboard/BacktestStudio';
 import { TradingViewRealtimeChart } from '@/components/dashboard/TradingViewRealtimeChart';
 import { StrategyStudio } from '@/components/dashboard/StrategyStudio';
@@ -88,10 +88,10 @@ function mergeSignalsSmoothly(prevSignals: Signal[], nextSignals: Signal[]): Sig
 }
 
 export default function TradingDashboard() {
-  // PIN Authentication & Session State
+  // Authentication & Session State
   const [authSession, setAuthSession] = useState<AuthSession>({ authenticated: false });
   const [isAuthLoading, setIsAuthLoading] = useState(true);
-  const [isPinManagerOpen, setIsPinManagerOpen] = useState(false);
+  const [isUserManagerOpen, setIsUserManagerOpen] = useState(false);
 
   // Version Selector State (v1 = original minimal release, v2 = new active workspace)
   const [currentVersion, setCurrentVersion] = useState<'v1' | 'v2'>('v1');
@@ -123,66 +123,48 @@ export default function TradingDashboard() {
     let isMounted = true;
     const verifySession = async () => {
       try {
-        const storedPin = typeof window !== 'undefined' ? localStorage.getItem('auth_pin_code') : null;
-        if (!storedPin) {
-          if (isMounted) {
-            setAuthSession({ authenticated: false });
+        const storedUserId = typeof window !== 'undefined' ? localStorage.getItem('auth_user_id') : null;
+        const storedEmail = typeof window !== 'undefined' ? localStorage.getItem('auth_user_email') : null;
+
+        const headers: Record<string, string> = {};
+        if (storedUserId) headers['x-user-id'] = storedUserId;
+        if (storedEmail) headers['x-user-email'] = storedEmail;
+
+        const res = await fetch('/api/auth/me', { headers });
+        if (res.ok) {
+          const data = await res.json();
+          if (isMounted && data.authenticated && data.user) {
+            setAuthSession({
+              authenticated: true,
+              userId: data.user.id,
+              email: data.user.email,
+              name: data.user.name,
+              role: data.user.role,
+              strategy_access: data.user.strategy_access,
+              expires_at: data.user.expires_at,
+              duration_type: data.user.duration_type
+            });
             setIsAuthLoading(false);
+            return;
           }
-          return;
         }
 
-        const headers: Record<string, string> = { 'x-auth-pin': storedPin };
-        try {
-          const res = await fetch('/api/auth/me', { headers });
-          if (res.ok) {
-            const data = await res.json();
-            if (isMounted && data.authenticated) {
-              setAuthSession({
-                authenticated: true,
-                role: data.role,
-                label: data.label,
-                pin: data.pin || storedPin
-              });
-              setIsAuthLoading(false);
-              return;
-            }
-          }
-        } catch {
-          // API not available, proceed to client validation
-        }
-
-        // Static host fallback
-        if (storedPin === '9398') {
+        // LocalStorage fallback for static host / offline
+        if (storedEmail === 'admin@forex.com') {
           if (isMounted) {
             setAuthSession({
               authenticated: true,
+              userId: 'usr_admin_master',
+              email: 'admin@forex.com',
+              name: 'Master Admin (Owner)',
               role: 'ADMIN',
-              label: 'Master Admin (Owner)',
-              pin: '9398'
+              strategy_access: ['ALL'],
+              duration_type: 'LIFETIME'
             });
             setIsAuthLoading(false);
+            return;
           }
-          return;
         }
-
-        try {
-          const storedCustomPins = localStorage.getItem('auth_custom_pins');
-          if (storedCustomPins) {
-            const list = JSON.parse(storedCustomPins);
-            const found = list.find((p: any) => p.pin === storedPin && p.is_active);
-            if (found && isMounted) {
-              setAuthSession({
-                authenticated: true,
-                role: found.role || 'USER',
-                label: found.label || 'Authorized Trader',
-                pin: storedPin
-              });
-              setIsAuthLoading(false);
-              return;
-            }
-          }
-        } catch {}
 
         if (isMounted) {
           setAuthSession({ authenticated: false });
@@ -204,13 +186,9 @@ export default function TradingDashboard() {
     };
   }, []);
 
-  const handleLoginSuccess = useCallback((session: { role: 'ADMIN' | 'USER'; label: string; pin: string }) => {
-    setAuthSession({
-      authenticated: true,
-      role: session.role,
-      label: session.label,
-      pin: session.pin
-    });
+  const handleLoginSuccess = useCallback((session: AuthSession) => {
+    setAuthSession(session);
+    soundEngine.playBuySignalChime();
   }, []);
 
   const handleLogout = useCallback(async () => {
@@ -218,6 +196,12 @@ export default function TradingDashboard() {
       await fetch('/api/auth/logout', { method: 'POST' });
     } catch {}
     try {
+      localStorage.removeItem('auth_user_id');
+      localStorage.removeItem('auth_user_email');
+      localStorage.removeItem('auth_user_name');
+      localStorage.removeItem('auth_user_role');
+      localStorage.removeItem('auth_user_strategies');
+      localStorage.removeItem('auth_user_expires_at');
       localStorage.removeItem('auth_pin_code');
       localStorage.removeItem('auth_pin_role');
       localStorage.removeItem('auth_pin_label');
@@ -745,7 +729,18 @@ export default function TradingDashboard() {
       if (selectedDirection !== 'ALL' && s.action.toUpperCase() !== selectedDirection.toUpperCase()) {
         return false;
       }
-      // 3. Strict Favorites Only Filter:
+      // 3. User Strategy Access Permissions Check (for subscribed traders)
+      if (authSession.role !== 'ADMIN') {
+        const allowed = authSession.strategy_access || ['ALL'];
+        if (!allowed.includes('ALL')) {
+          const sStrat = s.strategy.toUpperCase();
+          if (!allowed.some(a => a.toUpperCase() === sStrat)) {
+            return false;
+          }
+        }
+      }
+
+      // 4. Strict Favorites Only Filter:
       if (favoritesOnly && !isFavorite(s.symbol)) {
         return false;
       }
@@ -830,14 +825,14 @@ export default function TradingDashboard() {
       <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-white p-4">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-          <span className="font-mono text-xs tracking-widest text-slate-400">VERIFYING PIN AUTHORIZATION...</span>
+          <span className="font-mono text-xs tracking-widest text-slate-400">VERIFYING TERMINAL AUTHENTICATION...</span>
         </div>
       </div>
     );
   }
 
   if (!authSession.authenticated) {
-    return <PinLoginScreen onLoginSuccess={handleLoginSuccess} />;
+    return <EmailLoginScreen onLoginSuccess={handleLoginSuccess} />;
   }
 
   return (
@@ -854,7 +849,7 @@ export default function TradingDashboard() {
         onOpenLogs={() => setIsLogsOpen(true)}
         onResetSeedData={handleResetSeedData}
         onOpenTelegram={() => setIsTelegramOpen(true)}
-        onOpenPinManager={() => setIsPinManagerOpen(true)}
+        onOpenUserManager={() => setIsUserManagerOpen(true)}
         onLogout={handleLogout}
       />
 
@@ -1389,10 +1384,11 @@ export default function TradingDashboard() {
         onClose={() => setIsTelegramOpen(false)}
       />
 
-      <PinManagerModal
-        isOpen={isPinManagerOpen}
-        onClose={() => setIsPinManagerOpen(false)}
-        currentPin={authSession.pin || '9398'}
+      <UserManagerModal
+        isOpen={isUserManagerOpen}
+        onClose={() => setIsUserManagerOpen(false)}
+        currentUserRole={authSession.role}
+        currentUserId={authSession.userId}
       />
 
     </div>

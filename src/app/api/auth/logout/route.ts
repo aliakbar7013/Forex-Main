@@ -8,6 +8,7 @@ export async function POST() {
     message: 'Logged out successfully.'
   });
 
+  response.cookies.delete('auth_session_id');
   response.cookies.delete('auth_pin_session');
   return response;
 }

@@ -1,36 +1,58 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { validatePin } from '@/lib/db';
+import { authenticateUser } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
-    const pin = (body.pin || '').toString().trim();
+    const email = (body.email || '').toString().trim();
+    const password = (body.password || '').toString();
 
-    if (!pin) {
-      return NextResponse.json({ success: false, error: 'Please enter a PIN.' }, { status: 400 });
+    // Fallback: if user sent pin for backward compatibility, handle master admin 9398
+    if (body.pin && !email && !password) {
+      if (body.pin.toString().trim() === '9398') {
+        const authRes = authenticateUser('admin@forex.com', 'AdminPassword123!');
+        if (authRes.success && authRes.user) {
+          const response = NextResponse.json({
+            success: true,
+            message: 'Authentication successful.',
+            user: authRes.user
+          });
+          response.cookies.set('auth_session_id', authRes.user.id, {
+            path: '/',
+            maxAge: 60 * 60 * 24 * 30,
+            sameSite: 'lax'
+          });
+          return response;
+        }
+      }
     }
 
-    const result = validatePin(pin);
-    if (!result.valid) {
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Invalid PIN. Access denied.' 
-      }, { status: 401 });
+    if (!email || !password) {
+      return NextResponse.json(
+        { success: false, error: 'Please enter both your email address and password.' },
+        { status: 400 }
+      );
     }
 
+    const result = authenticateUser(email, password);
+    if (!result.success || !result.user) {
+      return NextResponse.json(
+        { success: false, error: result.error || 'Invalid email or password.' },
+        { status: 401 }
+      );
+    }
+
+    const user = result.user;
     const response = NextResponse.json({
       success: true,
-      message: 'Authentication successful.',
-      role: result.role,
-      label: result.label,
-      pin
+      message: 'Login successful.',
+      user
     });
 
-    // Set secure cookie for 30 days
-    response.cookies.set('auth_pin_session', pin, {
-      httpOnly: false, // Accessible to client for instant resume
+    // Set secure session cookie
+    response.cookies.set('auth_session_id', user.id, {
       path: '/',
       maxAge: 60 * 60 * 24 * 30, // 30 days
       sameSite: 'lax'

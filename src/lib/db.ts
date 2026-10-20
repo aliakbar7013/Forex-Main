@@ -1,6 +1,7 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
+import crypto from 'crypto';
 import { 
   Signal, 
   RiskSettings, 
@@ -20,7 +21,9 @@ import {
   DayPerformanceMetrics,
   StrategyPerformanceMetrics,
   TelegramSettings,
-  AuthPin
+  AuthPin,
+  AppUser,
+  UserDurationType
 } from '@/types';
 import { DEFAULT_CENTRAL_BANK_RATES } from './ipdaEngine';
 
@@ -263,6 +266,35 @@ function initDatabase(db: Database.Database) {
       INSERT INTO telegram_settings (id, bot_token, chat_id, enabled, notify_new_signals, notify_trade_resolutions, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?)
     `).run('default', '', '', 0, 1, 1, new Date().toISOString());
+  }
+
+  // 12. Users Table for Email & Password Auth and Strategy Access Management
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      email TEXT UNIQUE NOT NULL,
+      password_hash TEXT NOT NULL,
+      name TEXT NOT NULL,
+      role TEXT NOT NULL DEFAULT 'USER',
+      strategy_access TEXT NOT NULL DEFAULT '["ALL"]',
+      duration_type TEXT NOT NULL DEFAULT '30_DAYS',
+      expires_at TEXT,
+      is_active INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL,
+      last_login_at TEXT
+    );
+  `);
+
+  // Seed default Master Admin User (admin@forex.com)
+  const masterUser = db.prepare('SELECT id FROM users WHERE email = ?').get('admin@forex.com') as { id: string } | undefined;
+  if (!masterUser) {
+    const salt = 'master_admin_apex_salt';
+    const hash = crypto.pbkdf2Sync('AdminPassword123!', salt, 1000, 64, 'sha512').toString('hex');
+    const combinedHash = `${salt}:${hash}`;
+    db.prepare(`
+      INSERT OR REPLACE INTO users (id, email, password_hash, name, role, strategy_access, duration_type, expires_at, is_active, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, NULL, 1, ?)
+    `).run('usr_admin_master', 'admin@forex.com', combinedHash, 'Master Admin (Owner)', 'ADMIN', '["ALL"]', 'LIFETIME', new Date().toISOString());
   }
 
   // Seed default data if empty
@@ -1950,6 +1982,332 @@ export function deleteAuthPin(pin: string): { success: boolean; message: string 
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     return { success: false, message: `Failed to delete PIN: ${msg}` };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Email & Password Authentication + Strategy Access Management
+// ---------------------------------------------------------------------------
+
+export function hashPassword(password: string): string {
+  const salt = crypto.randomBytes(16).toString('hex');
+  const hash = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
+  return `${salt}:${hash}`;
+}
+
+export function verifyPassword(password: string, combinedHash: string): boolean {
+  if (!combinedHash) return false;
+  if (!combinedHash.includes(':')) {
+    return password === combinedHash;
+  }
+  const [salt, originalHash] = combinedHash.split(':');
+  const hash = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
+  return hash === originalHash;
+}
+
+export function calculateExpirationDate(durationType: UserDurationType, fromDate?: Date): string | null {
+  const base = fromDate ? new Date(fromDate) : new Date();
+  switch (durationType) {
+    case '7_DAYS': {
+      const d = new Date(base);
+      d.setDate(d.getDate() + 7);
+      return d.toISOString();
+    }
+    case '30_DAYS': {
+      const d = new Date(base);
+      d.setDate(d.getDate() + 30);
+      return d.toISOString();
+    }
+    case '6_MONTHS': {
+      const d = new Date(base);
+      d.setMonth(d.getMonth() + 6);
+      return d.toISOString();
+    }
+    case '1_YEAR': {
+      const d = new Date(base);
+      d.setFullYear(d.getFullYear() + 1);
+      return d.toISOString();
+    }
+    case 'LIFETIME':
+    default:
+      return null;
+  }
+}
+
+interface RawUserRow {
+  id: string;
+  email: string;
+  password_hash: string;
+  name: string;
+  role: string;
+  strategy_access: string;
+  duration_type: string;
+  expires_at: string | null;
+  is_active: number;
+  created_at: string;
+  last_login_at: string | null;
+}
+
+function mapUserRow(row: RawUserRow): AppUser {
+  let strategies: string[] = ['ALL'];
+  try {
+    const parsed = JSON.parse(row.strategy_access);
+    if (Array.isArray(parsed)) strategies = parsed;
+  } catch {
+    strategies = ['ALL'];
+  }
+
+  return {
+    id: row.id,
+    email: row.email,
+    name: row.name,
+    role: (row.role as 'ADMIN' | 'USER') || 'USER',
+    strategy_access: strategies,
+    duration_type: (row.duration_type as UserDurationType) || '30_DAYS',
+    expires_at: row.expires_at,
+    is_active: row.is_active,
+    created_at: row.created_at,
+    last_login_at: row.last_login_at
+  };
+}
+
+export function authenticateUser(email: string, password: string): { success: boolean; user?: AppUser; error?: string } {
+  const db = getDb();
+  const cleanEmail = (email || '').trim().toLowerCase();
+  const cleanPass = (password || '').trim();
+
+  if (!cleanEmail || !cleanPass) {
+    return { success: false, error: 'Please enter both email and password.' };
+  }
+
+  const row = db.prepare('SELECT * FROM users WHERE LOWER(email) = ?').get(cleanEmail) as RawUserRow | undefined;
+  if (!row) {
+    return { success: false, error: 'Invalid email or password. Please try again.' };
+  }
+
+  if (row.is_active !== 1) {
+    return { success: false, error: 'Your account has been deactivated. Please contact administrator.' };
+  }
+
+  // Check expiration if set
+  if (row.expires_at) {
+    const expiryTime = new Date(row.expires_at).getTime();
+    if (Date.now() > expiryTime) {
+      const expDate = new Date(row.expires_at).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      });
+      return { 
+        success: false, 
+        error: `Your subscription access expired on ${expDate}. Please contact administrator to renew your strategy access.` 
+      };
+    }
+  }
+
+  const isMatch = verifyPassword(cleanPass, row.password_hash);
+  if (!isMatch) {
+    return { success: false, error: 'Invalid email or password. Please try again.' };
+  }
+
+  // Update last login timestamp
+  const now = new Date().toISOString();
+  try {
+    db.prepare('UPDATE users SET last_login_at = ? WHERE id = ?').run(now, row.id);
+  } catch {}
+
+  const mappedUser = mapUserRow({ ...row, last_login_at: now });
+  return { success: true, user: mappedUser };
+}
+
+export function getAllUsers(): AppUser[] {
+  const db = getDb();
+  const rows = db.prepare('SELECT * FROM users ORDER BY role DESC, created_at DESC').all() as RawUserRow[];
+  return rows.map(mapUserRow);
+}
+
+export function getUserById(id: string): AppUser | null {
+  const db = getDb();
+  const row = db.prepare('SELECT * FROM users WHERE id = ?').get(id) as RawUserRow | undefined;
+  return row ? mapUserRow(row) : null;
+}
+
+export function getUserByEmail(email: string): AppUser | null {
+  const db = getDb();
+  const cleanEmail = (email || '').trim().toLowerCase();
+  const row = db.prepare('SELECT * FROM users WHERE LOWER(email) = ?').get(cleanEmail) as RawUserRow | undefined;
+  return row ? mapUserRow(row) : null;
+}
+
+export function createUser(params: {
+  email: string;
+  password: string;
+  name?: string;
+  role?: 'ADMIN' | 'USER';
+  strategy_access?: string[];
+  duration_type?: UserDurationType;
+}): { success: boolean; user?: AppUser; error?: string } {
+  const db = getDb();
+  const cleanEmail = (params.email || '').trim().toLowerCase();
+  const cleanPass = (params.password || '').trim();
+  const name = (params.name || '').trim() || cleanEmail.split('@')[0];
+  const role = params.role || 'USER';
+  const durationType = params.duration_type || '30_DAYS';
+  const strategies = params.strategy_access && params.strategy_access.length > 0 
+    ? params.strategy_access 
+    : ['ALL'];
+
+  if (!cleanEmail || !cleanEmail.includes('@')) {
+    return { success: false, error: 'Valid email address is required.' };
+  }
+
+  if (!cleanPass || cleanPass.length < 6) {
+    return { success: false, error: 'Password must be at least 6 characters.' };
+  }
+
+  const existing = db.prepare('SELECT id FROM users WHERE LOWER(email) = ?').get(cleanEmail);
+  if (existing) {
+    return { success: false, error: 'A user with this email address already exists.' };
+  }
+
+  const id = `usr_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+  const passwordHash = hashPassword(cleanPass);
+  const expiresAt = role === 'ADMIN' ? null : calculateExpirationDate(durationType);
+  const now = new Date().toISOString();
+
+  try {
+    db.prepare(`
+      INSERT INTO users (id, email, password_hash, name, role, strategy_access, duration_type, expires_at, is_active, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
+    `).run(
+      id,
+      cleanEmail,
+      passwordHash,
+      name,
+      role,
+      JSON.stringify(strategies),
+      durationType,
+      expiresAt,
+      now
+    );
+
+    const created = getUserById(id);
+    return { success: true, user: created || undefined };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { success: false, error: `Failed to create user: ${msg}` };
+  }
+}
+
+export function updateUser(
+  id: string,
+  updates: {
+    name?: string;
+    password?: string;
+    role?: 'ADMIN' | 'USER';
+    strategy_access?: string[];
+    duration_type?: UserDurationType;
+    expires_at?: string | null;
+    is_active?: number;
+  }
+): { success: boolean; user?: AppUser; error?: string } {
+  const db = getDb();
+  const user = getUserById(id);
+  if (!user) {
+    return { success: false, error: 'User not found.' };
+  }
+
+  // Prevent disabling or stripping master admin
+  if (user.email === 'admin@forex.com') {
+    if (updates.is_active === 0) {
+      return { success: false, error: 'Master Admin account cannot be deactivated.' };
+    }
+    if (updates.role === 'USER') {
+      return { success: false, error: 'Master Admin account role cannot be downgraded.' };
+    }
+  }
+
+  const fields: string[] = [];
+  const values: any[] = [];
+
+  if (updates.name !== undefined) {
+    fields.push('name = ?');
+    values.push(updates.name.trim());
+  }
+
+  if (updates.password && updates.password.trim()) {
+    if (updates.password.trim().length < 6) {
+      return { success: false, error: 'Password must be at least 6 characters.' };
+    }
+    fields.push('password_hash = ?');
+    values.push(hashPassword(updates.password.trim()));
+  }
+
+  if (updates.role !== undefined) {
+    fields.push('role = ?');
+    values.push(updates.role);
+  }
+
+  if (updates.strategy_access !== undefined) {
+    fields.push('strategy_access = ?');
+    values.push(JSON.stringify(updates.strategy_access));
+  }
+
+  if (updates.duration_type !== undefined) {
+    fields.push('duration_type = ?');
+    values.push(updates.duration_type);
+    
+    // Auto re-calculate expiration date based on new duration from now
+    if (updates.expires_at === undefined) {
+      const newExpiry = updates.role === 'ADMIN' ? null : calculateExpirationDate(updates.duration_type);
+      fields.push('expires_at = ?');
+      values.push(newExpiry);
+    }
+  }
+
+  if (updates.expires_at !== undefined) {
+    fields.push('expires_at = ?');
+    values.push(updates.expires_at);
+  }
+
+  if (updates.is_active !== undefined) {
+    fields.push('is_active = ?');
+    values.push(updates.is_active ? 1 : 0);
+  }
+
+  if (fields.length === 0) {
+    return { success: true, user };
+  }
+
+  values.push(id);
+
+  try {
+    db.prepare(`UPDATE users SET ${fields.join(', ')} WHERE id = ?`).run(...values);
+    const updated = getUserById(id);
+    return { success: true, user: updated || undefined };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { success: false, error: `Failed to update user: ${msg}` };
+  }
+}
+
+export function deleteUser(id: string): { success: boolean; message: string } {
+  const db = getDb();
+  const user = getUserById(id);
+  if (!user) {
+    return { success: false, message: 'User not found.' };
+  }
+
+  if (user.email === 'admin@forex.com') {
+    return { success: false, message: 'Master Admin account cannot be deleted.' };
+  }
+
+  try {
+    db.prepare('DELETE FROM users WHERE id = ?').run(id);
+    return { success: true, message: `User ${user.email} has been deleted.` };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { success: false, message: `Failed to delete user: ${msg}` };
   }
 }
 
