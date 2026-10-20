@@ -196,42 +196,42 @@ export function SignalCardComponent({
     switch (signal.status) {
       case 'PENDING':
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-600 border border-slate-200 whitespace-nowrap">
             <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
             Pending
           </span>
         );
       case 'IN_TRADE':
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 whitespace-nowrap">
             <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse" />
             In Trade
           </span>
         );
       case 'TP1_HIT':
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
             TP1 (BE Active)
           </span>
         );
       case 'CLOSED_PROFIT':
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap">
             <Trophy className="w-3 h-3 text-emerald-600" />
             Target Hit (+3R)
           </span>
         );
       case 'SL_HIT':
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200 whitespace-nowrap">
             <Skull className="w-3 h-3 text-rose-600" />
             SL Hit (-1R)
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 text-slate-600">
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 text-slate-600 whitespace-nowrap">
             {signal.status}
           </span>
         );
@@ -244,87 +244,34 @@ export function SignalCardComponent({
       {/* Top Card Body */}
       <div className="p-4 sm:p-5">
         
-        {/* Row 1: Symbol, Direction Pill & Status */}
-        <div className="flex items-start justify-between gap-3 mb-3">
-          
-          <div className="flex items-center gap-2.5">
-            <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 border ${
+        {/* Row 1: Symbol & Direction (Left) + Status & Floating Pips (Right) */}
+        <div className="flex items-center justify-between gap-3 mb-2.5">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm shrink-0 border ${
               isBuy 
                 ? 'bg-emerald-50 text-emerald-700 border-emerald-200/80' 
                 : 'bg-rose-50 text-rose-700 border-rose-200/80'
             }`}>
-              {isBuy ? <ArrowUpRight className="w-5 h-5" /> : <ArrowDownRight className="w-5 h-5" />}
+              {isBuy ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
             </div>
 
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-lg font-bold text-slate-900 font-mono tracking-tight">
-                  {signal.symbol.replace(/([A-Z]{3})([A-Z]{3})/, '$1 / $2')}
-                </span>
-                <span className={`px-2 py-0.5 rounded-md text-[11px] font-bold tracking-wide uppercase border ${
-                  isBuy 
-                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
-                    : 'bg-rose-50 text-rose-700 border-rose-200'
-                }`}>
-                  {signal.action} {isBuy ? '▲' : '▼'}
-                </span>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
-                <span className="text-[10px] font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
-                  {isCBDR ? 'CBDR 15m' : isStopHunt ? 'Stop Hunt 5m' : signal.strategy}
-                </span>
-
-                {isCBDR && (
-                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md border ${
-                    isMajorPair(signal.symbol)
-                      ? 'bg-blue-50 text-blue-700 border-blue-200'
-                      : 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                  }`}>
-                    {isMajorPair(signal.symbol) ? 'Major • PDH/PDL Sweep' : '🎯 Minor • 1st London Imbalance/FVG'}
-                  </span>
-                )}
-
-                {/* Prominent Date of Entry Pill */}
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-50 text-blue-900 border border-blue-200/80 font-mono">
-                  <Calendar className="w-3 h-3 text-blue-600 shrink-0" />
-                  <span>Entry: {entryIsoDate}</span>
-                </span>
-
-                <span className="text-slate-300">•</span>
-                <span className="text-[11px] text-slate-500 font-medium">
-                  {dayName}
-                </span>
-              </div>
+            <div className="flex items-center gap-2">
+              <span className="text-lg font-black text-slate-900 font-mono tracking-tight whitespace-nowrap">
+                {signal.symbol.replace(/([A-Z]{3})([A-Z]{3})/, '$1 / $2')}
+              </span>
+              <span className={`px-2 py-0.5 rounded-md text-[11px] font-bold tracking-wide uppercase border whitespace-nowrap ${
+                isBuy 
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                  : 'bg-rose-50 text-rose-700 border-rose-200'
+              }`}>
+                {signal.action} {isBuy ? '▲' : '▼'}
+              </span>
             </div>
           </div>
 
-          <div className="flex flex-col items-end gap-1.5 shrink-0">
-            <div className="flex items-center gap-1.5">
-              {currentPrice !== undefined && (
-                <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md font-mono text-[11px] font-bold border transition-all ${
-                  inProfit
-                    ? 'bg-emerald-50 text-emerald-700 border-emerald-300 shadow-xs'
-                    : 'bg-rose-50 text-rose-700 border-rose-300 shadow-xs'
-                }`}>
-                  <span className="relative flex h-1.5 w-1.5">
-                    <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
-                      inProfit ? 'bg-emerald-400' : 'bg-rose-400'
-                    }`} />
-                    <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${
-                      inProfit ? 'bg-emerald-600' : 'bg-rose-600'
-                    }`} />
-                  </span>
-                  <span className="text-[9px] uppercase font-sans text-slate-400 font-semibold">Live</span>
-                  <span>{formatLivePrice(currentPrice)}</span>
-                </span>
-              )}
-              {getStatusBadge()}
-            </div>
-            
-            {/* Live Floating Pips Pill */}
-            {floatingPips !== undefined && (
-              <span className={`px-2 py-0.5 rounded-full font-mono text-[11px] font-semibold border ${
+          <div className="flex items-center gap-1.5 shrink-0">
+            {floatingPips !== undefined && signal.status === 'IN_TRADE' && (
+              <span className={`px-2 py-0.5 rounded-full font-mono text-[11px] font-bold border whitespace-nowrap ${
                 inProfit
                   ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                   : 'bg-rose-50 text-rose-700 border-rose-200'
@@ -332,19 +279,47 @@ export function SignalCardComponent({
                 {inProfit ? '+' : ''}{floatingPips} pips
               </span>
             )}
+            {getStatusBadge()}
           </div>
-
         </div>
 
-        {/* Execution Time & Date Ribbon */}
-        <div className="flex items-center justify-between text-xs py-2 px-3 bg-slate-50 border border-slate-100 rounded-xl mb-4">
+        {/* Row 2: Strategy, Setup & Entry Date Ribbon */}
+        <div className="flex flex-wrap items-center gap-1.5 pb-2.5 border-b border-slate-100 mb-3">
+          <span className="text-[10px] font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200 whitespace-nowrap">
+            {isCBDR ? 'CBDR 15m' : isStopHunt ? 'Stop Hunt 5m' : signal.strategy}
+          </span>
+
+          {isCBDR && (
+            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md border whitespace-nowrap ${
+              isMajorPair(signal.symbol)
+                ? 'bg-blue-50 text-blue-700 border-blue-200'
+                : 'bg-emerald-50 text-emerald-800 border-emerald-200'
+            }`}>
+              {isMajorPair(signal.symbol) ? 'Major • PDH/PDL Sweep' : '🎯 Minor • 1st London FVG'}
+            </span>
+          )}
+
+          {/* Prominent Date of Entry Pill */}
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-50 text-blue-900 border border-blue-200/80 font-mono whitespace-nowrap">
+            <Calendar className="w-3 h-3 text-blue-600 shrink-0" />
+            <span>Entry: {entryIsoDate}</span>
+          </span>
+
+          <span className="text-slate-300">•</span>
+          <span className="text-[11px] text-slate-500 font-medium whitespace-nowrap">
+            {dayName}
+          </span>
+        </div>
+
+        {/* Row 3: Session Time & Rules Trigger */}
+        <div className="flex items-center justify-between text-xs py-1.5 px-3 bg-slate-50 border border-slate-100 rounded-lg mb-3">
           <div className="flex items-center gap-2 text-slate-500 font-medium flex-wrap">
-            <div className="flex items-center gap-1 text-slate-900 font-bold font-mono text-[11px]">
+            <div className="flex items-center gap-1 text-slate-900 font-bold font-mono text-[11px] whitespace-nowrap">
               <Calendar className="w-3.5 h-3.5 text-blue-600 shrink-0" />
               <span>{entryDateFormatted}</span>
             </div>
             <span className="text-slate-300 hidden sm:inline">•</span>
-            <div className="flex items-center gap-1 text-slate-600 text-[11px]">
+            <div className="flex items-center gap-1 text-slate-600 text-[11px] whitespace-nowrap">
               <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
               <span className="font-mono text-slate-700 font-semibold">{signal.session_name || timeFormatted}</span>
             </div>
@@ -353,12 +328,12 @@ export function SignalCardComponent({
           <button 
             type="button"
             onClick={() => setShowValidationDetails(!showValidationDetails)}
-            className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-slate-700 font-medium shrink-0 ml-1"
+            className="flex items-center gap-1 text-[11px] text-slate-500 hover:text-slate-900 font-semibold shrink-0 ml-1 transition-colors"
             title="View validation criteria"
           >
-            {isValid ? <CheckCircle2 className="w-3 h-3 text-emerald-600" /> : <AlertTriangle className="w-3 h-3 text-amber-500" />}
+            {isValid ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> : <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />}
             <span>Rules</span>
-            {showValidationDetails ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+            {showValidationDetails ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
           </button>
         </div>
 
@@ -405,19 +380,20 @@ export function SignalCardComponent({
           </div>
         )}
 
-        {/* Core 4-Box Price Matrix: Entry | Live Running Price | Stop Loss | Target 1:3 */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+        {/* Core 4-Box Price Matrix (2x2 Grid for optimal readability and spacing) */}
+        <div className="grid grid-cols-2 gap-2.5 mb-3">
           
           {/* Box 1: Limit Entry */}
-          <div className="p-2.5 rounded-xl bg-blue-50/50 border border-blue-100 text-center flex flex-col justify-between">
-            <div>
-              <div className="text-[10px] uppercase font-semibold text-blue-600 tracking-wide mb-1 flex items-center justify-center gap-1">
+          <div className="p-2.5 rounded-xl bg-blue-50/50 border border-blue-100/90 flex flex-col justify-between">
+            <div className="flex items-center justify-between gap-1 mb-1">
+              <span className="text-[10px] uppercase font-bold text-blue-700 tracking-wide flex items-center gap-1">
                 <Calendar className="w-2.5 h-2.5 text-blue-500" />
                 <span>Entry</span>
-              </div>
-              <div className="text-sm font-bold text-slate-900 font-mono">
-                {formatLivePrice(signal.entry)}
-              </div>
+              </span>
+              <span className="text-[9px] text-slate-400 font-mono font-medium">Order</span>
+            </div>
+            <div className="text-base font-bold text-slate-900 font-mono tracking-tight">
+              {formatLivePrice(signal.entry)}
             </div>
             <div className="text-[10px] text-slate-500 font-medium mt-1 truncate">
               {isCBDR && !isMajorPair(signal.symbol) 
@@ -429,17 +405,17 @@ export function SignalCardComponent({
           </div>
 
           {/* Box 2: Live Current Price (Prominently Running) */}
-          <div className={`p-2.5 rounded-xl border text-center transition-all duration-300 flex flex-col justify-between ${
+          <div className={`p-2.5 rounded-xl border transition-all duration-300 flex flex-col justify-between ${
             priceFlash === 'UP'
               ? 'bg-emerald-100/90 border-emerald-400 ring-2 ring-emerald-300 shadow-sm'
               : priceFlash === 'DOWN'
                 ? 'bg-rose-100/90 border-rose-400 ring-2 ring-rose-300 shadow-sm'
                 : inProfit
-                  ? 'bg-emerald-50/90 border-emerald-300'
-                  : 'bg-rose-50/90 border-rose-300'
+                  ? 'bg-emerald-50/90 border-emerald-300 shadow-xs'
+                  : 'bg-rose-50/90 border-rose-300 shadow-xs'
           }`}>
-            <div>
-              <div className="text-[10px] uppercase font-extrabold tracking-wider mb-1 flex items-center justify-center gap-1">
+            <div className="flex items-center justify-between gap-1 mb-1">
+              <span className="text-[10px] uppercase font-extrabold tracking-wider flex items-center gap-1.5">
                 <span className="relative flex h-1.5 w-1.5">
                   <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
                     inProfit ? 'bg-emerald-400' : 'bg-rose-400'
@@ -451,12 +427,15 @@ export function SignalCardComponent({
                 <span className={inProfit ? 'text-emerald-700' : 'text-rose-700'}>
                   Live Price
                 </span>
-              </div>
-              <div className={`text-sm font-black font-mono tracking-tight ${
-                inProfit ? 'text-emerald-800' : 'text-rose-800'
-              }`}>
-                {currentPrice !== undefined ? formatLivePrice(currentPrice) : 'Syncing...'}
-              </div>
+              </span>
+              <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">
+                Tick
+              </span>
+            </div>
+            <div className={`text-base font-black font-mono tracking-tight ${
+              inProfit ? 'text-emerald-800' : 'text-rose-800'
+            }`}>
+              {currentPrice !== undefined ? formatLivePrice(currentPrice) : 'Syncing...'}
             </div>
             <div className={`text-[10px] font-bold font-mono mt-1 ${
               inProfit ? 'text-emerald-600' : 'text-rose-600'
@@ -466,31 +445,33 @@ export function SignalCardComponent({
           </div>
 
           {/* Box 3: Stop Loss */}
-          <div className="p-2.5 rounded-xl bg-rose-50/40 border border-rose-100 text-center flex flex-col justify-between">
-            <div>
-              <div className="text-[10px] uppercase font-semibold text-rose-500 tracking-wide mb-1">
+          <div className="p-2.5 rounded-xl bg-rose-50/40 border border-rose-100/90 flex flex-col justify-between">
+            <div className="flex items-center justify-between gap-1 mb-1">
+              <span className="text-[10px] uppercase font-bold text-rose-600 tracking-wide">
                 Stop Loss
-              </div>
-              <div className="text-sm font-bold text-rose-700 font-mono">
-                {formatLivePrice(signal.sl)}
-              </div>
+              </span>
+              <span className="text-[9px] text-rose-400 font-mono font-medium">1.0R</span>
             </div>
-            <div className="text-[10px] text-rose-600 font-medium mt-1">
+            <div className="text-base font-bold text-rose-700 font-mono tracking-tight">
+              {formatLivePrice(signal.sl)}
+            </div>
+            <div className="text-[10px] text-rose-600 font-semibold font-mono mt-1">
               -{signal.sl_distance_pips_points} pips
             </div>
           </div>
 
           {/* Box 4: Take Profit (1:3 RR) */}
-          <div className="p-2.5 rounded-xl bg-emerald-50/40 border border-emerald-100 text-center flex flex-col justify-between">
-            <div>
-              <div className="text-[10px] uppercase font-semibold text-emerald-600 tracking-wide mb-1">
+          <div className="p-2.5 rounded-xl bg-emerald-50/40 border border-emerald-100/90 flex flex-col justify-between">
+            <div className="flex items-center justify-between gap-1 mb-1">
+              <span className="text-[10px] uppercase font-bold text-emerald-700 tracking-wide">
                 Target (1:3)
-              </div>
-              <div className="text-sm font-bold text-emerald-700 font-mono">
-                {formatLivePrice(signal.tp1)}
-              </div>
+              </span>
+              <span className="text-[9px] text-emerald-500 font-mono font-medium">3.0R</span>
             </div>
-            <div className="text-[10px] text-emerald-600 font-medium mt-1">
+            <div className="text-base font-bold text-emerald-700 font-mono tracking-tight">
+              {formatLivePrice(signal.tp1)}
+            </div>
+            <div className="text-[10px] text-emerald-600 font-semibold font-mono mt-1">
               +{Math.round(signal.sl_distance_pips_points * 3)} pips
             </div>
           </div>
