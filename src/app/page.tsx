@@ -34,6 +34,7 @@ import { PinManagerModal } from '@/components/modals/PinManagerModal';
 import { BacktestStudio } from '@/components/dashboard/BacktestStudio';
 import { TradingViewRealtimeChart } from '@/components/dashboard/TradingViewRealtimeChart';
 import { StrategyStudio } from '@/components/dashboard/StrategyStudio';
+import { useFavoritePairs } from '@/lib/useFavoritePairs';
 import { getSignalTradingDay } from '@/lib/strategyValidator';
 import { Sparkles, BarChart3, Zap, Scale, BarChart2, CheckCircle2, AlertTriangle, X, Radio, BookOpen, Clock, ExternalLink, Loader2 } from 'lucide-react';
 import { 
@@ -248,6 +249,10 @@ export default function TradingDashboard() {
   // Time & Session Clocks State
   const [clocks, setClocks] = useState<SessionClocks>(() => getCurrentMarketClocks());
   const [sessions, setSessions] = useState(() => getTradingSessions());
+
+  // Favorite Pairs System
+  const { favorites, isFavorite, toggleFavorite } = useFavoritePairs();
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
 
   // Filter & View States
   const [selectedStrategy, setSelectedStrategy] = useState<string>('ALL');
@@ -740,6 +745,11 @@ export default function TradingDashboard() {
       if (selectedDirection !== 'ALL' && s.action.toUpperCase() !== selectedDirection.toUpperCase()) {
         return false;
       }
+      // 3. Strict Favorites Only Filter:
+      if (favoritesOnly && !isFavorite(s.symbol)) {
+        return false;
+      }
+
       if (searchQuery.trim()) {
         const q = searchQuery.toUpperCase().trim();
         const matchesSymbol = s.symbol.toUpperCase().includes(q);
@@ -749,24 +759,42 @@ export default function TradingDashboard() {
       }
       return true;
     });
-  }, [signals, selectedStrategy, selectedStatus, selectedDirection, searchQuery]);
+  }, [signals, favoritesOnly, isFavorite, selectedStrategy, selectedStatus, selectedDirection, searchQuery]);
 
-  // Deduplicate by symbol on ALL view so no instrument appears twice ("as i dont need everying double double")
+  // Deduplicate by symbol on ALL view, then PRIORITY SORT favorite pairs to the top!
   const displayedSignals = useMemo(() => {
-    if (selectedStrategy !== 'ALL') {
-      return filteredSignals;
-    }
-    const seen = new Set<string>();
-    const res: Signal[] = [];
-    for (const s of filteredSignals) {
-      const sym = s.symbol.toUpperCase();
-      if (!seen.has(sym)) {
-        seen.add(sym);
-        res.push(s);
+    let list = filteredSignals;
+    if (selectedStrategy === 'ALL') {
+      const seen = new Set<string>();
+      const res: Signal[] = [];
+      for (const s of filteredSignals) {
+        const sym = s.symbol.toUpperCase();
+        if (!seen.has(sym)) {
+          seen.add(sym);
+          res.push(s);
+        }
       }
+      list = res;
     }
-    return res;
-  }, [filteredSignals, selectedStrategy]);
+
+    // Priority Sorting:
+    // 1. Favorite pairs first! (Always elevated in priority)
+    // 2. IN_TRADE status first
+    // 3. Date / Created time descending
+    return [...list].sort((a, b) => {
+      const aFav = isFavorite(a.symbol) ? 1 : 0;
+      const bFav = isFavorite(b.symbol) ? 1 : 0;
+      if (aFav !== bFav) return bFav - aFav; // Favorites elevated to top!
+
+      const statusWeight = (st: string) => st === 'IN_TRADE' ? 2 : st === 'PENDING' ? 1 : 0;
+      const diffStatus = statusWeight(b.status) - statusWeight(a.status);
+      if (diffStatus !== 0) return diffStatus;
+
+      const dateA = new Date(a.date_of_entry || a.created_at).getTime();
+      const dateB = new Date(b.date_of_entry || b.created_at).getTime();
+      return (isNaN(dateB) ? 0 : dateB) - (isNaN(dateA) ? 0 : dateA);
+    });
+  }, [filteredSignals, selectedStrategy, isFavorite]);
 
   const handleOpenChart = useCallback((symbol: string, signal?: Signal) => {
     setSelectedChartSymbol(symbol);
@@ -1097,25 +1125,28 @@ export default function TradingDashboard() {
 
               {/* Minimal Filter and View Controls Bar */}
               <FilterAndControlsBar
-            selectedStrategy={selectedStrategy}
-            onSelectStrategy={setSelectedStrategy}
-            selectedStatus={selectedStatus}
-            onSelectStatus={setSelectedStatus}
-            selectedDirection={selectedDirection}
-            onSelectDirection={setSelectedDirection}
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-            viewMode={viewMode}
-            onViewModeChange={setViewMode}
-            counts={strategyCounts}
-            onOpenCreateSignal={() => setIsCreateOpen(true)}
-            onRefreshLiveSignals={handleRefreshLiveSignals}
-            isRefreshingLive={isRefreshingLive}
-            isBackgroundSyncing={isBackgroundSyncing}
-            autoSync5s={autoSync5s}
-            onToggleAutoSync={() => setAutoSync5s(p => !p)}
-            countdown={countdown}
-          />
+                selectedStrategy={selectedStrategy}
+                onSelectStrategy={setSelectedStrategy}
+                selectedStatus={selectedStatus}
+                onSelectStatus={setSelectedStatus}
+                selectedDirection={selectedDirection}
+                onSelectDirection={setSelectedDirection}
+                searchQuery={searchQuery}
+                onSearchChange={setSearchQuery}
+                viewMode={viewMode}
+                onViewModeChange={setViewMode}
+                counts={strategyCounts}
+                onOpenCreateSignal={() => setIsCreateOpen(true)}
+                onRefreshLiveSignals={handleRefreshLiveSignals}
+                isRefreshingLive={isRefreshingLive}
+                isBackgroundSyncing={isBackgroundSyncing}
+                autoSync5s={autoSync5s}
+                onToggleAutoSync={() => setAutoSync5s(p => !p)}
+                countdown={countdown}
+                favoritesOnly={favoritesOnly}
+                onToggleFavoritesOnly={() => setFavoritesOnly(p => !p)}
+                favoritesCount={favorites.length}
+              />
 
           {/* Real-Time Trade Resolution Alert Toast / Banner (Auto-dismisses in 5s) */}
           {tradeToast && (
@@ -1269,6 +1300,8 @@ export default function TradingDashboard() {
                   onDeleteSignal={handleDeleteSignal}
                   onViewPayload={handleViewPayload}
                   onOpenChart={handleOpenChart}
+                  isFavorite={isFavorite(signal.symbol)}
+                  onToggleFavorite={toggleFavorite}
                 />
               ))}
             </div>
@@ -1279,6 +1312,8 @@ export default function TradingDashboard() {
                 onDeleteSignal={handleDeleteSignal}
                 onViewPayload={handleViewPayload}
                 onOpenChart={handleOpenChart}
+                isFavorite={isFavorite}
+                onToggleFavorite={toggleFavorite}
               />
             )}
             </>

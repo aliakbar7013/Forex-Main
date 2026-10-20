@@ -8,7 +8,8 @@ import {
   Calendar,
   BarChart2,
   Trophy,
-  Skull
+  Skull,
+  Star
 } from 'lucide-react';
 import { Signal, SignalStatus } from '@/types';
 import { getSignalTradingDay, isMajorPair } from '@/lib/strategyValidator';
@@ -19,11 +20,15 @@ interface SignalsTableProps {
   onDeleteSignal?: (id: string) => void;
   onViewPayload?: (signal: Signal) => void;
   onOpenChart?: (symbol: string, signal?: Signal) => void;
+  isFavorite?: (symbol: string) => boolean;
+  onToggleFavorite?: (symbol: string) => void;
 }
 
 export function SignalsTableComponent({
   signals,
-  onOpenChart
+  onOpenChart,
+  isFavorite,
+  onToggleFavorite
 }: SignalsTableProps) {
   const [copiedId, setCopiedId] = React.useState<string | null>(null);
 
@@ -139,6 +144,21 @@ export function SignalsTableComponent({
                   {/* Symbol & Action */}
                   <td className="py-3 px-4 whitespace-nowrap font-sans">
                     <div className="flex items-center gap-1.5 font-bold">
+                      {onToggleFavorite && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onToggleFavorite(s.symbol);
+                          }}
+                          className="p-1 rounded-md hover:bg-slate-100 transition-colors group cursor-pointer"
+                          title={isFavorite?.(s.symbol) ? `Remove ${s.symbol} from favorites` : `Star ${s.symbol} as favorite`}
+                        >
+                          <Star className={`w-3.5 h-3.5 transition-transform group-hover:scale-115 ${
+                            isFavorite?.(s.symbol) ? 'text-amber-500 fill-amber-400' : 'text-slate-300 group-hover:text-amber-500'
+                          }`} />
+                        </button>
+                      )}
                       <span className="text-slate-900 text-sm font-mono">{s.symbol}</span>
                       <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
                         isBuy 
@@ -147,6 +167,11 @@ export function SignalsTableComponent({
                       }`}>
                         {s.action} {isBuy ? '▲' : '▼'}
                       </span>
+                      {isFavorite?.(s.symbol) && (
+                        <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-amber-50 text-amber-800 border border-amber-300">
+                          FAV
+                        </span>
+                      )}
                     </div>
                   </td>
 

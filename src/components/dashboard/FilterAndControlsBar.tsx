@@ -5,7 +5,8 @@ import {
   LayoutGrid, 
   Table as TableIcon, 
   Plus,
-  Search
+  Search,
+  Star
 } from 'lucide-react';
 
 interface FilterAndControlsBarProps {
@@ -32,6 +33,9 @@ interface FilterAndControlsBarProps {
   autoSync5s?: boolean;
   onToggleAutoSync?: () => void;
   countdown?: number;
+  favoritesOnly?: boolean;
+  onToggleFavoritesOnly?: () => void;
+  favoritesCount?: number;
 }
 
 export function FilterAndControlsBarComponent({
@@ -46,7 +50,10 @@ export function FilterAndControlsBarComponent({
   viewMode,
   onViewModeChange,
   counts,
-  onOpenCreateSignal
+  onOpenCreateSignal,
+  favoritesOnly = false,
+  onToggleFavoritesOnly,
+  favoritesCount
 }: FilterAndControlsBarProps) {
   const strategies = [
     { key: 'ALL', label: 'All Signals', count: counts.all },
@@ -57,30 +64,59 @@ export function FilterAndControlsBarComponent({
   return (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white border border-slate-200/80 rounded-2xl p-2.5 sm:p-3 shadow-xs">
       
-      {/* LEFT: Apple-Style Segmented Strategy Filter Bar */}
-      <div className="flex items-center gap-1 bg-slate-100/80 p-1 rounded-xl overflow-x-auto no-scrollbar">
-        {strategies.map(s => {
-          const isSelected = selectedStrategy.toUpperCase() === s.key;
-          return (
-            <button
-              key={s.key}
-              type="button"
-              onClick={() => onSelectStrategy(s.key)}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all shrink-0 ${
-                isSelected
-                  ? 'bg-white text-slate-900 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/40'
-              }`}
-            >
-              <span>{s.label}</span>
-              <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded-md font-bold ${
-                isSelected ? 'bg-slate-100 text-slate-800' : 'bg-slate-200/60 text-slate-600'
+      {/* LEFT: Apple-Style Segmented Strategy Filter Bar + Favorites Toggle */}
+      <div className="flex items-center gap-1.5 flex-wrap">
+        <div className="flex items-center gap-1 bg-slate-100/80 p-1 rounded-xl overflow-x-auto no-scrollbar">
+          {strategies.map(s => {
+            const isSelected = selectedStrategy.toUpperCase() === s.key && !favoritesOnly;
+            return (
+              <button
+                key={s.key}
+                type="button"
+                onClick={() => {
+                  if (favoritesOnly && onToggleFavoritesOnly) onToggleFavoritesOnly();
+                  onSelectStrategy(s.key);
+                }}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all shrink-0 ${
+                  isSelected
+                    ? 'bg-white text-slate-900 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/40'
+                }`}
+              >
+                <span>{s.label}</span>
+                <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded-md font-bold ${
+                  isSelected ? 'bg-slate-100 text-slate-800' : 'bg-slate-200/60 text-slate-600'
+                }`}>
+                  {s.count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Favorites Quick Filter Button */}
+        {onToggleFavoritesOnly && (
+          <button
+            type="button"
+            onClick={onToggleFavoritesOnly}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer border ${
+              favoritesOnly
+                ? 'bg-amber-500 text-white border-amber-600 shadow-xs ring-2 ring-amber-400/30'
+                : 'bg-slate-50 hover:bg-amber-50 text-slate-700 hover:text-amber-800 border-slate-200'
+            }`}
+            title="Filter to only show signals from your favorite pairs"
+          >
+            <Star className={`w-3.5 h-3.5 ${favoritesOnly ? 'fill-white text-white' : 'text-amber-500 fill-amber-400'}`} />
+            <span>Favorites</span>
+            {favoritesCount !== undefined && (
+              <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded font-bold ${
+                favoritesOnly ? 'bg-amber-700/60 text-white' : 'bg-amber-100 text-amber-900'
               }`}>
-                {s.count}
+                {favoritesCount}
               </span>
-            </button>
-          );
-        })}
+            )}
+          </button>
+        )}
       </div>
 
       {/* RIGHT: Search, Action Filter & View Mode Toggle */}

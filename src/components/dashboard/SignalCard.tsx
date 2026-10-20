@@ -16,7 +16,8 @@ import {
   Skull, 
   BarChart2,
   Trash2,
-  XCircle
+  XCircle,
+  Star
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { Signal, SignalStatus } from '@/types';
@@ -30,6 +31,8 @@ interface SignalCardProps {
   onViewPayload: (signal: Signal) => void;
   onOpenChart?: (symbol: string, signal?: Signal) => void;
   liveQuote?: { price: number; bid?: number; ask?: number; change?: number; changePercent?: number };
+  isFavorite?: boolean;
+  onToggleFavorite?: (symbol: string) => void;
 }
 
 export function SignalCardComponent({
@@ -37,7 +40,9 @@ export function SignalCardComponent({
   onUpdateStatus,
   onDeleteSignal,
   onOpenChart,
-  liveQuote
+  liveQuote,
+  isFavorite = false,
+  onToggleFavorite
 }: SignalCardProps) {
   const [copied, setCopied] = useState(false);
   const [showValidationDetails, setShowValidationDetails] = useState(false);
@@ -239,7 +244,9 @@ export function SignalCardComponent({
   };
 
   return (
-    <div className="stripe-card rounded-2xl overflow-hidden flex flex-col justify-between">
+    <div className={`stripe-card rounded-2xl overflow-hidden flex flex-col justify-between transition-all ${
+      isFavorite ? 'ring-2 ring-amber-400/50 shadow-md bg-gradient-to-b from-amber-500/[0.02] to-transparent' : ''
+    }`}>
       
       {/* Top Card Body */}
       <div className="p-4 sm:p-5">
@@ -255,7 +262,7 @@ export function SignalCardComponent({
               {isBuy ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
               <span className="text-lg font-black text-slate-900 font-mono tracking-tight whitespace-nowrap">
                 {signal.symbol.replace(/([A-Z]{3})([A-Z]{3})/, '$1 / $2')}
               </span>
@@ -266,6 +273,30 @@ export function SignalCardComponent({
               }`}>
                 {signal.action} {isBuy ? '▲' : '▼'}
               </span>
+
+              {/* Interactive Favorite Star Button & Badge */}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleFavorite?.(signal.symbol);
+                }}
+                className={`p-1 rounded-lg transition-all flex items-center gap-1 group cursor-pointer ${
+                  isFavorite 
+                    ? 'bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-300 shadow-xs' 
+                    : 'text-slate-300 hover:text-amber-500 hover:bg-slate-100'
+                }`}
+                title={isFavorite ? `★ ${signal.symbol} is a Favorite Pair (Click to unstar)` : `Star ${signal.symbol} as Favorite Pair`}
+              >
+                <Star className={`w-3.5 h-3.5 transition-transform group-hover:scale-115 ${
+                  isFavorite ? 'text-amber-500 fill-amber-400' : 'text-slate-300 group-hover:text-amber-500'
+                }`} />
+                {isFavorite && (
+                  <span className="text-[9px] font-black uppercase text-amber-800 tracking-wider font-sans whitespace-nowrap pr-0.5">
+                    FAV
+                  </span>
+                )}
+              </button>
             </div>
           </div>
 

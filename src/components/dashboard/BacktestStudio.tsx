@@ -22,7 +22,8 @@ import {
   Loader2,
   Key,
   ExternalLink,
-  ShieldCheck
+  ShieldCheck,
+  Star
 } from 'lucide-react';
 import { LogBacktestTradeModal } from '@/components/modals/LogBacktestTradeModal';
 import { BacktestTradeChartModal } from '@/components/modals/BacktestTradeChartModal';
@@ -30,6 +31,7 @@ import { PairFilterSelect } from '@/components/dashboard/PairFilterSelect';
 import { PairPerformancePieChart } from '@/components/dashboard/PairPerformancePieChart';
 import { isMajorPair } from '@/lib/strategyValidator';
 import { getTradingViewSymbol } from '@/components/dashboard/TradingViewRealtimeChart';
+import { useFavoritePairs } from '@/lib/useFavoritePairs';
 
 function extractTradeTime(session: string): string {
   if (!session) return '03:15 NY (12:45 IST)';
@@ -49,6 +51,10 @@ export function BacktestStudio() {
   
   // Data Provider state (Strictly TradingView)
   const activeProvider = 'TRADINGVIEW';
+
+  // Favorite pairs system
+  const { favorites, isFavorite, toggleFavorite } = useFavoritePairs();
+  const [favoritesOnlyFilter, setFavoritesOnlyFilter] = useState<boolean>(false);
 
   // Filters
   const [strategyFilter, setStrategyFilter] = useState<string>('ALL');
@@ -217,6 +223,9 @@ export function BacktestStudio() {
   // Filtered trades
   const filteredTrades = useMemo(() => {
     return trades.filter(t => {
+      if (favoritesOnlyFilter && !isFavorite(t.symbol)) {
+        return false;
+      }
       if (strategyFilter !== 'ALL' && t.strategy.toUpperCase() !== strategyFilter.toUpperCase()) {
         return false;
       }
@@ -240,7 +249,7 @@ export function BacktestStudio() {
       }
       return true;
     });
-  }, [trades, strategyFilter, monthFilter, pairFilter, pairTypeFilter, dayFilter, outcomeFilter]);
+  }, [trades, favoritesOnlyFilter, isFavorite, strategyFilter, monthFilter, pairFilter, pairTypeFilter, dayFilter, outcomeFilter]);
 
   // Dynamic metrics calculated directly from active filteredTrades
   const dynamicStats = useMemo(() => {
@@ -829,6 +838,21 @@ export function BacktestStudio() {
               buttonLabelPrefix="Filter Pair:" 
             />
           </div>
+
+          {/* Favorites Only Quick Filter Button */}
+          <button
+            type="button"
+            onClick={() => setFavoritesOnlyFilter(!favoritesOnlyFilter)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border cursor-pointer ${
+              favoritesOnlyFilter
+                ? 'bg-amber-500 text-white border-amber-600 shadow-xs ring-2 ring-amber-400/30'
+                : 'bg-slate-50 hover:bg-amber-50 text-slate-700 hover:text-amber-800 border-slate-200'
+            }`}
+            title="Filter to only show trades from your favorite pairs"
+          >
+            <Star className={`w-3.5 h-3.5 ${favoritesOnlyFilter ? 'fill-white text-white' : 'text-amber-500 fill-amber-400'}`} />
+            <span>Favorites ({favorites.length})</span>
+          </button>
         </div>
       </div>
 
@@ -920,12 +944,32 @@ export function BacktestStudio() {
                     {/* Symbol / Action */}
                     <td className="py-3.5 px-4 whitespace-nowrap">
                       <div className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleFavorite(trade.symbol);
+                          }}
+                          className="p-1 rounded-md hover:bg-slate-100 transition-colors group cursor-pointer"
+                          title={isFavorite(trade.symbol) ? `Remove ${trade.symbol} from favorites` : `Star ${trade.symbol} as favorite pair`}
+                        >
+                          <Star className={`w-3.5 h-3.5 transition-transform group-hover:scale-115 ${
+                            isFavorite(trade.symbol)
+                              ? 'text-amber-500 fill-amber-400'
+                              : 'text-slate-300 group-hover:text-amber-500'
+                          }`} />
+                        </button>
                         <span>{trade.symbol}</span>
                         <span className="px-1.5 py-0.2 rounded text-[8px] font-black bg-emerald-50 text-emerald-800 border border-emerald-200">
                           OANDA
                         </span>
+                        {isFavorite(trade.symbol) && (
+                          <span className="px-1.5 py-0.2 rounded text-[8px] font-black bg-amber-50 text-amber-800 border border-amber-300">
+                            FAV
+                          </span>
+                        )}
                       </div>
-                      <span className={`inline-block px-1.5 py-0.2 rounded text-[9px] font-black ${
+                      <span className={`inline-block px-1.5 py-0.2 rounded text-[9px] font-black mt-1 ${
                         trade.action === 'BUY'
                           ? 'bg-emerald-100 text-emerald-950 border border-emerald-300'
                           : 'bg-rose-100 text-rose-950 border border-rose-300'

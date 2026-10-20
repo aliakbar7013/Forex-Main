@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Search, ChevronDown, Check, X, Globe } from 'lucide-react';
+import { Search, ChevronDown, Check, X, Globe, Star } from 'lucide-react';
+import { useFavoritePairs } from '@/lib/useFavoritePairs';
 
 export interface TradableAssetOption {
   symbol: string;
@@ -70,6 +71,7 @@ export function PairFilterSelect({
   className = '',
   buttonLabelPrefix = 'Pair:'
 }: PairFilterSelectProps) {
+  const { favorites, isFavorite, toggleFavorite } = useFavoritePairs();
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
@@ -130,7 +132,9 @@ export function PairFilterSelect({
   // Filtered list by search and quick category
   const filteredAssets = useMemo(() => {
     let list = ALL_TRADABLE_ASSETS;
-    if (categoryFilter !== 'ALL') {
+    if (categoryFilter === 'FAVORITES') {
+      list = list.filter(a => isFavorite(a.symbol));
+    } else if (categoryFilter !== 'ALL') {
       list = list.filter(a => a.categoryLabel === categoryFilter);
     }
     if (!searchTerm.trim()) return list;
@@ -140,7 +144,7 @@ export function PairFilterSelect({
       a.name.toUpperCase().includes(q) ||
       a.categoryLabel.toUpperCase().includes(q)
     );
-  }, [searchTerm, categoryFilter]);
+  }, [searchTerm, categoryFilter, isFavorite]);
 
   // Grouped by Category
   const groupedAssets = useMemo(() => {
@@ -177,6 +181,9 @@ export function PairFilterSelect({
           <span className="text-slate-500 font-medium text-[11px] shrink-0">{buttonLabelPrefix}</span>
           {selectedAsset ? (
             <div className="flex items-center gap-1.5 truncate">
+              {isFavorite(selectedAsset.symbol) && (
+                <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-400 shrink-0" />
+              )}
               <span className="px-1.5 py-0.2 rounded bg-blue-100 text-blue-800 border border-blue-200 font-mono text-[11px] font-black shrink-0">
                 {selectedAsset.symbol}
               </span>
@@ -224,6 +231,19 @@ export function PairFilterSelect({
 
             {/* Quick Category Filter Chips */}
             <div className="flex items-center gap-1 overflow-x-auto no-scrollbar pb-0.5 text-[10px]">
+              <button
+                type="button"
+                onClick={() => setCategoryFilter(categoryFilter === 'FAVORITES' ? 'ALL' : 'FAVORITES')}
+                className={`flex items-center gap-1 px-2 py-0.5 rounded-md font-bold whitespace-nowrap transition-colors shrink-0 cursor-pointer ${
+                  categoryFilter === 'FAVORITES'
+                    ? 'bg-amber-500 text-white shadow-xs'
+                    : 'bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-300'
+                }`}
+                title="Show only your favorite pairs"
+              >
+                <Star className={`w-3 h-3 ${categoryFilter === 'FAVORITES' ? 'fill-white text-white' : 'text-amber-500 fill-amber-400'}`} />
+                <span>Favorites ({favorites.length})</span>
+              </button>
               {['ALL', 'Majors', 'Yen Crosses', 'Pound & Euro Crosses', 'Commodity Crosses'].map((cat) => (
                 <button
                   key={cat}
@@ -290,13 +310,31 @@ export function PairFilterSelect({
                               : 'text-slate-800 hover:bg-slate-100 hover:text-slate-900 font-medium'
                           }`}
                         >
-                          <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleFavorite(asset.symbol);
+                              }}
+                              className="p-1 rounded hover:bg-slate-200 transition-colors group cursor-pointer shrink-0"
+                              title={isFavorite(asset.symbol) ? `Remove ${asset.symbol} from favorites` : `Star ${asset.symbol} as favorite pair`}
+                            >
+                              <Star className={`w-3.5 h-3.5 transition-transform group-hover:scale-120 ${
+                                isFavorite(asset.symbol) ? 'text-amber-500 fill-amber-400' : 'text-slate-300 group-hover:text-amber-500'
+                              }`} />
+                            </button>
                             <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-800 font-mono text-[10px] font-bold border border-slate-200 shrink-0">
                               {asset.baseCode}/{asset.quoteCode}
                             </span>
                             <div className="flex flex-col text-left min-w-0">
-                              <span className="font-mono font-extrabold text-slate-900 text-xs leading-tight">
-                                {asset.symbol}
+                              <span className="font-mono font-extrabold text-slate-900 text-xs leading-tight flex items-center gap-1">
+                                <span>{asset.symbol}</span>
+                                {isFavorite(asset.symbol) && (
+                                  <span className="text-[8px] font-black text-amber-800 bg-amber-50 border border-amber-300 px-1 py-0.2 rounded">
+                                    FAV
+                                  </span>
+                                )}
                               </span>
                               <span className="text-[11px] text-slate-500 truncate">
                                 {asset.name}

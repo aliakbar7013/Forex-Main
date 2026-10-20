@@ -2,7 +2,8 @@
 
 import React, { useState, useMemo } from 'react';
 import { BacktestTradeRecord } from '@/types';
-import { PieChart as PieIcon, Trophy, Filter, Sparkles, Layers } from 'lucide-react';
+import { PieChart as PieIcon, Trophy, Filter, Sparkles, Layers, Star } from 'lucide-react';
+import { useFavoritePairs } from '@/lib/useFavoritePairs';
 
 interface PairPerformancePieChartProps {
   trades: BacktestTradeRecord[];
@@ -49,6 +50,7 @@ export function PairPerformancePieChart({
   selectedPair = 'ALL',
   initialStrategy = 'ALL'
 }: PairPerformancePieChartProps) {
+  const { isFavorite, toggleFavorite } = useFavoritePairs();
   const [strategyFilter, setStrategyFilter] = useState<string>(initialStrategy);
   const [metricMode, setMetricMode] = useState<'netR' | 'wins' | 'winRate'>('netR');
   const [hoveredSymbol, setHoveredSymbol] = useState<string | null>(null);
@@ -483,6 +485,19 @@ export function PairPerformancePieChart({
                         <span className="font-mono font-bold text-slate-900 text-xs">
                           {pair.symbol}
                         </span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleFavorite(pair.symbol);
+                          }}
+                          className="p-0.5 rounded hover:bg-slate-200 transition-colors group cursor-pointer"
+                          title={isFavorite(pair.symbol) ? `Remove ${pair.symbol} from favorites` : `Star ${pair.symbol} as favorite pair`}
+                        >
+                          <Star className={`w-3.5 h-3.5 transition-transform group-hover:scale-120 ${
+                            isFavorite(pair.symbol) ? 'text-amber-500 fill-amber-400' : 'text-slate-300 group-hover:text-amber-500'
+                          }`} />
+                        </button>
                       </div>
 
                       <span className="hidden sm:inline px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 text-[9px] font-bold">
