@@ -1,46 +1,50 @@
 # ICT Forex Signals Terminal — Production Hosting Guide
 
-This guide details how to host and run your website online across different hosting options.
+This guide details how to build and host your terminal online across different hosting platforms (Hostinger, Render, Railway, VPS, Docker).
 
 ---
 
-## 🔑 Master Access Credentials
-- **Master Owner PIN**: `9398` (Permanent root admin)
-- **Role**: `Master Admin (Owner)`
-- **Capabilities**: Unlocks dashboard, manages & creates trader PINs, revokes access, and copies trader PINs.
+## 🔑 Master Admin Credentials
+- **Master Admin Email**: `admin@forex.com`
+- **Master Admin Password**: `AdminPassword123!`
+- **Role**: `Master Admin`
+- **User Management Panel**: From the dashboard header, open **Manage Users** to create trader accounts with custom durations (7 Days, 30 Days, 6 Months, 1 Year, or Lifetime) and assign specific strategy access (`CBDR`, `STOP_HUNT`, or `ALL`).
 
 ---
 
-## Option 1: Live Cloudflare Tunnel (Zero-Configuration, Currently Active)
-If running from your computer or home server, the Cloudflare tunnel forwards traffic securely without opening router ports:
+## 🚀 Quick Deployment Options
 
-```bash
-# Start Next.js production server
-npm run start -- -H 0.0.0.0 -p 3001
+### Option 1: One-Click Cloud Hosting (Render / Railway / Fly.io) — Recommended
+Since the codebase is synced to GitHub (`https://github.com/aliakbar7013/Forex-Main.git`), cloud deployment is completely automatic:
 
-# In another terminal, start the Cloudflare tunnel
-npx -y cloudflared tunnel --url http://localhost:3001
-```
+1. **Log in to [Render.com](https://render.com) or [Railway.app](https://railway.app)**.
+2. Click **New Web Service** and connect your GitHub repository `Forex-Main`.
+3. Configure the settings:
+   - **Environment**: Node
+   - **Build Command**: `npm install && npm run build`
+   - **Start Command**: `node server.js`
+   - **Node Version**: 20+
+4. Click **Deploy**. Your terminal will be live with a free SSL HTTPS link!
 
 ---
 
-## Option 2: Linux / VPS Hosting (Ubuntu / Debian / DigitalOcean / Hetzner)
+### Option 2: Hostinger VPS or Linux VPS (Ubuntu / Debian / DigitalOcean)
 
-### 1. Setup Node.js 20 & Git
+#### 1. Setup Node.js 20 & Git on your VPS
 ```bash
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
 sudo apt-get install -y nodejs build-essential git
 ```
 
-### 2. Install Project Dependencies & Build
+#### 2. Clone the Repository & Build
 ```bash
-git clone <your-repo-url> forex-signals-dashboard
-cd forex-signals-dashboard
+git clone https://github.com/aliakbar7013/Forex-Main.git forex-terminal
+cd forex-terminal
 npm install
 npm run build
 ```
 
-### 3. Keep Running 24/7 with PM2
+#### 3. Keep Running 24/7 with PM2
 ```bash
 sudo npm install -g pm2
 pm2 start ecosystem.config.cjs
@@ -48,14 +52,14 @@ pm2 save
 pm2 startup
 ```
 
-### 4. Optional: Nginx Reverse Proxy with HTTPS (Certbot)
+#### 4. Nginx Reverse Proxy with Free SSL (Certbot)
 ```nginx
-# /etc/nginx/sites-available/forex.yourdomain.com
+# /etc/nginx/sites-available/forex
 server {
-    server_name forex.yourdomain.com;
+    server_name yourdomain.com www.yourdomain.com;
 
     location / {
-        proxy_pass http://127.0.0.1:3001;
+        proxy_pass http://127.0.0.1:3000;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -64,30 +68,30 @@ server {
     }
 }
 ```
-Enable SSL:
+Enable and get SSL:
 ```bash
-sudo certbot --nginx -d forex.yourdomain.com
+sudo ln -s /etc/nginx/sites-available/forex /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl restart nginx
+sudo certbot --nginx -d yourdomain.com
 ```
 
 ---
 
-## Option 3: Docker Container Deployment (Railway / Render / Fly.io / AWS)
-
-Build and run with Docker:
+### Option 3: Docker Deployment (1 Command)
 ```bash
-# Build the Docker image
-docker build -t forex-dashboard .
-
-# Run the container
-docker run -d -p 3001:3001 --name forex-terminal forex-dashboard
+docker compose up -d --build
 ```
+This builds and starts the terminal container with persistent SQLite database storage mounted in `./data`.
 
 ---
 
-## Option 4: Cloud Platforms (Railway / Render)
-1. Push this project to GitHub.
-2. In **Railway** or **Render**, click **New Web Service** and link your repository.
-3. Configure:
-   - **Build Command**: `npm run build`
-   - **Start Command**: `npm run start -- -H 0.0.0.0 -p $PORT`
-4. The dashboard will automatically deploy with a free HTTPS custom domain.
+### Option 4: Instant Public Access (Cloudflare Tunnel)
+If you want to host from your computer or home server with zero router configuration:
+```bash
+# In the terminal directory:
+node server.js
+
+# In a second terminal window:
+npx cloudflared tunnel --url http://localhost:3000
+```
+This generates a secure, free public HTTPS link accessible on any mobile device or browser worldwide.

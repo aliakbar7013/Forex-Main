@@ -14,8 +14,10 @@ This guide provides step-by-step instructions for deploying your **ICT CBDR Inst
 2. **Pre-Built Deployment Packages**:
    - **Upload Zip**: `C:\Users\aliak\.gemini\antigravity\scratch\hostinger_upload.zip` *(Contains pre-built production `.next`, `data/trading_dashboard.db`, `server.js`, `Dockerfile`, `docker-compose.yml`, etc.)*
    - **Extracted Folder**: `C:\Users\aliak\.gemini\antigravity\scratch\HOSTINGER_UPLOAD_FILES`
-3. **Master Owner Access PIN**:
-   - **`9398`** (Master Admin PIN)
+3. **Master Admin Credentials**:
+   - **Email**: `admin@forex.com`
+   - **Password**: `AdminPassword123!`
+   - **User Manager**: Allows creating accounts with strategy permissions and duration limits (7d, 30d, 6m, 1y, lifetime).
 
 ---
 
