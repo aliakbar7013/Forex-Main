@@ -382,8 +382,8 @@ export async function syncLiveMarketSignals(): Promise<{
 
   if (isTodayCbdrTradingDay) {
     for (const symbol of ACTIVE_SYMBOLS) {
-      // 1. If symbol already has an active, running live signal being monitored, DO NOT touch or delete it!
-      if (cbdrSignalMap.has(symbol)) {
+      // 1. If symbol already has an active, running live signal being monitored (CBDR or Stop Hunt), DO NOT duplicate or recreate!
+      if (cbdrSignalMap.has(symbol) || stopHuntSignalMap.has(symbol)) {
         continue;
       }
 
@@ -649,11 +649,7 @@ export async function syncLiveMarketSignals(): Promise<{
   // 1. Remove any pending unexecuted CBDR orders (no new entries taken on non-trading days):
   db.prepare("DELETE FROM signals WHERE strategy = 'CBDR' AND status = 'PENDING'").run();
   
-  // 2. Prevent duplicate trades on the same instrument ("no double double"):
-  // If an instrument has a Stop Hunt setup, do not run CBDR on that same symbol!
-  db.prepare("DELETE FROM signals WHERE strategy = 'CBDR' AND symbol IN (SELECT symbol FROM signals WHERE strategy = 'STOP_HUNT')").run();
-  
-  // 3. Any active running (IN_TRADE) CBDR trade that has NOT hit TP/SL yet continues running,
+  // 2. Any active running (IN_TRADE) CBDR trade that has NOT hit TP/SL yet continues running,
   // tracked and live-evaluated by tickLiveTradeEvaluator until it hits TP/SL!
 }
 
@@ -671,8 +667,8 @@ export async function syncLiveMarketSignals(): Promise<{
 
   for (const shSpec of STOP_HUNT_SPECS) {
     try {
-      // 1. If signal is already actively tracked and running, DO NOT touch or delete it!
-      if (stopHuntSignalMap.has(shSpec.symbol)) {
+      // 1. If signal is already actively tracked and running (Stop Hunt or CBDR), DO NOT duplicate or recreate!
+      if (stopHuntSignalMap.has(shSpec.symbol) || cbdrSignalMap.has(shSpec.symbol)) {
         continue;
       }
 
@@ -831,10 +827,6 @@ export async function syncLiveMarketSignals(): Promise<{
       console.error(`Error constructing Stop Hunt signal for ${shSpec.symbol}`, err);
     }
   }
-
-  // Prevent duplicate trades on the same instrument ("no double double"):
-  // If an instrument has a Stop Hunt setup, do not run CBDR on that same symbol!
-  db.prepare("DELETE FROM signals WHERE strategy = 'CBDR' AND symbol IN (SELECT symbol FROM signals WHERE strategy = 'STOP_HUNT')").run();
 
   const allUpdatedSignals = getAllSignals(50);
 
