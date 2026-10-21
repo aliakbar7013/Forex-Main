@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAllSignals, insertSignal, getRiskSettings, getAllIpdaBiases } from '@/lib/db';
+import { getAllSignals, insertSignal, getRiskSettings, getAllIpdaBiases, getDb } from '@/lib/db';
 import { validateStrategySignal, normalizeStrategy, normalizeTimeframe } from '@/lib/strategyValidator';
 import { calculateLotSize } from '@/lib/riskEngine';
 import { broadcastSSE } from '@/lib/eventBroadcaster';
@@ -62,6 +62,27 @@ export async function POST(req: NextRequest) {
 
     if (!entry || !sl || !tp1) {
       return NextResponse.json({ error: 'Entry, SL, and TP1 are required' }, { status: 400 });
+    }
+
+    // Stop Hunt Exclusion: If an entry has been taken in CBDR, DO NOT trade that pair in Stop Hunt!
+    if (strategy === 'STOP_HUNT') {
+      const db = getDb();
+      const todayDateStr = new Date().toISOString().split('T')[0];
+      const activeCbdr = db.prepare(`
+        SELECT id FROM signals 
+        WHERE symbol = ? AND strategy = 'CBDR' AND status IN ('IN_TRADE', 'PENDING')
+      `).get(symbol);
+
+      const cbdrTradedToday = db.prepare(`
+        SELECT id FROM backtest_trades 
+        WHERE symbol = ? AND strategy = 'CBDR' AND date_executed = ?
+      `).get(symbol, todayDateStr);
+
+      if (activeCbdr || cbdrTradedToday) {
+        return NextResponse.json({
+          error: `Pair ${symbol} has already taken an entry under the CBDR strategy. ICT Rule: Pairs traded in CBDR must NOT be traded in the Stop Hunt model.`
+        }, { status: 422 });
+      }
     }
 
     const riskSettings = getRiskSettings();

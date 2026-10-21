@@ -213,6 +213,7 @@ export function CreateSignalModal({
               <p>• <strong>Sweep</strong>: Post-01:00 NY sweep of Asian {action === 'SELL' ? 'HIGH' : 'LOW'} + {action === 'SELL' ? 'Red Bearish' : 'Green Bullish'} CHoCH + FVG.</p>
               <p>• <strong>Stop Loss</strong>: 2–4 pips {action === 'SELL' ? 'above' : 'below'} the 5m FVG imbalance.</p>
               <p>• <strong>Take Profit</strong>: Directly targets opposing Asian {action === 'SELL' ? 'LOW' : 'HIGH'}.</p>
+              <p>• <strong>Single Model Rule</strong>: Pairs with an entry already taken under CBDR must not be traded in the Stop Hunt model.</p>
             </div>
           </div>
         )}

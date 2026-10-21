@@ -667,8 +667,28 @@ export async function syncLiveMarketSignals(): Promise<{
 
   for (const shSpec of STOP_HUNT_SPECS) {
     try {
+      const todayDateStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+
       // 1. If signal is already actively tracked and running (Stop Hunt or CBDR), DO NOT duplicate or recreate!
       if (stopHuntSignalMap.has(shSpec.symbol) || cbdrSignalMap.has(shSpec.symbol)) {
+        continue;
+      }
+
+      // 2. Strict ICT Rule: If an entry has been taken in CBDR (active in signals OR executed in today's session),
+      // DO NOT trade this pair in the Stop Hunt model!
+      const activeCbdr = db.prepare(`
+        SELECT id FROM signals 
+        WHERE symbol = ? AND strategy = 'CBDR' AND status IN ('IN_TRADE', 'PENDING')
+      `).get(shSpec.symbol.toUpperCase());
+      if (activeCbdr) {
+        continue;
+      }
+
+      const cbdrTradedToday = db.prepare(`
+        SELECT id FROM backtest_trades 
+        WHERE symbol = ? AND strategy = 'CBDR' AND date_executed = ?
+      `).get(shSpec.symbol.toUpperCase(), todayDateStr);
+      if (cbdrTradedToday) {
         continue;
       }
 
@@ -736,8 +756,6 @@ export async function syncLiveMarketSignals(): Promise<{
         : (currentPrice <= tp1));
 
       if (isWin || isLoss) continue; // skip resolved
-
-      const todayDateStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
 
       // ICT Rule: Strictly 1 trade per day per instrument!
       // If this symbol has already completed a trade today in backtest_trades, do NOT respawn!

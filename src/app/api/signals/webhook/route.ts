@@ -7,7 +7,8 @@ import {
   insertSignal, 
   insertWebhookLog,
   insertBacktestTrade,
-  findExistingSignalForEntry
+  findExistingSignalForEntry,
+  getDb
 } from '@/lib/db';
 import { validateStrategySignal, normalizeStrategy, normalizeTimeframe, getMarketTimeContext } from '@/lib/strategyValidator';
 import { checkSignalIpdaPermitted } from '@/lib/ipdaEngine';
@@ -184,6 +185,50 @@ export async function POST(req: NextRequest) {
         reason: `CBDR Strategy strictly permits trades on Monday, Tuesday, and Wednesday only. Signal received on ${marketTime.dayName} is blocked.`,
         day: marketTime.dayName,
         permittedDays: ['Monday', 'Tuesday', 'Wednesday']
+      }, { status: 422 });
+    }
+  }
+
+  // 4c. Stop Hunt Exclusion: If an entry has been taken in CBDR, DO NOT trade that pair in Stop Hunt!
+  if (strategy === 'STOP_HUNT') {
+    const todayDateStr = marketTime.nyDate.toISOString().split('T')[0];
+    const db = getDb();
+    
+    // Check if symbol currently has an active CBDR trade
+    const activeCbdr = db.prepare(`
+      SELECT id FROM signals 
+      WHERE symbol = ? AND strategy = 'CBDR' AND status IN ('IN_TRADE', 'PENDING')
+    `).get(symbol);
+
+    // Or was already traded today under CBDR
+    const cbdrTradedToday = db.prepare(`
+      SELECT id FROM backtest_trades 
+      WHERE symbol = ? AND strategy = 'CBDR' AND date_executed = ?
+    `).get(symbol, todayDateStr);
+
+    if (activeCbdr || cbdrTradedToday) {
+      const rejectLog: WebhookLog = {
+        id: `wh_rej_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+        timestamp,
+        strategy,
+        symbol,
+        action,
+        status: 'REJECTED',
+        errors_count: 1,
+        lot_size: 0,
+        ip_address: req.headers.get('x-forwarded-for') || '127.0.0.1',
+        payload: rawBody
+      };
+      insertWebhookLog(rejectLog);
+
+      return NextResponse.json({
+        success: false,
+        status: 'rejected',
+        strategy,
+        symbol,
+        action,
+        reason: `Pair ${symbol} has already taken an entry under the CBDR strategy. ICT Rule: Pairs traded in CBDR must NOT be traded in the Stop Hunt model.`,
+        rule: 'NO_CBDR_STOPHUNT_COLLISION'
       }, { status: 422 });
     }
   }
