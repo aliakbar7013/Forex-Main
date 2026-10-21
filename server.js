@@ -5,9 +5,15 @@ const next = require('next');
 
 const dev = process.env.NODE_ENV !== 'production';
 const hostname = process.env.HOSTNAME || '0.0.0.0';
-const port = parseInt(process.env.PORT || '3000', 10);
+const rawPort = process.env.PORT || 3000;
+const isNumericPort = !isNaN(Number(rawPort));
+const port = isNumericPort ? Number(rawPort) : rawPort;
 
-const app = next({ dev, hostname, port });
+const app = next({ 
+  dev, 
+  hostname: isNumericPort ? hostname : undefined, 
+  port: isNumericPort ? port : undefined 
+});
 const handle = app.getRequestHandler();
 
 app.prepare().then(() => {
@@ -22,9 +28,9 @@ app.prepare().then(() => {
     }
   });
 
-  server.listen(port, hostname, (err) => {
+  const onListen = (err) => {
     if (err) throw err;
-    console.log(`> ICT Forex Terminal running on http://${hostname}:${port}`);
+    console.log(`> ICT Forex Terminal running on ${isNumericPort ? `http://${hostname}:${port}` : `socket ${port}`}`);
 
     // Autonomous Background Worker:
     // Periodically invokes the live sync engine every 10 seconds.
@@ -35,14 +41,24 @@ app.prepare().then(() => {
       if (isTicking) return;
       isTicking = true;
 
-      const syncReq = http.request({
-        hostname: '127.0.0.1',
-        port: port,
-        path: '/api/signals/live-sync',
-        method: 'GET',
-        headers: { 'User-Agent': 'ICT-Forex-Autonomous-Engine/1.0' },
-        timeout: 12000
-      }, (res) => {
+      const requestOptions = isNumericPort
+        ? {
+            hostname: '127.0.0.1',
+            port: port,
+            path: '/api/signals/live-sync',
+            method: 'GET',
+            headers: { 'User-Agent': 'ICT-Forex-Autonomous-Engine/1.0' },
+            timeout: 12000
+          }
+        : {
+            socketPath: port,
+            path: '/api/signals/live-sync',
+            method: 'GET',
+            headers: { 'User-Agent': 'ICT-Forex-Autonomous-Engine/1.0' },
+            timeout: 12000
+          };
+
+      const syncReq = http.request(requestOptions, (res) => {
         res.resume();
         res.on('end', () => { isTicking = false; });
       });
@@ -75,7 +91,13 @@ app.prepare().then(() => {
 
     process.on('SIGTERM', shutdown);
     process.on('SIGINT', shutdown);
-  });
+  };
+
+  if (isNumericPort) {
+    server.listen(port, hostname, onListen);
+  } else {
+    server.listen(port, onListen);
+  }
 }).catch((err) => {
   console.error('Failed to prepare Next.js app:', err);
   process.exit(1);
