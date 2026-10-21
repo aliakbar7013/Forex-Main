@@ -7,15 +7,24 @@ export const dynamic = 'force-dynamic';
 function verifyAdmin(req: NextRequest): boolean {
   const cookieUserId = req.cookies.get('auth_session_id')?.value;
   const headerUserId = req.headers.get('x-user-id');
+  const headerEmail = req.headers.get('x-user-email');
   const legacyPin = req.cookies.get('auth_pin_session')?.value || req.headers.get('x-auth-pin');
 
   if (legacyPin === '9398') return true;
 
   const userId = (cookieUserId || headerUserId || '').trim();
-  if (!userId) return false;
+  if (userId) {
+    const user = getUserById(userId);
+    if (user !== null && user.role === 'ADMIN' && user.is_active === 1) return true;
+  }
 
-  const user = getUserById(userId);
-  return user !== null && user.role === 'ADMIN' && user.is_active === 1;
+  const email = (headerEmail || '').trim().toLowerCase();
+  if (email) {
+    const user = getUserByEmail(email);
+    if (user !== null && user.role === 'ADMIN' && user.is_active === 1) return true;
+  }
+
+  return false;
 }
 
 export async function GET(req: NextRequest) {

@@ -70,11 +70,20 @@ export function UserManagerModal({
 
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
+  const getAuthHeaders = useCallback((): Record<string, string> => {
+    const headers: Record<string, string> = {};
+    const uid = currentUserId || (typeof window !== 'undefined' ? localStorage.getItem('auth_user_id') : null);
+    const email = typeof window !== 'undefined' ? localStorage.getItem('auth_user_email') : null;
+    if (uid) headers['x-user-id'] = uid;
+    if (email) headers['x-user-email'] = email;
+    return headers;
+  }, [currentUserId]);
+
   const fetchUsers = useCallback(async () => {
     try {
       setIsLoading(true);
       const res = await fetch('/api/admin/users', {
-        headers: { 'x-user-id': currentUserId || '' }
+        headers: getAuthHeaders()
       });
       const data = await res.json();
       if (data.success && Array.isArray(data.users)) {
@@ -85,7 +94,7 @@ export function UserManagerModal({
     } finally {
       setIsLoading(false);
     }
-  }, [currentUserId]);
+  }, [getAuthHeaders]);
 
   useEffect(() => {
     if (isOpen) {
@@ -162,7 +171,7 @@ export function UserManagerModal({
           method: 'PUT',
           headers: { 
             'Content-Type': 'application/json',
-            'x-user-id': currentUserId || ''
+            ...getAuthHeaders()
           },
           body: JSON.stringify({
             id: editingUserId,
@@ -188,7 +197,7 @@ export function UserManagerModal({
           method: 'POST',
           headers: { 
             'Content-Type': 'application/json',
-            'x-user-id': currentUserId || ''
+            ...getAuthHeaders()
           },
           body: JSON.stringify({
             email: formEmail.trim(),
@@ -224,7 +233,7 @@ export function UserManagerModal({
         method: 'PUT',
         headers: { 
           'Content-Type': 'application/json',
-          'x-user-id': currentUserId || ''
+          ...getAuthHeaders()
         },
         body: JSON.stringify({
           id: user.id,
@@ -250,7 +259,7 @@ export function UserManagerModal({
     try {
       const res = await fetch(`/api/admin/users?id=${user.id}`, {
         method: 'DELETE',
-        headers: { 'x-user-id': currentUserId || '' }
+        headers: getAuthHeaders()
       });
 
       const data = await res.json();
