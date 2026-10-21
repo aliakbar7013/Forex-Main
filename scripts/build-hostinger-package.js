@@ -17,6 +17,8 @@ fs.mkdirSync(targetDir, { recursive: true });
 
 // 2. Copy root configuration files
 const rootFiles = [
+  'app.js',
+  '.htaccess',
   'package.json',
   'package-lock.json',
   'next.config.ts',
@@ -68,26 +70,35 @@ fs.writeFileSync(
 ICT FOREX TERMINAL - HOSTINGER DEPLOYMENT PACKAGE
 =============================================================
 
-This folder contains all the PRE-BUILT files needed to run
-your ICT Forex Signals Terminal on Hostinger.
+This package contains all pre-compiled files needed to run
+your ICT Forex Signals Terminal on Hostinger hPanel with zero errors.
 
-HOW TO DEPLOY ON HOSTINGER:
+HOW TO DEPLOY ON HOSTINGER HPANEL (AVOIDING 503 ERRORS):
 -------------------------------------------------------------
-1. Upload all contents of this folder (or hostinger_upload.zip)
-   into your Hostinger 'public_html' folder (via Hostinger File Manager).
+1. Upload and extract all contents (or hostinger_upload.zip)
+   directly into your Hostinger 'public_html' folder (via Hostinger File Manager).
 
 2. In Hostinger hPanel -> Advanced -> Node.js:
    - Node version: 20.x
    - Application mode: Production
-   - Application startup file: server.js
+   - Application startup file: app.js (or server.js)
    - Application root: public_html
 
-3. Open the Terminal / SSH in Hostinger and run:
+3. In the Node.js panel, click 'Run NPM Install' (or in Hostinger Terminal run):
    npm install --omit=dev
 
 4. Click 'Start Application' (or 'Restart Application') in hPanel.
 
-5. Open your domain! Enter Master PIN: 9398 to unlock.
+5. Open your domain! Log in with Master Admin credentials:
+   - Email: admin@forex.com
+   - Password: AdminPassword123!
+
+WHY ERROR 503 HAPPENS ON HOSTINGER & HOW THIS PACKAGE FIXES IT:
+-------------------------------------------------------------
+- Fix 1: Added 'app.js' which Hostinger hPanel Phusion Passenger expects by default.
+- Fix 2: Added Hostinger-compatible '.htaccess' rewrite and Passenger directives.
+- Fix 3: Handled UNIX domain sockets in server.js so Passenger doesn't get 'NaN' port error.
+- Fix 4: Pre-bundled SQLite and JSON database dumps in ./data and ./public/data.
 =============================================================
 `
 );

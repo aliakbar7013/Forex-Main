@@ -1,0 +1,13 @@
+# --- Hostinger hPanel & LiteSpeed Node.js Configuration ---
+<IfModule mod_passenger.c>
+  PassengerEnabled On
+  PassengerAppType node
+  PassengerStartupFile app.js
+</IfModule>
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+</IfModule>
+
+Options -Indexes
