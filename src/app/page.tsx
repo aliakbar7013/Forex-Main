@@ -81,7 +81,7 @@ function mergeSignalsSmoothly(prevSignals: Signal[], nextSignals: Signal[]): Sig
   if (nextMap.size > 0) {
     hasChanges = true;
     const newSignals = Array.from(nextMap.values());
-    return [...newSignals, ...reconciled];
+    return [...reconciled, ...newSignals];
   }
 
   return hasChanges ? reconciled : prevSignals;
@@ -756,27 +756,14 @@ export default function TradingDashboard() {
     });
   }, [signals, favoritesOnly, isFavorite, selectedStrategy, selectedStatus, selectedDirection, searchQuery]);
 
-  // Deduplicate by symbol on ALL view, then PRIORITY SORT favorite pairs to the top!
+  // Deterministic, rock-solid sorting to ensure tiles NEVER move or swap positions on price ticks:
+  // 1. Favorite pairs first (elevated priority)
+  // 2. IN_TRADE active positions first, then PENDING
+  // 3. Fixed Alphabetical Symbol order (AUDCAD, AUDCHF, AUDUSD, EURCHF...) -> Permanently locked position!
+  // 4. Strategy deterministic order
+  // 5. Stable ID tie-breaker
   const displayedSignals = useMemo(() => {
-    let list = filteredSignals;
-    if (selectedStrategy === 'ALL') {
-      const seen = new Set<string>();
-      const res: Signal[] = [];
-      for (const s of filteredSignals) {
-        const sym = s.symbol.toUpperCase();
-        if (!seen.has(sym)) {
-          seen.add(sym);
-          res.push(s);
-        }
-      }
-      list = res;
-    }
-
-    // Priority Sorting:
-    // 1. Favorite pairs first! (Always elevated in priority)
-    // 2. IN_TRADE status first
-    // 3. Date / Created time descending
-    return [...list].sort((a, b) => {
+    const sorted = [...filteredSignals].sort((a, b) => {
       const aFav = isFavorite(a.symbol) ? 1 : 0;
       const bFav = isFavorite(b.symbol) ? 1 : 0;
       if (aFav !== bFav) return bFav - aFav; // Favorites elevated to top!
@@ -785,10 +772,30 @@ export default function TradingDashboard() {
       const diffStatus = statusWeight(b.status) - statusWeight(a.status);
       if (diffStatus !== 0) return diffStatus;
 
-      const dateA = new Date(a.date_of_entry || a.created_at).getTime();
-      const dateB = new Date(b.date_of_entry || b.created_at).getTime();
-      return (isNaN(dateB) ? 0 : dateB) - (isNaN(dateA) ? 0 : dateA);
+      // Stable Symbol order: guarantees cards remain locked in place when prices tick!
+      const diffSymbol = a.symbol.localeCompare(b.symbol);
+      if (diffSymbol !== 0) return diffSymbol;
+
+      const diffStrategy = a.strategy.localeCompare(b.strategy);
+      if (diffStrategy !== 0) return diffStrategy;
+
+      return a.id.localeCompare(b.id);
     });
+
+    if (selectedStrategy === 'ALL') {
+      const seen = new Set<string>();
+      const res: Signal[] = [];
+      for (const s of sorted) {
+        const sym = s.symbol.toUpperCase();
+        if (!seen.has(sym)) {
+          seen.add(sym);
+          res.push(s);
+        }
+      }
+      return res;
+    }
+
+    return sorted;
   }, [filteredSignals, selectedStrategy, isFavorite]);
 
   const handleOpenChart = useCallback((symbol: string, signal?: Signal) => {

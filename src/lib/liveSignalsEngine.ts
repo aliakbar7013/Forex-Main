@@ -382,6 +382,11 @@ export async function syncLiveMarketSignals(): Promise<{
 
   if (isTodayCbdrTradingDay) {
     for (const symbol of ACTIVE_SYMBOLS) {
+      // 1. If symbol already has an active, running live signal being monitored, DO NOT touch or delete it!
+      if (cbdrSignalMap.has(symbol)) {
+        continue;
+      }
+
       try {
         const isMajor = isMajorPair(symbol);
         const ipdaBuyCheckPre = checkSignalIpdaPermitted(symbol, 'BUY', DEFAULT_CENTRAL_BANK_RATES);
@@ -405,13 +410,7 @@ export async function syncLiveMarketSignals(): Promise<{
       // -------------------------------------------------------------------------
       const sweepAnalysis = await analyzePairSweepAndFvg(symbol, action);
       if (!sweepAnalysis.isValid || !sweepAnalysis.entry || !sweepAnalysis.sl || !sweepAnalysis.tp1) {
-        // Failed Rule 1 or Rule 2: Purge any invalid signal for this symbol from DB!
-        db.prepare("DELETE FROM signals WHERE symbol = ?").run(symbol.toUpperCase());
-        continue;
-      }
-
-      if (cbdrSignalMap.has(symbol)) {
-        // Symbol already has an active, validated live signal being monitored
+        // Failed Rule 1 or Rule 2: Do not create trade for this symbol
         continue;
       }
 
@@ -672,16 +671,15 @@ export async function syncLiveMarketSignals(): Promise<{
 
   for (const shSpec of STOP_HUNT_SPECS) {
     try {
-      // Enforce Rule 1 (First Condition): BUY setup MUST sweep PDL, SELL setup MUST sweep PDH!
-      // If Rule 1 is not met, strictly purge any signal for this symbol and never trade it!
-      const sweepCheck = await analyzePairSweepAndFvg(shSpec.symbol, shSpec.action);
-      if (!sweepCheck.ruleChecks?.pdlPdhSwept) {
-        db.prepare("DELETE FROM signals WHERE symbol = ? AND strategy = 'STOP_HUNT'").run(shSpec.symbol.toUpperCase());
+      // 1. If signal is already actively tracked and running, DO NOT touch or delete it!
+      if (stopHuntSignalMap.has(shSpec.symbol)) {
         continue;
       }
 
-      if (stopHuntSignalMap.has(shSpec.symbol)) {
-        // Validated signal is already actively tracked
+      // Enforce Rule 1 (First Condition): BUY setup MUST sweep PDL, SELL setup MUST sweep PDH!
+      // If Rule 1 is not met, do not create Stop Hunt signal for this symbol
+      const sweepCheck = await analyzePairSweepAndFvg(shSpec.symbol, shSpec.action);
+      if (!sweepCheck.ruleChecks?.pdlPdhSwept) {
         continue;
       }
 

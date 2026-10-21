@@ -714,7 +714,7 @@ export function getAllSignals(limit: number = 100): Signal[] {
       GROUP BY symbol, strategy
     ) latest ON s.symbol = latest.symbol AND s.strategy = latest.strategy AND s.created_at = latest.max_created
     WHERE s.status IN ('IN_TRADE', 'PENDING')
-    ORDER BY s.created_at DESC
+    ORDER BY s.symbol ASC, s.strategy ASC, s.created_at DESC, s.id ASC
     LIMIT ?
   `).all(limit) as any[];
   return rows.map(rowToSignal);
