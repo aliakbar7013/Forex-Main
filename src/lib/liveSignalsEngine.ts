@@ -81,15 +81,15 @@ export async function tickLiveTradeEvaluator(): Promise<{
     const pipFactor = getPipSize(signal.symbol);
     const isBuy = signal.action === 'BUY';
 
-    // A live trade has hit Stop Loss strictly if the live real-time market price touches/crosses SL
+    // A live trade has hit Stop Loss if the live price OR the session/day extreme touches/breaches SL
     const isLoss = isBuy 
-      ? (currentPrice <= signal.sl)
-      : (currentPrice >= signal.sl);
+      ? (currentPrice <= signal.sl || (dayLow > 0 && dayLow <= signal.sl))
+      : (currentPrice >= signal.sl || (dayHigh > 0 && dayHigh >= signal.sl));
 
-    // A live trade has hit TP1 strictly if the live real-time market price reaches/crosses TP1
+    // A live trade has hit TP1 strictly if live price OR session extreme touches TP1 (and SL not hit)
     const isWin = !isLoss && (isBuy 
-      ? (currentPrice >= signal.tp1)
-      : (currentPrice <= signal.tp1));
+      ? (currentPrice >= signal.tp1 || (dayHigh > 0 && dayHigh >= signal.tp1))
+      : (currentPrice <= signal.tp1 || (dayLow > 0 && dayLow <= signal.tp1)));
 
     if (isWin) {
       // -------------------------------------------------------------

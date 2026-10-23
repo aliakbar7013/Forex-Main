@@ -71,16 +71,31 @@ export function SignalsTableComponent({
               const isBuy = s.action === 'BUY';
               const { dayName } = getSignalTradingDay(s);
 
-              const rawDateStr = s.date_of_entry || s.created_at;
-              const createdDate = new Date(rawDateStr);
+              const rawDateStr = s.date_of_entry || (s.created_at ? s.created_at.split('T')[0] : '');
+              const getSafeTableDate = () => {
+                if (!rawDateStr) return '';
+                const cleanStr = rawDateStr.trim();
+                if (/^\d{4}-\d{2}-\d{2}$/.test(cleanStr)) {
+                  const [y, m, d] = cleanStr.split('-').map(Number);
+                  return new Date(y, m - 1, d, 12, 0, 0).toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric'
+                  });
+                }
+                const d = new Date(cleanStr);
+                if (isNaN(d.getTime())) return cleanStr;
+                return d.toLocaleDateString('en-US', {
+                  timeZone: 'America/New_York',
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric'
+                });
+              };
+              const entryDateFormatted = getSafeTableDate();
+              const createdDate = new Date(s.created_at || s.date_of_entry || '');
               const isValidDate = !isNaN(createdDate.getTime());
-              const entryIsoDate = s.date_of_entry || (isValidDate ? createdDate.toISOString().split('T')[0] : (s.created_at ? s.created_at.split('T')[0] : ''));
-              const entryDateFormatted = isValidDate ? createdDate.toLocaleDateString('en-US', { 
-                timeZone: 'America/New_York', 
-                month: 'short', 
-                day: 'numeric', 
-                year: 'numeric' 
-              }) : entryIsoDate;
+              const entryIsoDate = s.date_of_entry || (isValidDate ? createdDate.toISOString().split('T')[0] : '');
               const nyTime = isValidDate ? createdDate.toLocaleTimeString('en-US', { 
                 timeZone: 'America/New_York', 
                 hour: '2-digit', 

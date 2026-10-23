@@ -723,6 +723,10 @@ export default function TradingDashboard() {
       if (s.strategy === 'CBDR' && s.status === 'PENDING' && !isCbdrTradingDay) {
         return false;
       }
+      // - CBDR trades conclude within their session; on non-trading days (Thu/Fri/weekend), past CBDR trades do not linger in active feed
+      if (s.strategy === 'CBDR' && !isCbdrTradingDay) {
+        return false;
+      }
       // - If trade has hit TP or SL, do not show in live running feed
       if (s.status === 'TP1_HIT' || s.status === 'TP2_HIT' || s.status === 'CLOSED_PROFIT' || s.status === 'SL_HIT' || s.status === 'CANCELLED') {
         return false;
@@ -817,8 +821,8 @@ export default function TradingDashboard() {
     const todayNY = new Date().toLocaleDateString('en-US', { timeZone: 'America/New_York', weekday: 'long' });
     const isCbdrTradingDay = todayNY === 'Monday' || todayNY === 'Tuesday' || todayNY === 'Wednesday';
 
-    // Running CBDR trades (IN_TRADE) or valid new entries on Mon-Wed
-    const cbdrSignals = signals.filter(s => s.strategy === 'CBDR' && (s.status === 'IN_TRADE' || (s.status === 'PENDING' && isCbdrTradingDay)));
+    // Running CBDR trades (IN_TRADE) or valid new entries on Mon-Wed only
+    const cbdrSignals = signals.filter(s => s.strategy === 'CBDR' && isCbdrTradingDay && (s.status === 'IN_TRADE' || s.status === 'PENDING'));
     const stopHuntSignals = signals.filter(s => s.strategy === 'STOP_HUNT' && (s.status === 'IN_TRADE' || s.status === 'PENDING'));
     const newYorkSignals = signals.filter(s => s.strategy === 'NEW_YORK' && (s.status === 'IN_TRADE' || s.status === 'PENDING'));
 

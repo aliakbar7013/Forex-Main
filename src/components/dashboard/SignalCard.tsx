@@ -164,19 +164,35 @@ export function SignalCardComponent({
     }
   };
 
-  const rawDateStr = signal.date_of_entry || signal.created_at;
-  const createdDate = new Date(rawDateStr);
+  // Safe Date of Entry formatting: prevents UTC midnight timezone rollback shifting day backwards
+  const getSafeFormattedDate = () => {
+    const raw = signal.date_of_entry || (signal.created_at ? signal.created_at.split('T')[0] : '');
+    if (!raw) return '';
+    const cleanStr = raw.trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(cleanStr)) {
+      const [y, m, d] = cleanStr.split('-').map(Number);
+      const safeDate = new Date(y, m - 1, d, 12, 0, 0);
+      return safeDate.toLocaleDateString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      });
+    }
+    const d = new Date(cleanStr);
+    if (isNaN(d.getTime())) return cleanStr;
+    return d.toLocaleDateString('en-US', {
+      timeZone: 'America/New_York',
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+  };
+  const entryDateFormatted = getSafeFormattedDate();
+  const createdDate = new Date(signal.created_at || signal.date_of_entry || '');
   const isValidDate = !isNaN(createdDate.getTime());
-  
-  // Date of Entry formatting
-  const entryIsoDate = signal.date_of_entry || (isValidDate ? createdDate.toISOString().split('T')[0] : (signal.created_at ? signal.created_at.split('T')[0] : ''));
-  const entryDateFormatted = isValidDate ? createdDate.toLocaleDateString('en-US', { 
-    timeZone: 'America/New_York', 
-    weekday: 'short',
-    month: 'short', 
-    day: 'numeric', 
-    year: 'numeric' 
-  }) : entryIsoDate;
+  const entryIsoDate = signal.date_of_entry || (isValidDate ? createdDate.toISOString().split('T')[0] : '');
 
   const nyTime = isValidDate ? createdDate.toLocaleTimeString('en-US', { 
     timeZone: 'America/New_York', 

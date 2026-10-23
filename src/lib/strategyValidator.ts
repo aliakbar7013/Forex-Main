@@ -75,7 +75,12 @@ export function getMarketTimeContext(timestamp: Date = new Date(), explicitDay?:
 /**
  * Utility to extract trading day and CBDR validity from any signal
  */
-export function getSignalTradingDay(signal: { created_at?: string; notes?: string; raw_payload?: Record<string, unknown> }): {
+export function getSignalTradingDay(signal: { 
+  date_of_entry?: string;
+  created_at?: string; 
+  notes?: string; 
+  raw_payload?: Record<string, unknown> 
+}): {
   dayIndex: number;
   dayName: string;
   isCbdrValid: boolean;
@@ -83,7 +88,17 @@ export function getSignalTradingDay(signal: { created_at?: string; notes?: strin
   fullDateFormatted: string;
 } {
   const explicitDay = signal.raw_payload?.day || signal.raw_payload?.trading_day;
-  const dateObj = signal.created_at ? new Date(signal.created_at) : new Date();
+  
+  let dateObj: Date;
+  if (signal.date_of_entry && /^\d{4}-\d{2}-\d{2}$/.test(signal.date_of_entry.trim())) {
+    const [y, m, d] = signal.date_of_entry.trim().split('-').map(Number);
+    dateObj = new Date(y, m - 1, d, 12, 0, 0); // Noon neutral prevents UTC timezone rollback
+  } else if (signal.created_at) {
+    dateObj = new Date(signal.created_at);
+  } else {
+    dateObj = new Date();
+  }
+
   const dayNameNY = dateObj.toLocaleDateString('en-US', { timeZone: 'America/New_York', weekday: 'long' });
   let dayName = dayNameNY;
   const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
