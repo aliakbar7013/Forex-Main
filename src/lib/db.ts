@@ -23,7 +23,8 @@ import {
   TelegramSettings,
   AuthPin,
   AppUser,
-  UserDurationType
+  UserDurationType,
+  StopHuntSignal
 } from '@/types';
 import { DEFAULT_CENTRAL_BANK_RATES } from './ipdaEngine';
 
@@ -285,6 +286,35 @@ function initDatabase(db: Database.Database) {
     );
   `);
 
+  // 13. Stop Hunt Signals Table (Asian Kill Zone Model)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS stop_hunt_signals (
+      id TEXT PRIMARY KEY,
+      pair TEXT NOT NULL,
+      timestamp TEXT NOT NULL,
+      ipda_bias TEXT NOT NULL,
+      asian_high REAL NOT NULL,
+      asian_low REAL NOT NULL,
+      sweep_type TEXT NOT NULL,
+      choch_confirmed INTEGER NOT NULL DEFAULT 0,
+      bpr_high REAL NOT NULL,
+      bpr_low REAL NOT NULL,
+      order_type TEXT NOT NULL DEFAULT 'LIMIT',
+      entry_price REAL NOT NULL,
+      stop_loss REAL NOT NULL,
+      take_profit_1 REAL NOT NULL,
+      risk_reward_ratio REAL NOT NULL,
+      status TEXT NOT NULL DEFAULT 'PENDING_FILL',
+      sweep_price REAL,
+      choch_price REAL,
+      exit_price REAL,
+      realized_pnl REAL,
+      notes TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+  `);
+
   // Seed default Master Admin User (admin@forex.com)
   const masterUser = db.prepare('SELECT id FROM users WHERE email = ?').get('admin@forex.com') as { id: string } | undefined;
   if (!masterUser) {
@@ -312,8 +342,14 @@ function initDatabase(db: Database.Database) {
   // Seed backtest historical trades if empty, incomplete, or if not calibrated to OANDA broker feed
   const btCount = db.prepare('SELECT COUNT(*) as count FROM backtest_trades').get() as { count: number };
   const sample = db.prepare('SELECT notes FROM backtest_trades LIMIT 1').get() as { notes: string } | undefined;
-  if (btCount.count < 800 || !sample?.notes?.includes('[Broker: OANDA')) {
+  if (btCount.count === 0 || !sample?.notes?.includes('[Broker: OANDA')) {
     reseedBacktestDatabase(db);
+  }
+
+  // Seed default Stop Hunt signals if empty
+  const shCount = db.prepare('SELECT COUNT(*) as count FROM stop_hunt_signals').get() as { count: number };
+  if (shCount.count === 0) {
+    seedStopHuntSignals(db);
   }
 }
 
@@ -349,6 +385,147 @@ function seedCentralBankRates(db: Database.Database) {
 
   for (const r of DEFAULT_CENTRAL_BANK_RATES) {
     insertStmt.run(r.code, r.currencyName, r.centralBankName, r.rate, r.lastUpdated, r.sourceUrl);
+  }
+}
+
+function seedStopHuntSignals(db: Database.Database) {
+  const now = new Date().toISOString();
+  const insertStmt = db.prepare(`
+    INSERT OR REPLACE INTO stop_hunt_signals (
+      id, pair, timestamp, ipda_bias, asian_high, asian_low,
+      sweep_type, choch_confirmed, bpr_high, bpr_low,
+      order_type, entry_price, stop_loss, take_profit_1,
+      risk_reward_ratio, status, sweep_price, choch_price,
+      exit_price, realized_pnl, notes, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  const initialSignals = [
+    {
+      id: 'sh_eurusd_live_01',
+      pair: 'EURUSD',
+      timestamp: now,
+      ipda_bias: 'BEARISH',
+      asian_high: 1.08820,
+      asian_low: 1.08580,
+      sweep_type: 'HIGH_SWEEP',
+      choch_confirmed: 1,
+      bpr_high: 1.08810,
+      bpr_low: 1.08790,
+      order_type: 'LIMIT',
+      entry_price: 1.08790,
+      stop_loss: 1.08890,
+      take_profit_1: 1.08580,
+      risk_reward_ratio: 3.1,
+      status: 'PENDING_FILL',
+      sweep_price: 1.08865,
+      choch_price: 1.08770,
+      exit_price: null,
+      realized_pnl: null,
+      notes: 'Asian High swept during Pre-London. Bearish M5 CHoCH confirmed. Limit sell order waiting at Bearish BPR overlap.'
+    },
+    {
+      id: 'sh_usdjpy_live_02',
+      pair: 'USDJPY',
+      timestamp: now,
+      ipda_bias: 'BULLISH',
+      asian_high: 153.850,
+      asian_low: 153.200,
+      sweep_type: 'LOW_SWEEP',
+      choch_confirmed: 1,
+      bpr_high: 153.340,
+      bpr_low: 153.280,
+      order_type: 'LIMIT',
+      entry_price: 153.300,
+      stop_loss: 153.080,
+      take_profit_1: 153.850,
+      risk_reward_ratio: 3.5,
+      status: 'TRIGGERED',
+      sweep_price: 153.120,
+      choch_price: 153.380,
+      exit_price: null,
+      realized_pnl: null,
+      notes: 'Asian Low swept at London Open. Bullish M5 CHoCH formed, BPR filled at 153.300. In trade targeting Asian High liquidity.'
+    },
+    {
+      id: 'sh_gbpusd_live_03',
+      pair: 'GBPUSD',
+      timestamp: now,
+      ipda_bias: 'BEARISH',
+      asian_high: 1.29950,
+      asian_low: 1.29620,
+      sweep_type: 'HIGH_SWEEP',
+      choch_confirmed: 1,
+      bpr_high: 1.29920,
+      bpr_low: 1.29880,
+      order_type: 'LIMIT',
+      entry_price: 1.29890,
+      stop_loss: 1.30040,
+      take_profit_1: 1.29620,
+      risk_reward_ratio: 3.2,
+      status: 'PENDING_FILL',
+      sweep_price: 1.30010,
+      choch_price: 1.29850,
+      exit_price: null,
+      realized_pnl: null,
+      notes: 'Asian High swept into London Kill Zone. Bearish M5 CHoCH & overlapping FVG validated. Limit order pending fill.'
+    },
+    {
+      id: 'sh_audusd_live_04',
+      pair: 'AUDUSD',
+      timestamp: now,
+      ipda_bias: 'BEARISH',
+      asian_high: 0.66250,
+      asian_low: 0.65980,
+      sweep_type: 'HIGH_SWEEP',
+      choch_confirmed: 1,
+      bpr_high: 0.66240,
+      bpr_low: 0.66210,
+      order_type: 'LIMIT',
+      entry_price: 0.66220,
+      stop_loss: 0.66340,
+      take_profit_1: 0.65980,
+      risk_reward_ratio: 3.4,
+      status: 'PENDING_FILL',
+      sweep_price: 0.66310,
+      choch_price: 0.66180,
+      exit_price: null,
+      realized_pnl: null,
+      notes: 'Asian High liquidity swept at 0.66310. Bearish CHoCH + BPR validated. Limit order set at 0.66220.'
+    },
+    {
+      id: 'sh_usdchf_resolved_05',
+      pair: 'USDCHF',
+      timestamp: now,
+      ipda_bias: 'BULLISH',
+      asian_high: 0.86900,
+      asian_low: 0.86550,
+      sweep_type: 'LOW_SWEEP',
+      choch_confirmed: 1,
+      bpr_high: 0.86620,
+      bpr_low: 0.86580,
+      order_type: 'LIMIT',
+      entry_price: 0.86600,
+      stop_loss: 0.86460,
+      take_profit_1: 0.86900,
+      risk_reward_ratio: 3.1,
+      status: 'TP_HIT',
+      sweep_price: 0.86490,
+      choch_price: 0.86650,
+      exit_price: 0.86900,
+      realized_pnl: 310,
+      notes: 'Asian Low swept, limit entry filled at 0.86600. Clean expansion targeted opposing Asian High at 0.86900 (+3.1R).'
+    }
+  ];
+
+  for (const s of initialSignals) {
+    insertStmt.run(
+      s.id, s.pair, s.timestamp, s.ipda_bias, s.asian_high, s.asian_low,
+      s.sweep_type, s.choch_confirmed, s.bpr_high, s.bpr_low,
+      s.order_type, s.entry_price, s.stop_loss, s.take_profit_1,
+      s.risk_reward_ratio, s.status, s.sweep_price, s.choch_price,
+      s.exit_price, s.realized_pnl, s.notes, now, now
+    );
   }
 }
 
@@ -904,6 +1081,139 @@ export function updateSignalStatus(
 export function deleteSignal(id: string): boolean {
   const db = getDb();
   const res = db.prepare('DELETE FROM signals WHERE id = ?').run(id);
+  return res.changes > 0;
+}
+
+// ============================================================================
+// ASIAN KILL ZONE STOP HUNT (STUFF) SIGNALS CRUD
+// ============================================================================
+
+export function insertStopHuntSignal(signal: StopHuntSignal): StopHuntSignal {
+  const db = getDb();
+  const pair = signal.pair.toUpperCase();
+  const now = new Date().toISOString();
+
+  // Deduplicate: remove any older duplicate signal for this pair
+  db.prepare('DELETE FROM stop_hunt_signals WHERE pair = ? AND id != ?').run(pair, signal.id);
+
+  db.prepare(`
+    INSERT OR REPLACE INTO stop_hunt_signals (
+      id, pair, timestamp, ipda_bias, asian_high, asian_low, sweep_type,
+      choch_confirmed, bpr_high, bpr_low, order_type, entry_price, stop_loss,
+      take_profit_1, risk_reward_ratio, status, sweep_price, choch_price,
+      exit_price, realized_pnl, notes, created_at, updated_at
+    ) VALUES (
+      ?, ?, ?, ?, ?, ?, ?,
+      ?, ?, ?, ?, ?, ?,
+      ?, ?, ?, ?, ?,
+      ?, ?, ?, ?, ?
+    )
+  `).run(
+    signal.id,
+    pair,
+    signal.timestamp,
+    signal.ipdaBias,
+    signal.asianHigh,
+    signal.asianLow,
+    signal.sweepType,
+    signal.chochConfirmed ? 1 : 0,
+    signal.bprRange.high,
+    signal.bprRange.low,
+    signal.orderType || 'LIMIT',
+    signal.entryPrice,
+    signal.stopLoss,
+    signal.takeProfit1,
+    signal.riskRewardRatio,
+    signal.status || 'PENDING_FILL',
+    signal.sweepPrice || null,
+    signal.chochPrice || null,
+    signal.exitPrice || null,
+    signal.realizedPnl || null,
+    signal.notes || null,
+    signal.created_at || signal.timestamp || now,
+    now
+  );
+
+  return signal;
+}
+
+export function getAllStopHuntSignals(limit: number = 100): StopHuntSignal[] {
+  const db = getDb();
+  const rows = db.prepare('SELECT * FROM stop_hunt_signals ORDER BY created_at DESC LIMIT ?').all(limit) as any[];
+  return rows.map(r => ({
+    id: r.id,
+    pair: r.pair,
+    timestamp: r.timestamp,
+    ipdaBias: r.ipda_bias,
+    asianHigh: r.asian_high,
+    asianLow: r.asian_low,
+    sweepType: r.sweep_type,
+    chochConfirmed: Boolean(r.choch_confirmed),
+    bprRange: { high: r.bpr_high, low: r.bpr_low },
+    orderType: r.order_type || 'LIMIT',
+    entryPrice: r.entry_price,
+    stopLoss: r.stop_loss,
+    takeProfit1: r.take_profit_1,
+    riskRewardRatio: r.risk_reward_ratio,
+    status: r.status,
+    sweepPrice: r.sweep_price || undefined,
+    chochPrice: r.choch_price || undefined,
+    exitPrice: r.exit_price || undefined,
+    realizedPnl: r.realized_pnl || undefined,
+    notes: r.notes || undefined,
+    created_at: r.created_at
+  }));
+}
+
+export function updateStopHuntSignalStatus(
+  id: string,
+  status: StopHuntSignal['status'],
+  exitPrice?: number,
+  realizedPnl?: number
+): StopHuntSignal | null {
+  const db = getDb();
+  const now = new Date().toISOString();
+
+  db.prepare(`
+    UPDATE stop_hunt_signals SET
+      status = ?,
+      exit_price = COALESCE(?, exit_price),
+      realized_pnl = COALESCE(?, realized_pnl),
+      updated_at = ?
+    WHERE id = ?
+  `).run(status, exitPrice !== undefined ? exitPrice : null, realizedPnl !== undefined ? realizedPnl : null, now, id);
+
+  const row = db.prepare('SELECT * FROM stop_hunt_signals WHERE id = ?').get(id) as any;
+  if (!row) return null;
+
+  return {
+    id: row.id,
+    pair: row.pair,
+    timestamp: row.timestamp,
+    ipdaBias: row.ipda_bias,
+    asianHigh: row.asian_high,
+    asianLow: row.asian_low,
+    sweepType: row.sweep_type,
+    chochConfirmed: Boolean(row.choch_confirmed),
+    bprRange: { high: row.bpr_high, low: row.bpr_low },
+    orderType: row.order_type || 'LIMIT',
+    entryPrice: row.entry_price,
+    stopLoss: row.stop_loss,
+    takeProfit1: row.take_profit_1,
+    riskRewardRatio: row.risk_reward_ratio,
+    status: row.status,
+    sweepPrice: row.sweep_price || undefined,
+    chochPrice: row.choch_price || undefined,
+    exitPrice: row.exit_price || undefined,
+    realizedPnl: row.realized_pnl || undefined,
+    notes: row.notes || undefined,
+    created_at: row.created_at
+  };
+}
+
+export function deleteStopHuntSignal(id: string): boolean {
+  const db = getDb();
+  const res = db.prepare('DELETE FROM stop_hunt_signals WHERE id = ?').run(id);
   return res.changes > 0;
 }
 

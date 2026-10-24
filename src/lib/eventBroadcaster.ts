@@ -6,6 +6,10 @@ export type SSEEventType =
   | 'LIVE_PRICE_TICK'
   | 'RISK_UPDATED' 
   | 'IPDA_UPDATED' 
+  | 'STOP_HUNT_SIGNAL'
+  | 'NEW_STOP_HUNT_SIGNAL'
+  | 'STOP_HUNT_SIGNAL_UPDATED'
+  | 'STOP_HUNT_SIGNAL_DELETED'
   | 'HEARTBEAT';
 
 export interface SSEMessage {

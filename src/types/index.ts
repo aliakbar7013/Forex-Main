@@ -139,6 +139,80 @@ export interface Signal {
   raw_payload?: Record<string, unknown>;
 }
 
+/**
+ * Asian Kill Zone Stop Hunt (STUFF) Signal Specification
+ * 5-Minute Timeframe (M5), America/New_York session timing, Limit Orders Only.
+ */
+export interface StopHuntSignal {
+  id: string;
+  pair: string; // e.g., 'EURUSD', 'USDCHF', 'XAUUSD'
+  timestamp: string;
+  ipdaBias: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
+  asianHigh: number;
+  asianLow: number;
+  sweepType: 'HIGH_SWEEP' | 'LOW_SWEEP';
+  chochConfirmed: boolean;
+  bprRange: { high: number; low: number };
+  orderType: 'LIMIT';
+  entryPrice: number;
+  stopLoss: number;
+  takeProfit1: number;
+  riskRewardRatio: number;
+  status: 'PENDING_FILL' | 'TRIGGERED' | 'TP_HIT' | 'SL_HIT' | 'EXPIRED';
+  
+  // Detailed execution metadata
+  sweepPrice?: number;
+  chochPrice?: number;
+  opposingTarget?: number;
+  exitPrice?: number;
+  realizedPnl?: number;
+  riskPercent?: number;
+  riskAmountUsd?: number;
+  calculatedLotSize?: number;
+  tradingDay?: string;
+  dateExecuted?: string;
+  session?: string;
+  notes?: string;
+  created_at?: string;
+}
+
+export interface AsianStopHuntBacktestConfig {
+  asianStartHourNY: number; // default 20 (8 PM NY)
+  asianEndHourNY: number;   // default 0 (12 AM midnight NY)
+  minRiskReward: number;    // default 3.0 (up to 6.0+)
+  slBufferPips: number;     // default 3.0 pips above/below sweep high/low
+  bprBufferPips: number;    // default 1.0 pips
+  targetMode: 'OPPOSING_ASIAN_LEVEL' | 'FIXED_RR' | 'HYBRID';
+  selectedPairs: string[];  // list of symbols
+  dateRangeMonths?: string[]; // e.g. ['2026-04', '2026-05', ..., '2026-10']
+}
+
+export interface AsianStopHuntTradeResult {
+  id: string;
+  pair: string;
+  date: string;
+  tradingDay: string;
+  ipdaBias: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
+  sweepType: 'HIGH_SWEEP' | 'LOW_SWEEP';
+  asianHigh: number;
+  asianLow: number;
+  sweepPrice: number;
+  chochConfirmed: boolean;
+  chochPrice: number;
+  bprRange: { high: number; low: number };
+  orderType: 'LIMIT';
+  entryPrice: number;
+  stopLoss: number;
+  takeProfit: number;
+  riskRewardRatio: number;
+  outcome: 'WIN' | 'LOSS' | 'EXPIRED';
+  exitPrice: number;
+  realizedPnl: number;
+  entryTimeNY: string;
+  entryTimeIST: string;
+  notes: string;
+}
+
 export interface RiskSettings {
   id: string;
   balance: number;

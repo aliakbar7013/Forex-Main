@@ -23,8 +23,10 @@ import {
   Key,
   ExternalLink,
   ShieldCheck,
-  Star
+  Star,
+  Target
 } from 'lucide-react';
+import { AsianStopHuntBacktester } from '@/components/dashboard/AsianStopHuntBacktester';
 import { LogBacktestTradeModal } from '@/components/modals/LogBacktestTradeModal';
 import { BacktestTradeChartModal } from '@/components/modals/BacktestTradeChartModal';
 import { PairFilterSelect } from '@/components/dashboard/PairFilterSelect';
@@ -43,6 +45,7 @@ function extractTradeTime(session: string): string {
 }
 
 export function BacktestStudio() {
+  const [studioMode, setStudioMode] = useState<'ASIAN_STOP_HUNT' | 'CBDR_ARCHIVE'>('ASIAN_STOP_HUNT');
   const [trades, setTrades] = useState<BacktestTradeRecord[]>([]);
   const [stats, setStats] = useState<BacktestStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -388,13 +391,52 @@ export function BacktestStudio() {
   return (
     <div className="space-y-6">
       
-      {/* Real-Market Sync Feedback Banner */}
-      {syncFeedback && (
-        <div className="p-3.5 rounded-xl bg-blue-50 border border-blue-200 text-blue-900 text-xs font-bold flex items-center gap-2 animate-in fade-in shadow-xs">
-          <Zap className="w-4 h-4 text-blue-600 shrink-0" />
-          <span>{syncFeedback}</span>
-        </div>
-      )}
+      {/* Top Level Sub-Tab Navigation: Asian Stop Hunt Engine vs CBDR Archive */}
+      <div className="flex items-center gap-2 bg-white border border-slate-200/80 rounded-2xl p-2 shadow-xs">
+        <button
+          type="button"
+          onClick={() => setStudioMode('ASIAN_STOP_HUNT')}
+          className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs sm:text-sm font-black transition-all cursor-pointer ${
+            studioMode === 'ASIAN_STOP_HUNT'
+              ? 'bg-slate-900 text-white shadow-xs'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+          }`}
+        >
+          <Target className="w-4 h-4 text-amber-400" />
+          <span>Asian Kill Zone Stop Hunt (STUFF) Backtester (5m)</span>
+          <span className="hidden sm:inline-block px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-400/20 text-amber-300">
+            NEW SMC ENGINE
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setStudioMode('CBDR_ARCHIVE')}
+          className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs sm:text-sm font-black transition-all cursor-pointer ${
+            studioMode === 'CBDR_ARCHIVE'
+              ? 'bg-slate-900 text-white shadow-xs'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+          }`}
+        >
+          <BarChart3 className="w-4 h-4 text-blue-400" />
+          <span>CBDR Institutional Backtest Archive (15m)</span>
+          <span className="hidden sm:inline-block px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-slate-100 text-slate-700">
+            {trades.length || 1227} Trades
+          </span>
+        </button>
+      </div>
+
+      {studioMode === 'ASIAN_STOP_HUNT' ? (
+        <AsianStopHuntBacktester />
+      ) : (
+        <>
+          {/* Real-Market Sync Feedback Banner */}
+          {syncFeedback && (
+            <div className="p-3.5 rounded-xl bg-blue-50 border border-blue-200 text-blue-900 text-xs font-bold flex items-center gap-2 animate-in fade-in shadow-xs">
+              <Zap className="w-4 h-4 text-blue-600 shrink-0" />
+              <span>{syncFeedback}</span>
+            </div>
+          )}
 
       {/* TradingView Institutional Market Feed Bar with OANDA Broker Indicator */}
       <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-blue-900 via-indigo-950 to-slate-900 text-white shadow-md border border-blue-800/60 space-y-4">
@@ -1106,6 +1148,8 @@ export function BacktestStudio() {
         onClose={() => setSelectedTradeForChart(null)}
         trade={selectedTradeForChart}
       />
+        </>
+      )}
     </div>
   );
 }

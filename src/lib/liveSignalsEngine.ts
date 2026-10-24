@@ -8,7 +8,7 @@ import { getPipSize, Candle } from './cbdrRealDataEngine';
 import { fetchTwelveDataCandles, LiveMarketQuote } from './twelveDataEngine';
 import { fetchAllTradingViewLiveQuotes, ALL_FOREX_SYMBOLS, TradingViewLiveQuote } from './tradingViewDataEngine';
 import { checkSignalIpdaPermitted, DEFAULT_CENTRAL_BANK_RATES } from './ipdaEngine';
-import { Signal, SignalStatus, TradeLog, BacktestTradeRecord } from '@/types';
+import { Signal, SignalStatus, TradeLog, BacktestTradeRecord, StopHuntSignal } from '@/types';
 import { 
   getDb, 
   insertSignal, 
@@ -18,7 +18,9 @@ import {
   getRiskSettings, 
   saveRiskSettings, 
   insertTradeLog, 
-  insertBacktestTrade 
+  insertBacktestTrade,
+  insertStopHuntSignal,
+  getAllStopHuntSignals
 } from './db';
 import { applyTradeOutcomeToRiskSettings } from './riskEngine';
 import { broadcastSSE } from './eventBroadcaster';
@@ -850,6 +852,33 @@ export async function syncLiveMarketSignals(): Promise<{
 
       insertSignal(shSignal);
       broadcastSSE('NEW_SIGNAL', shSignal);
+
+      // Also persist dedicated typed Asian Stop Hunt signal
+      const typedShSignal: StopHuntSignal = {
+        id: `sh_${shSpec.symbol.toLowerCase()}_${todayDateStr}`,
+        pair: shSpec.symbol.toUpperCase(),
+        timestamp: `${todayDateStr}T08:15:00.000Z`,
+        ipdaBias: isBuy ? 'BULLISH' : 'BEARISH',
+        asianHigh,
+        asianLow,
+        sweepType: isBuy ? 'LOW_SWEEP' : 'HIGH_SWEEP',
+        chochConfirmed: true,
+        bprRange: {
+          high: isBuy ? entry : (asianHigh - 3.0 * pipFactor),
+          low: isBuy ? (asianLow + 3.0 * pipFactor) : entry
+        },
+        orderType: 'LIMIT',
+        entryPrice: entry,
+        stopLoss: sl,
+        takeProfit1: tp1,
+        riskRewardRatio: primaryRR,
+        status: 'PENDING_FILL',
+        sweepPrice: sweptPrice,
+        notes: `[IPDA ${shSpec.effectiveDirection}] [Stop Hunt 5m] Swept Asian ${sweptLevel} (${sweptPrice}) post-Asian KZ. 5m ${isBuy ? 'Green' : 'Red'} CHoCH & BPR Limit Entry @ ${entry}. SL: ${sl}. TP: Opposing Asian ${opposingLevel} @ ${tp1}.`
+      };
+      insertStopHuntSignal(typedShSignal);
+      broadcastSSE('STOP_HUNT_SIGNAL', typedShSignal);
+
       sendTelegramSignalAlert(shSignal).catch(err => console.warn('Telegram live Stop Hunt alert error:', err));
     } catch (err) {
       console.error(`Error constructing Stop Hunt signal for ${shSpec.symbol}`, err);

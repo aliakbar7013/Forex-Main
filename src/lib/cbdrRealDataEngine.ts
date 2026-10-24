@@ -68,21 +68,8 @@ export interface RealEngineResult {
   activeLiveTrades: Signal[];
 }
 
-export function getPipSize(symbol: string): number {
-  const s = symbol.toUpperCase();
-  if (s.includes('JPY')) return 0.01;
-  if (s.includes('XAU') || s === 'GC=F' || s.includes('GOLD')) return 0.1;
-  if (s.includes('US30') || s.includes('SPX') || s.includes('NAS')) return 1.0;
-  return 0.0001;
-}
-
-export function getPairDecimals(symbol: string): number {
-  const s = symbol.toUpperCase();
-  if (s.includes('JPY')) return 3;
-  if (s.includes('XAU') || s === 'GC=F' || s.includes('GOLD')) return 2;
-  if (s.includes('US30') || s.includes('SPX') || s.includes('NAS')) return 1;
-  return 5;
-}
+import { getPipSize, getPairDecimals } from './pairMath';
+export { getPipSize, getPairDecimals };
 
 /**
  * Fetches real 15m OHLCV candles calibrated to TradingView charts

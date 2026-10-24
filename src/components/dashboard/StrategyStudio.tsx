@@ -291,34 +291,201 @@ export function StrategyStudio() {
         </div>
       )}
 
-      {/* TAB 3: Stop Hunt Model */}
+      {/* TAB 3: Stop Hunt Model (Asian Kill Zone STUFF Strategy) */}
       {activeTab === 'stophunt' && (
-        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-4 animate-in fade-in">
-          <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
-            <Target className="w-5 h-5 text-blue-600" />
-            <h3 className="font-bold text-slate-900 text-base">Stop Hunt Model (5m Timeframe • Post-Asian Kill Zone)</h3>
+        <div className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-6 animate-in fade-in">
+          
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+            <div className="flex items-center gap-2.5">
+              <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-700">
+                <Target className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-black text-slate-900 text-lg">
+                  Asian Kill Zone Stop Hunt (STUFF) Model
+                </h3>
+                <p className="text-xs text-slate-500 font-medium">
+                  Smart Money Concepts (SMC) • 5-Minute (M5) Execution • Post-Asian Kill Zone Liquidity Sweeps
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-300">
+                ⚡ LIMIT ORDER ONLY
+              </span>
+              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-300">
+                🎯 Min 1:3 up to 1:6+ RR
+              </span>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs font-mono">
+          {/* Quick Specifications Ribbon */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
             <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
-              <span className="text-slate-500 font-bold block text-[10px]">TIMEFRAME</span>
-              <span className="font-bold text-slate-900">5-minute Execution</span>
+              <span className="text-slate-500 font-bold block text-[10px] uppercase">Base Timezone</span>
+              <span className="font-black text-slate-900">America/New_York (NY)</span>
             </div>
             <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
-              <span className="text-slate-500 font-bold block text-[10px]">TIMING</span>
-              <span className="font-bold text-slate-900">00:00–08:30 AM NY (Post-Asian)</span>
+              <span className="text-slate-500 font-bold block text-[10px] uppercase">Execution TF</span>
+              <span className="font-black text-slate-900">5-Minute (M5)</span>
             </div>
             <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
-              <span className="text-slate-500 font-bold block text-[10px]">MANDATORY RULE</span>
-              <span className="font-bold text-blue-700">IPDA Interest Rate Ratio Required</span>
+              <span className="text-slate-500 font-bold block text-[10px] uppercase">Asian KZ Window</span>
+              <span className="font-black text-blue-700">20:00 – 00:00 NY</span>
+            </div>
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+              <span className="text-slate-500 font-bold block text-[10px] uppercase">Pre-Condition</span>
+              <span className="font-black text-rose-700">0 Entries Inside KZ</span>
             </div>
           </div>
 
-          <div className="space-y-2 text-xs text-slate-700 font-medium">
-            <p><strong>1. Asian Kill Zone High/Low Mark:</strong> Mark the highest high and lowest low created between 20:00 - 00:00 NY.</p>
-            <p><strong>2. Liquidity Sweep:</strong> Wait for London or Pre-London volume to sweep the Asian high (for Short) or Asian low (for Long).</p>
-            <p><strong>3. CHOCH + BPR:</strong> Confirm a 5m Change of Character (CHOCH) followed by entry on a fresh Balanced Price Range (BPR).</p>
+          {/* Core Strategy Rules Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            
+            {/* Bearish SELL Setup Card */}
+            <div className="p-5 rounded-2xl bg-rose-50/70 border border-rose-200/80 shadow-xs space-y-3.5">
+              <div className="flex items-center justify-between">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[11px] font-black bg-rose-100 text-rose-900 border border-rose-300">
+                  SELL SETUP (SHORT)
+                </span>
+                <span className="text-xs font-mono font-bold text-rose-800">
+                  IPDA Bias: BEARISH
+                </span>
+              </div>
+
+              <div className="space-y-2 text-xs text-rose-950 font-medium">
+                <div className="flex items-start gap-2">
+                  <span className="font-black text-rose-700 shrink-0">1. Sweep:</span>
+                  <span>Price breaks above <strong>Asian_High</strong> after 00:00 NY to hunt buy-stop liquidity above the Asian range.</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="font-black text-rose-700 shrink-0">2. CHoCH:</span>
+                  <span>Forms a verified <strong>Bearish (Red) Change of Character (CHoCH)</strong> on M5 by breaking below the recent M5 swing low.</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="font-black text-rose-700 shrink-0">3. BPR:</span>
+                  <span>Identify a <strong>Balanced Price Range (BPR)</strong> where a Bearish FVG overlaps with a prior Bullish FVG. CHoCH and BPR are interchangeable in order, but both must validate before entry.</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="font-black text-rose-700 shrink-0">4. Limit Entry:</span>
+                  <span>Place <strong>LIMIT SELL ONLY</strong> at the upper edge/overlap of the Bearish BPR. (No market execution).</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="font-black text-rose-700 shrink-0">5. Stop Loss:</span>
+                  <span>Placed just above the swing high formed during the Asian High sweep (+1–3 pip safety buffer).</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="font-black text-rose-700 shrink-0">6. Take Profit:</span>
+                  <span>Target opposing retail liquidity: <strong>Asian_Low (Sell-Side Liquidity)</strong> or 1-Hour swing lows (Min 1:3 up to 1:6+ RR).</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Bullish BUY Setup Card */}
+            <div className="p-5 rounded-2xl bg-emerald-50/70 border border-emerald-200/80 shadow-xs space-y-3.5">
+              <div className="flex items-center justify-between">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[11px] font-black bg-emerald-100 text-emerald-900 border border-emerald-300">
+                  BUY SETUP (LONG)
+                </span>
+                <span className="text-xs font-mono font-bold text-emerald-800">
+                  IPDA Bias: BULLISH
+                </span>
+              </div>
+
+              <div className="space-y-2 text-xs text-emerald-950 font-medium">
+                <div className="flex items-start gap-2">
+                  <span className="font-black text-emerald-700 shrink-0">1. Sweep:</span>
+                  <span>Price breaks below <strong>Asian_Low</strong> after 00:00 NY to hunt sell-stop liquidity below the Asian range.</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="font-black text-emerald-700 shrink-0">2. CHoCH:</span>
+                  <span>Forms a verified <strong>Bullish (Green) Change of Character (CHoCH)</strong> on M5 by breaking above the recent M5 swing high.</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="font-black text-emerald-700 shrink-0">3. BPR:</span>
+                  <span>Identify a <strong>Balanced Price Range (BPR)</strong> where a Bullish FVG overlaps with a prior Bearish FVG. Both Bullish CHoCH &amp; BPR must validate before setting order.</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="font-black text-emerald-700 shrink-0">4. Limit Entry:</span>
+                  <span>Place <strong>LIMIT BUY ONLY</strong> at the lower edge/overlap of the Bullish BPR. (No market execution).</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="font-black text-emerald-700 shrink-0">5. Stop Loss:</span>
+                  <span>Placed just below the swing low formed during the Asian Low sweep (+1–3 pip safety buffer).</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="font-black text-emerald-700 shrink-0">6. Take Profit:</span>
+                  <span>Target opposing retail liquidity: <strong>Asian_High (Buy-Side Liquidity)</strong> or 1-Hour swing highs (Min 1:3 up to 1:6+ RR).</span>
+                </div>
+              </div>
+            </div>
+
           </div>
+
+          {/* Mandatory Pre-Condition & Filter Callout */}
+          <div className="p-4 sm:p-5 rounded-2xl bg-amber-50/70 border border-amber-300 shadow-xs space-y-3">
+            <h4 className="font-black text-amber-950 text-sm flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-amber-700" />
+              <span>Mandatory Institutional Execution Filters</span>
+            </h4>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-amber-900">
+              <div className="p-3 rounded-xl bg-white/80 border border-amber-200">
+                <span className="font-bold text-amber-950 block mb-1">⏳ 1. Asian KZ Pre-Condition</span>
+                <p className="text-[11px] leading-relaxed">
+                  <strong>NO ENTRIES</strong> inside the Asian Kill Zone (20:00 – 00:00 NY). The algorithm must wait until the zone completely concludes before scanning for liquidity sweeps.
+                </p>
+              </div>
+
+              <div className="p-3 rounded-xl bg-white/80 border border-amber-200">
+                <span className="font-bold text-amber-950 block mb-1">🧭 2. IPDA Directional Bias</span>
+                <p className="text-[11px] leading-relaxed">
+                  Interest rate differentials dictate permission: <strong>BULLISH</strong> pairs only take BUY setups. <strong>BEARISH</strong> pairs only take SELL setups. <strong>NEUTRAL</strong> pairs are flagged "NO TRADE" and skipped.
+                </p>
+              </div>
+
+              <div className="p-3 rounded-xl bg-white/80 border border-amber-200">
+                <span className="font-bold text-amber-950 block mb-1">🎯 3. Limit Order Discipline</span>
+                <p className="text-[11px] leading-relaxed">
+                  Only <strong>LIMIT orders</strong> are placed. Market orders are prohibited. Orders remain in <code>PENDING_FILL</code> until price retraces to the BPR edge, or expire cleanly at session close.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Order State Transition Flowchart */}
+          <div className="p-4 sm:p-5 rounded-2xl bg-slate-900 text-white shadow-xs space-y-3">
+            <h4 className="text-xs font-black uppercase tracking-wider text-slate-400 flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-blue-400" />
+              <span>Automated Signal Lifecycle &amp; State Machine</span>
+            </h4>
+
+            <div className="grid grid-cols-1 sm:grid-cols-5 gap-2 text-center text-xs font-mono">
+              <div className="p-2.5 rounded-xl bg-slate-800 border border-slate-700">
+                <span className="text-[10px] text-slate-400 block font-bold">1. SCANNING</span>
+                <span className="font-bold text-slate-200">Post-KZ Sweep</span>
+              </div>
+              <div className="p-2.5 rounded-xl bg-slate-800 border border-slate-700">
+                <span className="text-[10px] text-slate-400 block font-bold">2. VALIDATION</span>
+                <span className="font-bold text-amber-300">CHoCH + BPR</span>
+              </div>
+              <div className="p-2.5 rounded-xl bg-amber-500/20 border border-amber-500/40">
+                <span className="text-[10px] text-amber-400 block font-bold">3. ORDER PLACED</span>
+                <span className="font-bold text-amber-200">PENDING_FILL</span>
+              </div>
+              <div className="p-2.5 rounded-xl bg-blue-500/20 border border-blue-500/40">
+                <span className="text-[10px] text-blue-400 block font-bold">4. RETRACEMENT</span>
+                <span className="font-bold text-blue-200">TRIGGERED (In Trade)</span>
+              </div>
+              <div className="p-2.5 rounded-xl bg-emerald-500/20 border border-emerald-500/40">
+                <span className="text-[10px] text-emerald-400 block font-bold">5. TARGET</span>
+                <span className="font-bold text-emerald-200">TP HIT (+3R–6R)</span>
+              </div>
+            </div>
+          </div>
+
         </div>
       )}
 

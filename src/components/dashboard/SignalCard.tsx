@@ -346,6 +346,12 @@ export function SignalCardComponent({
             </span>
           )}
 
+          {isStopHunt && (
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md border whitespace-nowrap bg-purple-50 text-purple-900 border-purple-200">
+              ⚡ Asian Sweep • M5 CHoCH &amp; BPR Limit
+            </span>
+          )}
+
           {/* Prominent Date of Entry Pill */}
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-50 text-blue-900 border border-blue-200/80 font-mono whitespace-nowrap">
             <Calendar className="w-3 h-3 text-blue-600 shrink-0" />
@@ -437,17 +443,21 @@ export function SignalCardComponent({
                 <Calendar className="w-2.5 h-2.5 text-blue-500" />
                 <span>Entry</span>
               </span>
-              <span className="text-[9px] text-slate-400 font-mono font-medium">Order</span>
+              <span className="text-[9px] text-slate-500 font-mono font-bold">
+                {isStopHunt ? 'LIMIT ONLY' : 'Order'}
+              </span>
             </div>
             <div className="text-base font-bold text-slate-900 font-mono tracking-tight">
               {formatLivePrice(signal.entry)}
             </div>
             <div className="text-[10px] text-slate-500 font-medium mt-1 truncate">
-              {isCBDR && !isMajorPair(signal.symbol) 
-                ? '1st London FVG' 
-                : isCBDR 
-                  ? 'Post-Sweep FVG' 
-                  : '5m Imbalance'}
+              {isStopHunt
+                ? 'Balanced Price Range (BPR)'
+                : isCBDR && !isMajorPair(signal.symbol) 
+                  ? '1st London FVG' 
+                  : isCBDR 
+                    ? 'Post-Sweep FVG' 
+                    : '5m Imbalance'}
             </div>
           </div>
 
@@ -519,7 +529,7 @@ export function SignalCardComponent({
               {formatLivePrice(signal.tp1)}
             </div>
             <div className="text-[10px] text-emerald-600 font-semibold font-mono mt-1">
-              +{Math.round(signal.sl_distance_pips_points * 3)} pips
+              {isStopHunt ? `Opposing Asian ${isBuy ? 'High' : 'Low'}` : `+${Math.round(signal.sl_distance_pips_points * 3)} pips`}
             </div>
           </div>
 

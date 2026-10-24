@@ -11,7 +11,8 @@ import {
   IPDAPairBias,
   IPDAOverrideMode,
   AuthSession,
-  BacktestStats
+  BacktestStats,
+  StopHuntSignal
 } from '@/types';
 import { getCurrentMarketClocks, getTradingSessions, SessionClocks } from '@/lib/sessionTracker';
 import { soundEngine } from '@/lib/soundEngine';
@@ -19,6 +20,7 @@ import { Header } from '@/components/dashboard/Header';
 import { IpdaDirectionMatrix } from '@/components/dashboard/IpdaDirectionMatrix';
 import { FilterAndControlsBar } from '@/components/dashboard/FilterAndControlsBar';
 import { SignalCard } from '@/components/dashboard/SignalCard';
+import { StopHuntSignalCard } from '@/components/dashboard/StopHuntSignalCard';
 import { SignalsTable } from '@/components/dashboard/SignalsTable';
 import { V2Dashboard } from '@/components/dashboard/V2Dashboard';
 import { WebhookSimulatorModal } from '@/components/modals/WebhookSimulatorModal';
@@ -212,6 +214,7 @@ export default function TradingDashboard() {
 
   // Main Data States
   const [signals, setSignals] = useState<Signal[]>([]);
+  const [stopHuntSignals, setStopHuntSignals] = useState<StopHuntSignal[]>([]);
   const [riskSettings, setRiskSettings] = useState<RiskSettings | null>(null);
   const [ipdaBiases, setIpdaBiases] = useState<IPDABiasRecord[]>(STATIC_IPDA_BIASES);
   const [ipdaMatrix, setIpdaMatrix] = useState<IPDAPairBias[]>([]);
@@ -275,19 +278,26 @@ export default function TradingDashboard() {
       let fetchedMatrix: IPDAPairBias[] | null = null;
 
       try {
-        const [signalsRes, riskRes, ratesRes, ipdaRes, matrixRes, backtestRes] = await Promise.all([
+        const [signalsRes, riskRes, ratesRes, ipdaRes, matrixRes, backtestRes, stopHuntRes] = await Promise.all([
           fetch('/api/signals'),
           fetch('/api/risk'),
           fetch('/api/ipda/rates'),
           fetch('/api/ipda'),
           fetch('/api/ipda/matrix'),
-          fetch('/api/backtest')
+          fetch('/api/backtest'),
+          fetch('/api/stop-hunt').catch(() => null)
         ]);
 
         if (signalsRes.ok) {
           const sData = await signalsRes.json();
           if (sData?.signals && Array.isArray(sData.signals)) {
             fetchedSignals = sData.signals;
+          }
+        }
+        if (stopHuntRes && stopHuntRes.ok) {
+          const shData = await stopHuntRes.json();
+          if (shData?.signals && Array.isArray(shData.signals)) {
+            setStopHuntSignals(shData.signals);
           }
         }
         if (riskRes.ok) {
@@ -482,6 +492,41 @@ export default function TradingDashboard() {
         }
       });
 
+      eventSource.addEventListener('STOP_HUNT_SIGNAL', (e) => {
+        try {
+          const parsed = JSON.parse(e.data);
+          const newSh: StopHuntSignal = parsed.data;
+          setStopHuntSignals(prev => [newSh, ...prev.filter(s => s.id !== newSh.id)]);
+          if (newSh.sweepType === 'HIGH_SWEEP') {
+            soundEngine.playSellSignalChime();
+          } else {
+            soundEngine.playBuySignalChime();
+          }
+        } catch (err) {
+          console.error('Error handling STOP_HUNT_SIGNAL SSE event', err);
+        }
+      });
+
+      eventSource.addEventListener('STOP_HUNT_SIGNAL_UPDATED', (e) => {
+        try {
+          const parsed = JSON.parse(e.data);
+          const updated: StopHuntSignal = parsed.data;
+          setStopHuntSignals(prev => prev.map(s => s.id === updated.id ? updated : s));
+        } catch (err) {
+          console.error('Error handling STOP_HUNT_SIGNAL_UPDATED SSE event', err);
+        }
+      });
+
+      eventSource.addEventListener('STOP_HUNT_SIGNAL_DELETED', (e) => {
+        try {
+          const parsed = JSON.parse(e.data);
+          const { id } = parsed.data;
+          setStopHuntSignals(prev => prev.filter(s => s.id !== id));
+        } catch (err) {
+          console.error('Error handling STOP_HUNT_SIGNAL_DELETED SSE event', err);
+        }
+      });
+
       eventSource.onerror = () => {
         setIsConnected(false);
         eventSource?.close();
@@ -597,6 +642,33 @@ export default function TradingDashboard() {
       }
     } catch (err) {
       console.error('Failed to delete signal', err);
+    }
+  }, []);
+
+  const handleUpdateStopHuntStatus = useCallback(async (id: string, status: StopHuntSignal['status'], exitPrice?: number, pnl?: number) => {
+    try {
+      setStopHuntSignals(prev => prev.map(s => s.id === id ? { ...s, status, exitPrice, realizedPnl: pnl } : s));
+      await fetch('/api/stop-hunt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'UPDATE_STATUS', id, status, exitPrice, realizedPnl: pnl })
+      });
+    } catch (err) {
+      console.error('Failed to update stop hunt signal status', err);
+    }
+  }, []);
+
+  const handleDeleteStopHuntSignal = useCallback(async (id: string) => {
+    if (!confirm('Are you sure you want to delete this Stop Hunt signal?')) return;
+    try {
+      setStopHuntSignals(prev => prev.filter(s => s.id !== id));
+      await fetch('/api/stop-hunt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'DELETE', id })
+      });
+    } catch (err) {
+      console.error('Failed to delete stop hunt signal', err);
     }
   }, []);
 
@@ -811,6 +883,27 @@ export default function TradingDashboard() {
     return sorted;
   }, [filteredSignals, selectedStrategy, isFavorite]);
 
+  // Filtered Stop Hunt Signals computation (Asian Kill Zone Model)
+  const filteredStopHuntSignals = useMemo(() => {
+    return stopHuntSignals.filter(sh => {
+      if (favoritesOnly && !isFavorite(sh.pair)) return false;
+      if (selectedStatus !== 'ALL' && sh.status !== selectedStatus) return false;
+      if (selectedDirection !== 'ALL') {
+        const isBuy = sh.sweepType === 'LOW_SWEEP';
+        if (selectedDirection === 'BUY' && !isBuy) return false;
+        if (selectedDirection === 'SELL' && isBuy) return false;
+      }
+      if (searchQuery.trim()) {
+        const q = searchQuery.toUpperCase().trim();
+        const matchesPair = sh.pair.toUpperCase().includes(q);
+        const matchesBias = sh.ipdaBias.toUpperCase().includes(q);
+        const matchesNotes = (sh.notes || '').toUpperCase().includes(q);
+        if (!matchesPair && !matchesBias && !matchesNotes) return false;
+      }
+      return true;
+    });
+  }, [stopHuntSignals, favoritesOnly, isFavorite, selectedStatus, selectedDirection, searchQuery]);
+
   const handleOpenChart = useCallback((symbol: string, signal?: Signal) => {
     setSelectedChartSymbol(symbol);
     if (signal) setSelectedChartSignal(signal);
@@ -823,22 +916,27 @@ export default function TradingDashboard() {
 
     // Running CBDR trades (IN_TRADE) or valid new entries on Mon-Wed only
     const cbdrSignals = signals.filter(s => s.strategy === 'CBDR' && isCbdrTradingDay && (s.status === 'IN_TRADE' || s.status === 'PENDING'));
-    const stopHuntSignals = signals.filter(s => s.strategy === 'STOP_HUNT' && (s.status === 'IN_TRADE' || s.status === 'PENDING'));
+    const liveStopHuntCount = stopHuntSignals.length > 0 
+      ? stopHuntSignals.filter(s => s.status === 'PENDING_FILL' || s.status === 'TRIGGERED').length 
+      : signals.filter(s => s.strategy === 'STOP_HUNT' && (s.status === 'IN_TRADE' || s.status === 'PENDING')).length;
     const newYorkSignals = signals.filter(s => s.strategy === 'NEW_YORK' && (s.status === 'IN_TRADE' || s.status === 'PENDING'));
 
     // Unique symbols on ALL view to match deduplicated cards
     const uniqueSymbols = new Set<string>();
-    for (const s of [...stopHuntSignals, ...cbdrSignals, ...newYorkSignals]) {
+    for (const s of [...cbdrSignals, ...newYorkSignals]) {
       uniqueSymbols.add(s.symbol.toUpperCase());
+    }
+    for (const s of stopHuntSignals) {
+      uniqueSymbols.add(s.pair.toUpperCase());
     }
 
     return {
       all: uniqueSymbols.size,
       cbdr: cbdrSignals.length,
-      stopHunt: stopHuntSignals.length,
+      stopHunt: liveStopHuntCount,
       newYork: newYorkSignals.length
     };
-  }, [signals]);
+  }, [signals, stopHuntSignals]);
 
   // Dynamic Backtest & Performance Edge stats synchronized with SQLite database:
   const currentStats = useMemo(() => {
@@ -1274,6 +1372,49 @@ export default function TradingDashboard() {
               <div className="inline-block animate-spin rounded-full h-8 w-8 border-2 border-slate-900 border-t-transparent mb-3" />
               <p className="text-xs font-medium text-slate-600 tracking-wide">Connecting to Live Signals Feed...</p>
             </div>
+          ) : selectedStrategy === 'STOP_HUNT' ? (
+            filteredStopHuntSignals.length === 0 ? (
+              <div className="bg-white border border-slate-200/80 rounded-2xl p-12 text-center shadow-xs">
+                <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-700 mx-auto mb-3">
+                  <Clock className="w-6 h-6" />
+                </div>
+                <h3 className="text-base font-bold text-slate-900 mb-1">
+                  No Active Asian Stop Hunt Signals
+                </h3>
+                <p className="text-xs text-slate-500 max-w-md mx-auto mb-4 font-medium leading-relaxed">
+                  The Asian Kill Zone Stop Hunt strategy scans for Asian High / Low sweeps after 00:00 NY, followed by M5 CHoCH &amp; BPR verification with limit order execution.
+                </p>
+                <div className="flex items-center justify-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('backtest')}
+                    className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs shadow-xs transition-colors cursor-pointer"
+                  >
+                    Run Asian Stop Hunt Backtester
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedStrategy('CBDR')}
+                    className="px-4 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 font-semibold text-xs transition-colors shadow-xs cursor-pointer"
+                  >
+                    View CBDR Signals
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {filteredStopHuntSignals.map((sh) => (
+                  <StopHuntSignalCard
+                    key={sh.id}
+                    signal={sh}
+                    onUpdateStatus={handleUpdateStopHuntStatus}
+                    onDeleteSignal={handleDeleteStopHuntSignal}
+                    onOpenChart={(sym) => handleOpenChart(sym)}
+                    livePrice={liveQuotes[sh.pair]?.price}
+                  />
+                ))}
+              </div>
+            )
           ) : displayedSignals.length === 0 ? (
             <div className="bg-white border border-slate-200/80 rounded-2xl p-12 text-center shadow-xs">
               {selectedStrategy === 'CBDR' ? (
