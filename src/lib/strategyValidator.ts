@@ -92,9 +92,10 @@ export function getSignalTradingDay(signal: {
   let dateObj: Date;
   if (signal.date_of_entry && /^\d{4}-\d{2}-\d{2}$/.test(signal.date_of_entry.trim())) {
     const [y, m, d] = signal.date_of_entry.trim().split('-').map(Number);
-    dateObj = new Date(y, m - 1, d, 12, 0, 0); // Noon neutral prevents UTC timezone rollback
-  } else if (signal.created_at) {
-    dateObj = new Date(signal.created_at);
+    dateObj = new Date(Date.UTC(y, m - 1, d, 14, 0, 0)); // 14:00 UTC = 10:00 AM NY ensures same calendar day in NY & UTC
+  } else if (signal.created_at && /^\d{4}-\d{2}-\d{2}/.test(signal.created_at.trim())) {
+    const [y, m, d] = signal.created_at.trim().split('T')[0].split('-').map(Number);
+    dateObj = new Date(Date.UTC(y, m - 1, d, 14, 0, 0));
   } else {
     dateObj = new Date();
   }

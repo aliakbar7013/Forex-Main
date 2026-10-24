@@ -76,6 +76,14 @@ export function getPipSize(symbol: string): number {
   return 0.0001;
 }
 
+export function getPairDecimals(symbol: string): number {
+  const s = symbol.toUpperCase();
+  if (s.includes('JPY')) return 3;
+  if (s.includes('XAU') || s === 'GC=F' || s.includes('GOLD')) return 2;
+  if (s.includes('US30') || s.includes('SPX') || s.includes('NAS')) return 1;
+  return 5;
+}
+
 /**
  * Fetches real 15m OHLCV candles calibrated to TradingView charts
  */
@@ -113,6 +121,7 @@ export function backtestCbdrOnCandles(symbol: string, candles: Candle[]): RealEn
   const slBufferPips = 7.0; // 5-10 pips buffer (7 pips)
   const slBufferPrice = slBufferPips * pipFactor;
   const isMajor = isMajorPair(symbol);
+  const dec = getPairDecimals(symbol);
 
   // Group candles by calendar date
   const candlesByDate = new Map<string, Candle[]>();
@@ -211,16 +220,16 @@ export function backtestCbdrOnCandles(symbol: string, candles: Candle[]): RealEn
         let sl: number;
         if (isMajor) {
           const londonLowSoFar = Math.min(...londonCandles.slice(0, cIdx + 1).map(c => c.low));
-          sl = Number(londonLowSoFar.toFixed(5));
+          sl = Number(londonLowSoFar.toFixed(dec));
         } else {
-          sl = Number((imbalanceLow - slBufferPrice).toFixed(5)); // Below imbalance + 7 pips buffer
+          sl = Number((imbalanceLow - slBufferPrice).toFixed(dec)); // Below imbalance + 7 pips buffer
         }
-        const riskDist = entry - sl;
+        const riskDist = Number((entry - sl).toFixed(dec));
 
         if (riskDist > 0) {
           tradeFoundInDay = true;
-          const tp1 = Number((entry + riskDist * 3.0).toFixed(5)); // 1:3 target
-          const tp2 = Number((entry + riskDist * 5.0).toFixed(5));
+          const tp1 = Number((entry + riskDist * 3.0).toFixed(dec)); // 1:3 target
+          const tp2 = Number((entry + riskDist * 5.0).toFixed(dec));
           const lotSize = Number((1000 / (riskDist * 100000 || 1)).toFixed(2));
           const slPips = Number((riskDist / pipFactor).toFixed(1));
 
@@ -301,7 +310,7 @@ export function backtestCbdrOnCandles(symbol: string, candles: Candle[]): RealEn
               calculated_lot_size: lotSize,
               raw_quantity: lotSize * 100000,
               risk_amount_usd: 1000,
-              sl_distance_price: Number(riskDist.toFixed(5)),
+              sl_distance_price: Number(riskDist.toFixed(dec)),
               sl_distance_pips_points: slPips,
               primary_risk_reward: 3.0,
               targets: [
@@ -385,16 +394,16 @@ export function backtestCbdrOnCandles(symbol: string, candles: Candle[]): RealEn
         let sl: number;
         if (isMajor) {
           const londonHighSoFar = Math.max(...londonCandles.slice(0, cIdx + 1).map(c => c.high));
-          sl = Number(londonHighSoFar.toFixed(5));
+          sl = Number(londonHighSoFar.toFixed(dec));
         } else {
-          sl = Number((imbalanceHigh + slBufferPrice).toFixed(5)); // Above imbalance + 7 pips buffer
+          sl = Number((imbalanceHigh + slBufferPrice).toFixed(dec)); // Above imbalance + 7 pips buffer
         }
-        const riskDist = sl - entry;
+        const riskDist = Number((sl - entry).toFixed(dec));
 
         if (riskDist > 0) {
           tradeFoundInDay = true;
-          const tp1 = Number((entry - riskDist * 3.0).toFixed(5)); // 1:3 target
-          const tp2 = Number((entry - riskDist * 5.0).toFixed(5));
+          const tp1 = Number((entry - riskDist * 3.0).toFixed(dec)); // 1:3 target
+          const tp2 = Number((entry - riskDist * 5.0).toFixed(dec));
           const lotSize = Number((1000 / (riskDist * 100000 || 1)).toFixed(2));
           const slPips = Number((riskDist / pipFactor).toFixed(1));
 
@@ -474,7 +483,7 @@ export function backtestCbdrOnCandles(symbol: string, candles: Candle[]): RealEn
               calculated_lot_size: lotSize,
               raw_quantity: lotSize * 100000,
               risk_amount_usd: 1000,
-              sl_distance_price: Number(riskDist.toFixed(5)),
+              sl_distance_price: Number(riskDist.toFixed(dec)),
               sl_distance_pips_points: slPips,
               primary_risk_reward: 3.0,
               targets: [

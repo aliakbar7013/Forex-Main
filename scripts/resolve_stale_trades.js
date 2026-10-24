@@ -50,17 +50,17 @@ if (audchf) {
   );
 }
 
-// 2. Resolve EURGBP as TP1_HIT (TradingView Low reached 0.83616, below TP1 0.83651)
+// 2. Resolve EURGBP as SL_HIT (TradingView chart Image 3: Price rallied to 0.83950 on Thursday, hitting SL 0.83911)
 const eurgbp = db.prepare('SELECT * FROM signals WHERE symbol = ?').get('EURGBP');
 if (eurgbp) {
-  console.log('Resolving EURGBP as TP1_HIT on Wednesday 2026-10-21...');
+  console.log('Resolving EURGBP as SL_HIT on Wednesday 2026-10-21...');
   db.prepare(`
     UPDATE signals SET 
-      status = 'TP1_HIT',
-      outcome = 'WIN',
-      realized_pnl_usd = 3000,
-      exit_price = 0.83651,
-      updated_at = '2026-10-21T18:00:00.000Z'
+      status = 'SL_HIT',
+      outcome = 'LOSS',
+      realized_pnl_usd = -1000,
+      exit_price = 0.83911,
+      updated_at = '2026-10-22T14:00:00.000Z'
     WHERE id = ?
   `).run(eurgbp.id);
 
@@ -86,10 +86,10 @@ if (eurgbp) {
     'SELL',
     '15m',
     0.83846, 0.83911, 0.83651, null, null, 1, 'NORMAL',
-    15.38, 1000, 'WIN', 0.83651,
-    3000, 3, 'Wednesday', 1,
+    15.38, 1000, 'LOSS', 0.83911,
+    -1000, -1, 'Wednesday', 1,
     'London (04:00 NY / 05:30 PM IST)', '2026-10-21',
-    '[Broker: OANDA (TradingView Feed: OANDA:EURGBP)] [CBDR 15m Minor Cross] Entry: 0.83846. 1:3 Target hit at 0.83651 (+3.0R / +$3,000).',
+    '[Broker: OANDA (TradingView Feed: OANDA:EURGBP)] [CBDR 15m Minor Cross] Entry: 0.83846 on Wednesday Oct 21. Stop loss hit at 0.83911 (-1.0R / -$1,000) when price rallied to 0.83950 on Thursday Oct 22. Verified on user TradingView chart.',
     '2026-10-21T04:00:00.000Z'
   );
 }

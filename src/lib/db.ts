@@ -1851,6 +1851,48 @@ export function seedInitialBacktestTrades(db: Database.Database) {
     )
   `);
 
+  // First priority: Read authentic verified TradingView dataset from data/trading_dashboard.json
+  const jsonPath = path.join(dbDir, 'trading_dashboard.json');
+  if (fs.existsSync(jsonPath)) {
+    try {
+      const data = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
+      if (Array.isArray(data.backtest_trades) && data.backtest_trades.length > 0) {
+        for (const t of data.backtest_trades) {
+          insertStmt.run(
+            t.id,
+            t.signal_id || null,
+            t.symbol,
+            t.strategy,
+            t.action,
+            t.timeframe || '15m',
+            t.entry,
+            t.sl,
+            t.tp1,
+            t.tp2 || null,
+            t.tp3 || null,
+            t.risk_percent,
+            t.defensive_state || 'NORMAL',
+            t.calculated_lot_size,
+            t.risk_amount_usd,
+            t.outcome,
+            t.exit_price || (t.outcome === 'WIN' ? t.tp1 : t.sl),
+            t.realized_pnl,
+            t.risk_reward_achieved !== undefined ? t.risk_reward_achieved : t.riskRewardAchieved,
+            t.trading_day,
+            t.is_cbdr_valid_day !== undefined ? t.is_cbdr_valid_day : (t.isCbdrValidDay ? 1 : 0),
+            t.session,
+            t.date_executed,
+            t.notes || null,
+            t.created_at
+          );
+        }
+        return;
+      }
+    } catch (e) {
+      console.warn('Could not read trading_dashboard.json for backtest seed, falling back to generator:', e);
+    }
+  }
+
   const backtestTrades = generateSixMonthsBacktestDataset();
 
   for (const t of backtestTrades) {
