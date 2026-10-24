@@ -1299,7 +1299,7 @@ export function generateSixMonthsBacktestDataset(): BacktestTradeRecord[] {
     'USDJPY': { 4: 154.600, 5: 156.750, 6: 159.200, 7: 156.400, 8: 146.200, 9: 142.800, 10: 158.002 },
     'USDCHF': { 4: 0.91200, 5: 0.90650, 6: 0.89650, 7: 0.88600, 8: 0.85300, 9: 0.84750, 10: 0.82394 },
     'AUDUSD': { 4: 0.65350, 5: 0.66550, 6: 0.66750, 7: 0.67150, 8: 0.67300, 9: 0.68900, 10: 0.69460 },
-    'USDCAD': { 4: 1.36850, 5: 1.36500, 6: 1.37150, 7: 1.37850, 8: 1.35650, 9: 1.35200, 10: 1.41388 },
+    'USDCAD': { 4: 1.36850, 5: 1.36500, 6: 1.37150, 7: 1.37850, 8: 1.35650, 9: 1.35200, 10: 1.42100 },
     'NZDUSD': { 4: 0.59700, 5: 0.61250, 6: 0.61350, 7: 0.60350, 8: 0.61900, 9: 0.63300, 10: 0.56533 },
     'XAUUSD': { 4: 2345.50, 5: 2362.80, 6: 2332.50, 7: 2415.00, 8: 2505.00, 9: 2595.00, 10: 2685.50 },
 
@@ -1309,7 +1309,7 @@ export function generateSixMonthsBacktestDataset(): BacktestTradeRecord[] {
     'GBPNZD': { 4: 2.09900, 5: 2.07250, 6: 2.06850, 7: 2.14400, 8: 2.12400, 9: 2.10900, 10: 2.35767 },
     'EURGBP': { 4: 0.85600, 5: 0.85420, 6: 0.84650, 7: 0.84050, 8: 0.84330, 9: 0.83480, 10: 0.84324 },
     'EURCAD': { 4: 1.46800, 5: 1.48050, 6: 1.47400, 7: 1.49900, 8: 1.50450, 9: 1.50700, 10: 1.58898 },
-    'GBPAUD': { 4: 1.91750, 5: 1.90750, 6: 1.90100, 7: 1.92700, 8: 1.95400, 9: 1.93800, 10: 1.91890 },
+    'GBPAUD': { 4: 1.91750, 5: 1.90750, 6: 1.90100, 7: 1.92700, 8: 1.95400, 9: 1.93800, 10: 1.89256 },
     'GBPCHF': { 4: 1.14280, 5: 1.15050, 6: 1.13750, 7: 1.14600, 8: 1.12150, 9: 1.13150, 10: 1.09820 },
     'EURCHF': { 4: 0.97800, 5: 0.98300, 6: 0.96350, 7: 0.96350, 8: 0.94600, 9: 0.94450, 10: 0.92598 },
     'AUDJPY': { 4: 100.950, 5: 104.300, 6: 106.250, 7: 104.950, 8: 98.400,  9: 98.400,  10: 109.748 },
@@ -1344,7 +1344,7 @@ export function generateSixMonthsBacktestDataset(): BacktestTradeRecord[] {
     'USDJPY': { basePrice: 158.002, pipDecimals: 3, pipUnit: 0.01, pipsPerSl: 32.0, lotMultiplier: 1.0, action: 'BUY', isMajor: true, asianPips: 36 },
     'USDCHF': { basePrice: 0.82394, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 18.0, lotMultiplier: 1.0, action: 'BUY', isMajor: true, asianPips: 26 },
     'AUDUSD': { basePrice: 0.69460, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 18.0, lotMultiplier: 1.0, action: 'SELL', isMajor: true, asianPips: 26 },
-    'USDCAD': { basePrice: 1.41388, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 20.0, lotMultiplier: 1.0, action: 'BUY', isMajor: true, asianPips: 30 },
+    'USDCAD': { basePrice: 1.42100, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 20.0, lotMultiplier: 1.0, action: 'BUY', isMajor: true, asianPips: 30 },
     'NZDUSD': { basePrice: 0.56533, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 16.0, lotMultiplier: 1.0, action: 'BUY', isMajor: true, asianPips: 24 },
     'XAUUSD': { basePrice: 2685.50, pipDecimals: 2, pipUnit: 0.1, pipsPerSl: 45.0, lotMultiplier: 1.0, action: 'SELL', isMajor: true, asianPips: 60 },
 
@@ -1354,7 +1354,7 @@ export function generateSixMonthsBacktestDataset(): BacktestTradeRecord[] {
     'GBPNZD': { basePrice: 2.35767, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 26.0, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 42 },
     'EURGBP': { basePrice: 0.84324, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 16.0, lotMultiplier: 1.0, action: 'SELL', isMajor: false, asianPips: 22 },
     'EURCAD': { basePrice: 1.58898, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 24.0, lotMultiplier: 1.0, action: 'SELL', isMajor: false, asianPips: 34 },
-    'GBPAUD': { basePrice: 1.91890, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 32.0, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 40 },
+    'GBPAUD': { basePrice: 1.89256, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 32.0, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 40 },
     'GBPCHF': { basePrice: 1.09820, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 20.0, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 28 },
     'EURCHF': { basePrice: 0.92598, pipDecimals: 5, pipUnit: 0.0001, pipsPerSl: 18.0, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 24 },
     'AUDJPY': { basePrice: 109.748, pipDecimals: 3, pipUnit: 0.01, pipsPerSl: 28.0, lotMultiplier: 1.0, action: 'BUY', isMajor: false, asianPips: 32 },
@@ -1714,86 +1714,21 @@ export function generateSixMonthsBacktestDataset(): BacktestTradeRecord[] {
     // - Tuesday: ONLY if Monday was a loss. If WIN -> WEEKLY HOLIDAY!
     // - Wednesday: ONLY if Tuesday was a loss.
     // - Thursday & Friday: STRICTLY 0 TRADES FOR CBDR!
-    if (w === 27) {
-      // Week 27 (Oct 12 - Oct 16, 2026): User's live verified trading week!
-      // Monday Oct 12: Mon loss on GBPUSD BUY (SL hit at London Session Low)
-      createCbdrRecord('GBPUSD', 'Monday', monStr, 'LOSS', 'BUY', {
-        entry: 1.33280,
-        sl: 1.33060,
-        tp1: 1.33940,
-        entryTime: { ny: '03:15', ist: '12:45' },
-        note: '[Broker: OANDA (TradingView Feed: OANDA:GBPUSD)] [CBDR 15m Major Pair] Previous Day Low (PDL) swept at 02:45 NY. London 1st 15m Bullish FVG entry executed at 03:15 NY (12:45 IST) @ 1.33280. London Session Low broken, SL hit at 1.33060 (-1.0R). Exit Price: 1.33060. Defensive risk stepped down to 0.5%. Chart: https://in.tradingview.com/chart/J4O68zfP/?symbol=OANDA%3AGBPUSD'
-      });
-      // Tuesday Oct 13: Tue loss on GBPJPY BUY (SL hit below FVG)
-      createCbdrRecord('GBPJPY', 'Tuesday', tueStr, 'LOSS', 'BUY', {
-        entry: 210.590,
-        sl: 210.190,
-        tp1: 211.790,
-        entryTime: { ny: '03:45', ist: '13:15' },
-        note: '[Broker: OANDA (TradingView Feed: OANDA:GBPJPY)] [CBDR 15m Minor Cross] 1st 15m Fair Value Gap (FVG) formed at London session open. Direct London 1st 15m Bullish Imbalance entry executed at 03:45 NY (13:15 IST) @ 210.590 (No PDH/PDL sweep required for minor pairs). FVG invalidated, SL hit at 210.190 (-1.0R). Exit Price: 210.190. Defensive risk stepped down to 0.25%. Chart: https://in.tradingview.com/chart/J4O68zfP/?symbol=OANDA%3AGBPJPY'
-      });
-      // Wednesday Oct 14: User verified live trade execution: EURUSD SELL (+3.0R WIN / +$3,000)
-      createCbdrRecord('EURUSD', 'Wednesday', wedStr, 'WIN', 'SELL', {
-        entry: 1.12647,
-        sl: 1.12812,
-        tp1: 1.12152,
-        realized_pnl: 3000,
-        entryTime: { ny: '03:30', ist: '13:00' },
-        note: '[Broker: OANDA (TradingView Feed: OANDA:EURUSD)] [CBDR 15m Major Pair] Previous Day High (PDH) swept at 02:45 NY. London 1st 15m Bearish FVG entry executed at 03:30 NY (13:00 IST) @ 1.12647. Stop Loss placed at London Session High (1.12812). Target 1:3.0 (+3.0R / +$3,000 WIN) hit at 1.12152. Exit Price: 1.12152. Strategy rule satisfied; weekly holiday active for Thursday and Friday. Chart: https://in.tradingview.com/chart/J4O68zfP/?symbol=OANDA%3AEURUSD'
-      });
-      // Wednesday Oct 14: User verified TradingView OANDA Chart: USDCAD 15m Major Pair (+3.0R WIN / +$3,000)
-      // Reference: https://in.tradingview.com/chart/J4O68zfP/?symbol=OANDA%3AUSDCAD
-      createCbdrRecord('USDCAD', 'Wednesday', wedStr, 'WIN', 'BUY', {
-        entry: 1.41480,
-        sl: 1.41280,
-        tp1: 1.42080,
-        realized_pnl: 3000,
-        entryTime: { ny: '04:15', ist: '13:45' },
-        note: '[Broker: OANDA (TradingView Feed: OANDA:USDCAD)] [CBDR 15m Major Pair] Previous Day Low (PDL) swept at 02:45 NY before London open @ 1.41345. London 1st 15m Bullish FVG entry inside blue London session (07:00-16:00 UTC / 03:00-12:00 NY) executed at 04:15 NY (13:45 IST) @ 1.41480. Stop Loss placed at London Session Low (1.41280). Target 1:3.0 (+3.0R / +$3,000 WIN) reached at 1.42080. Exit Price: 1.42080. Matches TradingView OANDA chart https://in.tradingview.com/chart/J4O68zfP/?symbol=OANDA%3AUSDCAD exactly.'
-      });
-      // Wednesday Oct 14: User verified TradingView chart: GBPAUD 15m Minor Cross 1st Imbalance (+3.0R WIN / +$3,000)
-      createCbdrRecord('GBPAUD', 'Wednesday', wedStr, 'WIN', 'BUY', {
-        entry: 1.91850,
-        sl: 1.91530,
-        tp1: 1.92810,
-        realized_pnl: 3000,
-        entryTime: { ny: '07:45', ist: '17:15' },
-        note: '[Broker: OANDA (TradingView Feed: OANDA:GBPAUD)] [CBDR 15m Minor Cross] 1st 15m Fair Value Gap (FVG) formed at London session open. Direct London 1st 15m Imbalance entry executed inside blue London session at 07:45 NY (17:15 IST) @ 1.91850 (No PDH/PDL sweep required for minor pairs). SL placed with 7 pips buffer below FVG at 1.91530. Target 1:3.0 (+3.0R / +$3,000 WIN) reached at 1.92810. Exit Price: 1.92810. Strategy rule satisfied. Chart: https://in.tradingview.com/chart/J4O68zfP/?symbol=OANDA%3AGBPAUD'
-      });
-
-      // Complete all remaining 24 pairs for Week 27 so every pair has week 27 coverage
-      for (const sym of allSymbols) {
-        if (['GBPUSD', 'GBPJPY', 'EURUSD', 'USDCAD', 'GBPAUD'].includes(sym)) continue;
-        const pairHash = Math.abs((sym.charCodeAt(0) * 41 + sym.charCodeAt(sym.length - 1) * 67 + 27 * 19) % 100);
-        if (pairHash < 76) {
-          createCbdrRecord(sym, 'Monday', monStr, 'WIN');
-        } else if (pairHash < 93) {
-          createCbdrRecord(sym, 'Monday', monStr, 'LOSS');
-          createCbdrRecord(sym, 'Tuesday', tueStr, 'WIN');
-        } else {
-          createCbdrRecord(sym, 'Monday', monStr, 'LOSS');
-          createCbdrRecord(sym, 'Tuesday', tueStr, 'LOSS');
-          createCbdrRecord(sym, 'Wednesday', wedStr, 'WIN');
-        }
-      }
-      // Thursday Oct 15 & Friday Oct 16: STRICTLY 0 TRADES FOR CBDR!
-    } else {
-      // Complete CBDR execution across EVERY pair (all 8 Majors + all 21 Minors)
-      for (const sym of allSymbols) {
-        const pairHash = Math.abs((sym.charCodeAt(0) * 41 + sym.charCodeAt(sym.length - 1) * 67 + w * 19) % 100);
-        if (pairHash < 76) {
-          // Monday WIN (+3.0R) -> Weekly Holiday Tuesday to Friday
-          createCbdrRecord(sym, 'Monday', monStr, 'WIN');
-        } else if (pairHash < 93) {
-          // Monday LOSS (-1.0R) -> Tuesday trade taken! Tuesday WIN (+3.0R) -> Weekly Holiday Wed to Fri
-          createCbdrRecord(sym, 'Monday', monStr, 'LOSS');
-          createCbdrRecord(sym, 'Tuesday', tueStr, 'WIN');
-        } else {
-          // Monday LOSS (-1.0R) -> Tuesday LOSS (-1.0R) -> Wednesday WIN (+3.0R) -> Week over
-          createCbdrRecord(sym, 'Monday', monStr, 'LOSS');
-          createCbdrRecord(sym, 'Tuesday', tueStr, 'LOSS');
-          createCbdrRecord(sym, 'Wednesday', wedStr, 'WIN');
-        }
+    // Complete CBDR execution across EVERY pair (all 8 Majors + all 21 Minors)
+    for (const sym of allSymbols) {
+      const pairHash = Math.abs((sym.charCodeAt(0) * 41 + sym.charCodeAt(sym.length - 1) * 67 + w * 19) % 100);
+      if (pairHash < 76) {
+        // Monday WIN (+3.0R) -> Weekly Holiday Tuesday to Friday
+        createCbdrRecord(sym, 'Monday', monStr, 'WIN');
+      } else if (pairHash < 93) {
+        // Monday LOSS (-1.0R) -> Tuesday trade taken! Tuesday WIN (+3.0R) -> Weekly Holiday Wed to Fri
+        createCbdrRecord(sym, 'Monday', monStr, 'LOSS');
+        createCbdrRecord(sym, 'Tuesday', tueStr, 'WIN');
+      } else {
+        // Monday LOSS (-1.0R) -> Tuesday LOSS (-1.0R) -> Wednesday WIN (+3.0R) -> Week over
+        createCbdrRecord(sym, 'Monday', monStr, 'LOSS');
+        createCbdrRecord(sym, 'Tuesday', tueStr, 'LOSS');
+        createCbdrRecord(sym, 'Wednesday', wedStr, 'WIN');
       }
     }
 

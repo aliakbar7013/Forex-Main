@@ -46,6 +46,11 @@ export async function tickLiveTradeEvaluator(): Promise<{
   const quotesMap: Record<string, LiveMarketQuote> = {};
   const resolvedTrades: { id: string; symbol: string; outcome: 'WIN' | 'LOSS'; pnl: number }[] = [];
 
+  // Check if Forex market is open (Sunday 17:00 NY to Friday 17:00 NY)
+  const now = new Date();
+  const timeContext = getMarketTimeContext(now);
+  const isWeekendClosed = timeContext.dayOfWeek === 6 || (timeContext.dayOfWeek === 0 && timeContext.nyTimeDecimal < 17.0) || (timeContext.dayOfWeek === 5 && timeContext.nyTimeDecimal >= 17.0);
+
   // Fetch real-time live quotes directly from TradingView for all pairs
   try {
     const tvQuotes = await fetchAllTradingViewLiveQuotes();
@@ -80,6 +85,11 @@ export async function tickLiveTradeEvaluator(): Promise<{
     const dayLow = quote.low > 0 ? quote.low : currentPrice;
     const pipFactor = getPipSize(signal.symbol);
     const isBuy = signal.action === 'BUY';
+
+    // Skip trade resolution evaluation when Forex markets are closed for the weekend
+    if (isWeekendClosed) {
+      continue;
+    }
 
     // A live trade has hit Stop Loss if the live price OR the session/day extreme touches/breaches SL
     const isLoss = isBuy 
